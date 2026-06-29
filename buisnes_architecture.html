@@ -1,0 +1,1410 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<title>AI Image Agency - MASTER SYSTEM</title>
+<style>
+* { box-sizing: border-box; }
+body {
+  margin:0; font-family:Arial, sans-serif;
+  background:#0b0f1a; color:#eaeaea; line-height:1.7;
+}
+header {
+  padding:24px 30px; background:#151c2f;
+  font-size:22px; font-weight:bold;
+  border-bottom:3px solid #7a5cff;
+  letter-spacing: 1px;
+}
+header span { color:#7a5cff; }
+.tabs {
+  display:flex; flex-wrap:wrap;
+  background:#10172a; position:sticky; top:0; z-index:10;
+  border-bottom:1px solid #1e293b;
+}
+.tab {
+  padding:12px 16px; text-align:center; cursor:pointer;
+  user-select:none; border-bottom:3px solid transparent;
+  font-size:13px; transition:all 0.2s ease;
+}
+.tab:hover { background:#141b30; color:#7a5cff; }
+.tab.active { border-bottom:3px solid #7a5cff; background:#141b30; font-weight:bold; color:#c8b6ff; }
+.section { display:none; padding:30px; max-width:1200px; margin:auto; }
+.section.active { display:block; }
+.card {
+  background:#161d2e; padding:22px; margin:18px 0;
+  border-radius:12px; border-left:4px solid #7a5cff;
+}
+.card.green { border-left-color:#22c55e; }
+.card.orange { border-left-color:#f97316; }
+.card.red { border-left-color:#ef4444; }
+.card.cyan { border-left-color:#06b6d4; }
+.card.yellow { border-left-color:#eab308; }
+pre {
+  background:#0a0f1b; padding:16px; border-radius:8px;
+  overflow:auto; white-space:pre-wrap;
+  font-family:'Courier New', Courier, monospace;
+  border:1px solid #1e293b; color:#a5f3fc; font-size:13px;
+}
+h2 { color:#c8b6ff; margin-top:0; font-size:22px; }
+h3 { color:#9fb3ff; margin-top:22px; font-size:17px; }
+h4 { color:#7dd3fc; margin-top:16px; font-size:15px; }
+table { width:100%; border-collapse:collapse; margin:16px 0; background:#0d1527; }
+th, td { border:1px solid #1e293b; padding:11px 14px; text-align:left; font-size:13px; }
+th { background:#1e293b; color:#c8b6ff; font-weight:bold; }
+tr:nth-child(even) td { background:#0f1b2e; }
+.highlight { color:#38bdf8; font-weight:bold; }
+.green-text { color:#22c55e; font-weight:bold; }
+.orange-text { color:#f97316; font-weight:bold; }
+.red-text { color:#ef4444; font-weight:bold; }
+.yellow-text { color:#eab308; font-weight:bold; }
+.grid2 { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+.grid3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; }
+.grid4 { display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:14px; }
+.todo-item { padding:8px 12px; margin:6px 0; border-radius:6px; background:#0d1527; display:flex; align-items:center; gap:10px; }
+.todo-done { color:#22c55e; font-size:16px; }
+.todo-pending { color:#f97316; font-size:16px; }
+.todo-future { color:#6b7280; font-size:16px; }
+.phase-header { background:#1e1040; border-radius:8px; padding:12px 18px; margin:20px 0 10px 0; font-size:15px; font-weight:bold; color:#c8b6ff; }
+.product-card { background:#0d1527; border-radius:10px; padding:16px; text-align:center; }
+.product-card .icon { font-size:36px; margin-bottom:8px; }
+.product-card h4 { margin:0 0 6px 0; color:#c8b6ff; }
+.product-card .price { color:#22c55e; font-weight:bold; font-size:14px; }
+.product-card .margin { color:#f97316; font-size:12px; }
+.channel-badge { display:inline-block; padding:4px 12px; border-radius:20px; font-size:12px; font-weight:bold; margin:3px; }
+.ch-etsy { background:#f27a1a22; color:#f97316; border:1px solid #f97316; }
+.ch-amazon { background:#f9900022; color:#fbbf24; border:1px solid #fbbf24; }
+.ch-own { background:#7a5cff22; color:#c4b5fd; border:1px solid #7a5cff; }
+.ch-print { background:#06b6d422; color:#67e8f9; border:1px solid #06b6d4; }
+.ch-social { background:#22c55e22; color:#86efac; border:1px solid #22c55e; }
+.plan-meta {
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  margin:10px 0 16px 0;
+}
+.meta-chip {
+  background:#0d1527;
+  border:1px solid #1e293b;
+  border-radius:999px;
+  padding:5px 10px;
+  font-size:12px;
+  color:#cbd5e1;
+}
+.phase-card {
+  background:#121a2d;
+  border:1px solid #26334f;
+  border-radius:12px;
+  padding:14px;
+  margin:14px 0;
+}
+.phase-title {
+  font-size:16px;
+  font-weight:bold;
+  color:#c8b6ff;
+  margin-bottom:6px;
+}
+.phase-sub {
+  font-size:12px;
+  color:#94a3b8;
+  margin-bottom:10px;
+}
+.todo-row {
+  display:grid;
+  grid-template-columns:24px 1fr auto;
+  gap:10px;
+  align-items:start;
+  background:#0d1527;
+  border:1px solid #1e293b;
+  border-radius:8px;
+  padding:10px;
+  margin:8px 0;
+}
+.todo-row input[type="checkbox"] {
+  margin-top:3px;
+  transform:scale(1.1);
+  accent-color:#22c55e;
+}
+.todo-text {
+  font-size:13px;
+  color:#e2e8f0;
+  line-height:1.5;
+}
+.todo-help {
+  font-size:12px;
+  color:#93c5fd;
+  margin-top:3px;
+}
+.owner {
+  border-radius:999px;
+  padding:4px 9px;
+  font-size:11px;
+  font-weight:bold;
+  white-space:nowrap;
+  height:max-content;
+}
+.owner-a { background:#1d4ed8; color:#dbeafe; border:1px solid #3b82f6; }
+.owner-b { background:#15803d; color:#dcfce7; border:1px solid #22c55e; }
+.owner-ab { background:#6d28d9; color:#ede9fe; border:1px solid #8b5cf6; }
+.effort {
+  background:#1e293b;
+  border:1px solid #334155;
+  border-radius:999px;
+  padding:2px 8px;
+  margin-left:8px;
+  font-size:11px;
+  color:#bfdbfe;
+}
+.done-box {
+  background:#0b1324;
+  border:1px dashed #334155;
+  border-radius:8px;
+  padding:10px;
+  margin-top:10px;
+  font-size:12px;
+  color:#cbd5e1;
+}
+.xref {
+  color:#67e8f9;
+  text-decoration:none;
+  border-bottom:1px dashed #67e8f9;
+}
+.xref:hover {
+  color:#a5f3fc;
+  border-bottom-color:#a5f3fc;
+}
+.milestone {
+  background:#0f172a;
+  border:1px solid #334155;
+  border-left:4px solid #22c55e;
+  border-radius:8px;
+  padding:10px;
+  margin-top:10px;
+  font-size:12px;
+  color:#d1fae5;
+}
+.checklist-note {
+  font-size:12px;
+  color:#94a3b8;
+}
+ul li { margin-bottom:6px; }
+@media(max-width:768px) { .grid2,.grid3,.grid4 { grid-template-columns:1fr; } .tab { font-size:11px; padding:10px 8px; } }
+</style>
+</head>
+<body>
+
+<header>
+  <span>AI IMAGE AGENCY</span> — MASTER SYSTEM & BUSINESS PLAN (DEUTSCHLAND)
+</header>
+
+<div class="tabs">
+  <div class="tab active" onclick="showTab(0)">Vision & Idee</div>
+  <div class="tab" onclick="showTab(1)">Marktanalyse</div>
+  <div class="tab" onclick="showTab(2)">Projektplan</div>
+  <div class="tab" onclick="showTab(3)">Tech-Architektur</div>
+  <div class="tab" onclick="showTab(4)">ERP System</div>
+  <div class="tab" onclick="showTab(5)">Production Flow</div>
+  <div class="tab" onclick="showTab(6)">Print & Deep Tech</div>
+  <div class="tab" onclick="showTab(7)">Tech-Entscheidungen</div>
+  <div class="tab" onclick="showTab(8)">Automatisierung</div>
+  <div class="tab" onclick="showTab(9)">Print-Produkte & Shops</div>
+  <div class="tab" onclick="showTab(10)">Vertriebskanäle</div>
+  <div class="tab" onclick="showTab(11)">Business Logic</div>
+</div>
+
+<!-- ============================================================ TAB 0: VISION -->
+<div class="section active">
+  <h2>Vision & Grundidee</h2>
+  <div class="card">
+    <h3>Das Kernproblem im Printmarkt heute</h3>
+    <p>Klassische Bildbeschaffung für Print-Medien ist <span class="red-text">langsam, teuer und unflexibel</span>. Ein professionelles Produktfoto kostet zwischen <b>150 und 600 €</b>, ein Fotoshooting-Tag 2.000–6.000 €. Stockbilder sind generisch. Individualisierung kostet extra.</p>
+    <p>Gleichzeitig explodiert der Bedarf durch E-Commerce, Print-on-Demand, Personalisierung und Multichannel-Marketing — besonders im deutschen Markt mit über 500.000 aktiven Online-Shops.</p>
+  </div>
+  <div class="card green">
+    <h3>Die Lösung: AI Media Factory für Deutschland</h3>
+    <p>Eine vollautomatisierte <span class="highlight">KI-gesteuerte Bildfabrik</span>, die für Print, Web, POD-Shops und Werbung maßgeschneiderte Bilder generiert — in Druckqualität (CMYK, 300 DPI, TIFF), mit lückenlosem ERP-Tracking.</p>
+    <div class="grid3" style="margin-top:14px;">
+      <div style="background:#0d1527;padding:14px;border-radius:8px;text-align:center;">
+        <div style="font-size:28px;">⚡</div>
+        <b>Geschwindigkeit</b><br>
+        <span style="font-size:13px;">Von Briefing zu druckfertigem Bild in unter 30 Minuten</span>
+      </div>
+      <div style="background:#0d1527;padding:14px;border-radius:8px;text-align:center;">
+        <div style="font-size:28px;">💰</div>
+        <b>Kosten</b><br>
+        <span style="font-size:13px;">2–15 €/Bild statt 150–600 €</span>
+      </div>
+      <div style="background:#0d1527;padding:14px;border-radius:8px;text-align:center;">
+        <div style="font-size:28px;">🔁</div>
+        <b>Skalierbarkeit</b><br>
+        <span style="font-size:13px;">1 oder 10.000 Bilder — gleicher Aufwand</span>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <h3>Zwei Geschäftsmodelle parallel</h3>
+    <div class="grid2">
+      <div style="background:#0d1527;padding:16px;border-radius:10px;border-top:3px solid #7a5cff;">
+        <h4>B2B: Agentur-Service</h4>
+        <p>Firmen, Verlage und Agenturen beauftragen Bilder per Brief oder API. Abrechnung per Flatrate oder Einzelbild.</p>
+        <p><span class="green-text">Marge: 80–90%</span></p>
+      </div>
+      <div style="background:#0d1527;padding:16px;border-radius:10px;border-top:3px solid #22c55e;">
+        <h4>B2C: Print-on-Demand Shops</h4>
+        <p>Eigene Produkte (Poster, T-Shirts, Karten) auf Etsy, Amazon, Redbubble verkaufen. Passiveinnahmen durch Volumen.</p>
+        <p><span class="green-text">Marge: 40–70%</span></p>
+      </div>
+    </div>
+  </div>
+  <div class="card cyan">
+    <h3>Langfristige Vision</h3>
+    <p>Keine klassische Agentur, keine gewöhnliche Softwarefirma. Sondern eine <b>AI-gestützte visuelle Produktionsinfrastruktur</b> — vergleichbar mit einer vollautomatisierten Druckerei, die on-demand Bilder und Druckprodukte generiert.</p>
+    <p>Langfristig: <span class="highlight">SaaS-Plattform</span> mit White-Label für Druckereien und POD-Anbieter.</p>
+  </div>
+</div>
+
+<!-- ============================================================ TAB 1: MARKTANALYSE -->
+<div class="section">
+  <h2>Marktanalyse & Branchenchancen</h2>
+  <div class="card">
+    <h3>Marktgröße Deutschland (DACH)</h3>
+    <table>
+      <thead>
+        <tr><th>Segment</th><th>Marktgröße DE (2025)</th><th>Wachstum p.a.</th><th>AI-Disruption</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Print-on-Demand (Poster, Shirts, Karten)</td><td>~€ 1,8 Mrd. (DACH)</td><td>+22%</td><td><span class="red-text">SEHR HOCH</span></td></tr>
+        <tr><td>Stock-Fotografie</td><td>~€ 520 Mio.</td><td>+4%</td><td><span class="red-text">HOCH</span></td></tr>
+        <tr><td>E-Commerce Produktbilder</td><td>~€ 1,1 Mrd.</td><td>+15%</td><td><span class="red-text">SEHR HOCH</span></td></tr>
+        <tr><td>OOH/Plakat-Werbung DACH</td><td>~€ 940 Mio.</td><td>+6%</td><td><span class="orange-text">HOCH</span></td></tr>
+        <tr><td>Grußkarten & Papeterie</td><td>~€ 280 Mio.</td><td>+8%</td><td><span class="red-text">HOCH</span></td></tr>
+        <tr><td>Immobilien-Visualisierung</td><td>~€ 380 Mio.</td><td>+18%</td><td><span class="red-text">SEHR HOCH</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="card green">
+    <h3>Primäre Zielbranchen Deutschland</h3>
+    <h4>1. Print-on-Demand / E-Commerce (B2C)</h4>
+    <ul>
+      <li>~80.000 aktive Etsy-Shops in DE, Wachstum +35%/Jahr</li>
+      <li>Amazon Merch: 500 Mio. Produkte, täglich tausende neue Designs gefragt</li>
+      <li>Nischen mit wenig Konkurrenz: regionale Motive, Feiertage, Berufs-Nischen</li>
+    </ul>
+    <h4>2. Werbeagenturen & Druckereien</h4>
+    <ul>
+      <li>~12.000 Werbeagenturen in Deutschland (Stat. Bundesamt 2024)</li>
+      <li>Budgets sinken, Bildbedarf steigt → perfekter KI-Use-Case</li>
+      <li>Kontaktwege: LinkedIn, BDW (Berufsverband), lokale Netzwerke</li>
+    </ul>
+    <h4>3. Grußkarten & Papeterie</h4>
+    <ul>
+      <li>Geburtstag, Weihnachten, Hochzeit — immer gefragt, immer wiederkehrend</li>
+      <li>Personalisierung als Trend: "Karte mit eigenem Haustier-Motiv" → LoRA-Training</li>
+    </ul>
+    <h4>4. Mode / T-Shirt-Business</h4>
+    <ul>
+      <li>Print-on-Demand über Printful, Printify, Spreadshirt</li>
+      <li>Design erstellen → dropshipping, kein Lager nötig</li>
+      <li>Nischen: Hobbys, Berufe, Regionen, Humor</li>
+    </ul>
+  </div>
+  <div class="card orange">
+    <h3>Wettbewerbsanalyse</h3>
+    <table>
+      <thead>
+        <tr><th>Wettbewerber</th><th>Schwäche</th><th>Unsere Differenzierung</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Adobe Firefly</td><td>Kein CMYK, kein ERP, kein Batch, kein POD-Link</td><td>Print-Native, automatisierte POD-Pipeline</td></tr>
+        <tr><td>Midjourney</td><td>Kein CMYK, kein API-Batch, Discord-only</td><td>Skalierbare API, vollautomatisierter Shop-Export</td></tr>
+        <tr><td>Canva Print</td><td>Generische Templates, keine echte KI-Generierung</td><td>100% individuell generiert, jedes Motiv einzigartig</td></tr>
+        <tr><td>Printful Designer</td><td>Nur rudimentäre Mockup-Tools, keine KI</td><td>KI-generierte Designs direkt in POD-Pipeline</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="card">
+    <h3>Deutscher Markt — Besonderheiten & Rechtliches</h3>
+    <ul>
+      <li><b>DSGVO:</b> Kundendaten auf EU-Servern (Hetzner DE), Datenschutz-Hinweis auf Website obligatorisch</li>
+      <li><b>MwSt.:</b> 19% USt auf digitale Leistungen, Kleinunternehmerregelung bis € 22.000/Jahr möglich</li>
+      <li><b>Urheber-KI-Recht (neu 2025):</b> AI-generierte Werke müssen bei kommerzieller Nutzung als KI-erstellt gekennzeichnet werden (AI Act)</li>
+      <li><b>Impressumspflicht:</b> Auch für Etsy-Shops mit Wohnsitz DE erforderlich</li>
+      <li><b>Preissensibilität:</b> DE-Markt preissensibel bei B2C, bei B2B aber qualitätsorientiert → zwei Preisstrategien nötig</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ============================================================ TAB 2: PROJEKTPLAN -->
+<div class="section">
+  <h2>Projektplan Umsetzung (klarer Endzustand + 2 Personen)</h2>
+
+  <div class="card cyan">
+    <div class="plan-meta">
+      <span class="meta-chip">VPS Ubuntu vorhanden</span>
+      <span class="meta-chip">Domain aktiv: datemyhobby.com/printbuddy</span>
+      <span class="meta-chip">Synology DS925+ vorhanden</span>
+      <span class="meta-chip">Team: 2 Personen</span>
+      <span class="meta-chip">Bestehende Django-Projekte laufen</span>
+    </div>
+    <h3>Endzustand (MVP): Was muss am Ende funktionieren?</h3>
+    <ul>
+      <li>Kundin/Kunde waehlt Produkt (Shirt, Karte, wissenschaftliches Poster) in der Webapp.</li>
+      <li>Job wird im Backend erzeugt, Bild auf GPU-Server generiert und auf NAS gespeichert.</li>
+      <li>Automatischer Export je Kanal (Etsy/Printful/Shop) inkl. Preis- und Margenkalkulation.</li>
+      <li>Operativer Betrieb mit 2 Personen, klaren Rollen, Checklisten und KPI-Tracking.</li>
+    </ul>
+    <p class="checklist-note">Querverweise: <a class="xref" href="#" onclick="showTab(3);return false;">Tech-Architektur</a> | <a class="xref" href="#" onclick="showTab(5);return false;">Production Flow</a> | <a class="xref" href="#" onclick="showTab(9);return false;">Print-Produkte</a> | <a class="xref" href="#" onclick="showTab(10);return false;">Vertriebskanäle</a></p>
+  </div>
+
+  <div class="card yellow">
+    <h3>Unternehmen gruenden: wann und welche Form?</h3>
+    <table>
+      <thead>
+        <tr><th>Zeitpunkt</th><th>Schritt</th><th>Warum</th><th>Empfehlung</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Vor erstem Verkauf</td><td>Gewerbe anmelden</td><td>Pflicht fuer Etsy/Amazon/Shop-Verkauf</td><td>Spätestens in Phase 2 erledigen</td></tr>
+        <tr><td>Startphase</td><td>Einzelunternehmen</td><td>Schnell, guenstig, wenig Overhead</td><td>Fuer MVP am sinnvollsten</td></tr>
+        <tr><td>Bei steigendem Risiko/Umsatz</td><td>Pruefung UG</td><td>Haftungsbegrenzung und professioneller Auftritt</td><td>Ab planbarem Wachstum evaluieren</td></tr>
+        <tr><td>Laufend</td><td>USt-Status pruefen</td><td>Kleinunternehmer vs Regelbesteuerung beeinflusst Preise/Margen</td><td>Mit Steuerberatung im Quartal abstimmen</td></tr>
+      </tbody>
+    </table>
+    <p class="checklist-note">Hinweis: Grenzwerte koennen sich jaehrlich aendern; steuerliche Details immer kurz gegenpruefen.</p>
+  </div>
+
+  <div class="card orange">
+    <h3>Vertriebsprojekt 01 (90 Tage): Shirts, Karten, wissenschaftliche Bilder</h3>
+    <table>
+      <thead>
+        <tr><th>Produktlinie</th><th>Primärer Kanal</th><th>Sekundärer Kanal</th><th>Zielmarge</th><th>Kommentar</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Shirts/Hoodies</td><td>Etsy + Printful</td><td>Amazon Merch</td><td>40-55%</td><td>Schneller Test ueber Nischenmotive</td></tr>
+        <tr><td>Karten/Poster-Sets</td><td>Etsy Digital + Print-on-Demand</td><td>Eigener Shop</td><td>60-80% (digital), 45-65% (physisch)</td><td>Saisonale Kampagnen moeglich</td></tr>
+        <tr><td>Wissenschaftliche Bilder</td><td>Eigener Shop + B2B-Verlage</td><td>Adobe Stock</td><td>50-75% (direkt), 20-40% (Lizenz)</td><td>Fokus: Edu/Medizin/Naturwissenschaft</td></tr>
+      </tbody>
+    </table>
+    <p class="checklist-note">Querverweis: <a class="xref" href="#" onclick="showTab(10);return false;">Vertriebskanäle & Plattformen</a>.</p>
+  </div>
+
+  <div class="phase-card">
+    <div class="phase-title">Phase 0: Scope-Freeze und Team-Setup (Tag 1)</div>
+    <div class="phase-sub">Ziel: Klarer Plan, klare Rollen, klares Endbild.</div>
+
+    <div class="todo-row">
+      <input class="todo-check" data-key="plan2-p0-01" type="checkbox">
+      <div class="todo-text">MVP-Endzustand schriftlich fixieren (GPU-Generation, NAS, Export, Verkauf). <span class="effort">1-2h</span></div>
+      <span class="owner owner-ab">A+B</span>
+    </div>
+    <div class="todo-row">
+      <input class="todo-check" data-key="plan2-p0-02" type="checkbox">
+      <div class="todo-text">Arbeitsaufteilung fixieren: A (Infra/Backend), B (Content/QA/Vertrieb). <span class="effort">1h</span></div>
+      <span class="owner owner-ab">A+B</span>
+    </div>
+    <div class="todo-row">
+      <input class="todo-check" data-key="plan2-p0-03" type="checkbox">
+      <div class="todo-text">Backlog priorisieren: Must-have vs. Nice-to-have fuer 6 Wochen. <span class="effort">1-2h</span></div>
+      <span class="owner owner-ab">A+B</span>
+    </div>
+    <div class="milestone">Meilenstein: Umsetzungsplan ist eindeutig und fuer beide Personen sofort nutzbar.</div>
+  </div>
+
+  <div class="phase-card">
+    <div class="phase-title">Phase 1: Infrastruktur & Isolation auf VPS (Tag 2-4)</div>
+    <div class="phase-sub">Ziel: Neues Projekt unter /printbuddy live, ohne bestehende Django-Apps zu stoeren.</div>
+
+    <div class="todo-row">
+      <input class="todo-check" data-key="plan2-p1-01" type="checkbox">
+      <div class="todo-text">Neues isoliertes Django-Projekt + eigenes venv + eigener Linux-User aufsetzen. <span class="effort">3-5h</span></div>
+      <span class="owner owner-a">A</span>
+    </div>
+    <div class="todo-row">
+      <input class="todo-check" data-key="plan2-p1-02" type="checkbox">
+      <div class="todo-text">Eigene PostgreSQL-DB inkl. Rechte, Backup-Policy und Restore-Test definieren. <span class="effort">2-3h</span></div>
+      <span class="owner owner-a">A</span>
+    </div>
+    <div class="todo-row">
+      <input class="todo-check" data-key="plan2-p1-03" type="checkbox">
+      <div class="todo-text">Nginx-Routing datemyhobby.com/printbuddy auf eigenen Gunicorn-Service konfigurieren. <span class="effort">2-3h</span></div>
+      <span class="owner owner-a">A</span>
+    </div>
+    <div class="todo-row">
+      <input class="todo-check" data-key="plan2-p1-04" type="checkbox">
+      <div class="todo-text">Smoke-Test: alle alten Projekte + neues Projekt gemeinsam stabil. <span class="effort">1h</span></div>
+      <span class="owner owner-ab">A+B</span>
+    </div>
+    <div class="milestone">Meilenstein: Produktionsfaehige Basis unter /printbuddy ist online.</div>
+  </div>
+
+  <div class="phase-card">
+    <div class="phase-title">Phase 2: GPU-Server + NAS-Pipeline (Tag 5-9)</div>
+    <div class="phase-sub">Ziel: Bilder werden auf GPU generiert und sicher auf DS925+ gespeichert.</div>
+
+    <div class="todo-row">
+      <input class="todo-check" data-key="plan2-p2-01" type="checkbox">
+      <div class="todo-text">GPU-Endpoint anbinden (RunPod/Lokal) fuer Job-Start, Status und Ergebnisdatei. <span class="effort">4-6h</span></div>
+      <span class="owner owner-a">A</span>
+    </div>
+    <div class="todo-row">
+      <input class="todo-check" data-key="plan2-p2-02" type="checkbox">
+      <div class="todo-text">Synology DS925+ Mount (NFS/SMB) inkl. Ordnerstruktur raw/exports/backups. <span class="effort">3-5h</span></div>
+      <span class="owner owner-a">A</span>
+    </div>
+    <div class="todo-row">
+      <input class="todo-check" data-key="plan2-p2-03" type="checkbox">
+      <div class="todo-text">End-to-End-Test: Job anlegen -> GPU Bild -> NAS speichern -> Preview im Admin. <span class="effort">2-3h</span></div>
+      <span class="owner owner-ab">A+B</span>
+    </div>
+    <div class="todo-row">
+      <input class="todo-check" data-key="plan2-p2-04" type="checkbox">
+      <div class="todo-text">Fehlerpfad testen (GPU offline/NAS offline) und Fallback-Meldungen im UI anzeigen. <span class="effort">2h</span></div>
+      <span class="owner owner-ab">A+B</span>
+    </div>
+    <div class="milestone">Meilenstein: Technische Kernfunktion steht (GPU-Generation + NAS-Ablage).</div>
+  </div>
+
+  <div class="phase-card">
+    <div class="phase-title">Phase 3: Unternehmensschritte und Rechtsgrundlagen (Tag 8-12)</div>
+    <div class="phase-sub">Ziel: Verkauf rechtlich sauber starten.</div>
+
+    <div class="todo-row">
+      <input class="todo-check" data-key="plan2-p3-01" type="checkbox">
+      <div class="todo-text">Gewerbeanmeldung + steuerliche Erfassung + Elster + Geschaeftskonto vorbereiten. <span class="effort">3-6h + Amtslaufzeit</span></div>
+      <span class="owner owner-b">B</span>
+    </div>
+    <div class="todo-row">
+      <input class="todo-check" data-key="plan2-p3-02" type="checkbox">
+      <div class="todo-text">Entscheidung: Kleinunternehmerregelung vs. Regelbesteuerung dokumentieren. <span class="effort">2h</span></div>
+      <span class="owner owner-ab">A+B</span>
+    </div>
+    <div class="todo-row">
+      <input class="todo-check" data-key="plan2-p3-03" type="checkbox">
+      <div class="todo-text">Impressum, Datenschutz, AGB/Widerruf fuer Website und Etsy finalisieren. <span class="effort">4-8h</span></div>
+      <span class="owner owner-b">B</span>
+    </div>
+    <div class="milestone">Meilenstein: Rechtlich freigegeben fuer ersten aktiven Verkauf.</div>
+  </div>
+
+  <div class="phase-card">
+    <div class="phase-title">Phase 4: Vertriebsprojekt 01 Launch (Woche 3-5)</div>
+    <div class="phase-sub">Ziel: Erste Umsaetze mit drei Produktlinien erzielen.</div>
+
+    <div class="todo-row">
+      <input class="todo-check" data-key="plan2-p4-01" type="checkbox">
+      <div class="todo-text">Shirt-Linie: 10 Listings (Nischenmotive), Printful-Fulfillment, Preislogik mit Zielmarge 40-55%. <span class="effort">8-12h</span></div>
+      <span class="owner owner-b">B</span>
+    </div>
+    <div class="todo-row">
+      <input class="todo-check" data-key="plan2-p4-02" type="checkbox">
+      <div class="todo-text">Karten-Linie: 10 Listings (Saison + Events), digital + physisch, Zielmarge 60-80% digital. <span class="effort">8-12h</span></div>
+      <span class="owner owner-b">B</span>
+    </div>
+    <div class="todo-row">
+      <input class="todo-check" data-key="plan2-p4-03" type="checkbox">
+      <div class="todo-text">Wissenschaftliche Bilder: 10 Assets (Poster/Infografik) fuer eigenen Shop + B2B-Musterdeck. <span class="effort">10-14h</span></div>
+      <span class="owner owner-ab">A+B</span>
+    </div>
+    <div class="todo-row">
+      <input class="todo-check" data-key="plan2-p4-04" type="checkbox">
+      <div class="todo-text">Kanalvergleich dokumentieren: Etsy vs. Eigener Shop vs. B2B-Direct (Conversion, Marge, Zeitbedarf). <span class="effort">3-4h</span></div>
+      <span class="owner owner-ab">A+B</span>
+    </div>
+    <div class="milestone">Meilenstein: Mindestens 30 Live-Produkte und erste valide Margendaten.</div>
+  </div>
+
+  <div class="phase-card">
+    <div class="phase-title">Phase 5: Webapp UX und Kunden-zum-Produkt-Flow (Woche 4-6)</div>
+    <div class="phase-sub">Ziel: Einfacher, messbarer Funnel von Interesse bis Kauf.</div>
+
+    <div class="todo-row">
+      <input class="todo-check" data-key="plan2-p5-01" type="checkbox">
+      <div class="todo-text">UX-Funnel bauen: Landing -> Kategorie -> Produktdetail -> Personalisierung -> Checkout. <span class="effort">8-12h</span></div>
+      <span class="owner owner-b">B</span>
+    </div>
+    <div class="todo-row">
+      <input class="todo-check" data-key="plan2-p5-02" type="checkbox">
+      <div class="todo-text">Produktseiten mit klaren Conversion-Elementen: Nutzen, Lieferzeit, FAQ, Trust-Elemente. <span class="effort">4-8h</span></div>
+      <span class="owner owner-b">B</span>
+    </div>
+    <div class="todo-row">
+      <input class="todo-check" data-key="plan2-p5-03" type="checkbox">
+      <div class="todo-text">Tracking einbauen: Click-through, Add-to-cart, Checkout-Abbruch, Conversion pro Kanal. <span class="effort">3-6h</span></div>
+      <span class="owner owner-a">A</span>
+    </div>
+    <div class="todo-row">
+      <input class="todo-check" data-key="plan2-p5-04" type="checkbox">
+      <div class="todo-text">KPI-Wochenroutine festlegen (2 Personen): Montag Planung, Mittwoch QA, Freitag Reporting. <span class="effort">1h/Woche</span></div>
+      <span class="owner owner-ab">A+B</span>
+    </div>
+    <div class="milestone">Meilenstein: Messbarer End-to-End-Kundenflow mit belastbaren KPIs.</div>
+  </div>
+
+  <div class="card green">
+    <h3>Zeitaufwand gesamt (realistisch fuer 2 Personen)</h3>
+    <table>
+      <thead>
+        <tr><th>Block</th><th>Geschaetzte Stunden</th><th>Dauer (Kalender)</th><th>Output</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Phase 0-1</td><td>15-25h</td><td>3-4 Tage</td><td>Stabile Basis unter /printbuddy</td></tr>
+        <tr><td>Phase 2</td><td>11-16h</td><td>3-4 Tage</td><td>GPU + NAS Pipeline aktiv</td></tr>
+        <tr><td>Phase 3</td><td>9-16h</td><td>4-7 Tage inkl. Behoerdenzeit</td><td>Rechtlich sauberer Verkaufsstart</td></tr>
+        <tr><td>Phase 4</td><td>29-42h</td><td>1-2 Wochen</td><td>Vertriebsprojekt mit 30 Produkten live</td></tr>
+        <tr><td>Phase 5</td><td>16-27h</td><td>1 Woche</td><td>UX-Funnel + KPI-Tracking</td></tr>
+        <tr><td><b>Gesamt MVP</b></td><td><b>80-126h</b></td><td><b>4-6 Wochen</b></td><td><b>Operatives Verkaufssystem</b></td></tr>
+      </tbody>
+    </table>
+    <p class="checklist-note">Querverweise: <a class="xref" href="#" onclick="showTab(4);return false;">ERP Modelle</a> | <a class="xref" href="#" onclick="showTab(8);return false;">Automatisierung</a> | <a class="xref" href="#" onclick="showTab(11);return false;">ROI</a></p>
+  </div>
+
+  <div class="card">
+    <h3>UX Kunden-zum-Produkt-Flow (MVP)</h3>
+<pre>
+Traffic (Etsy/SEO/Social/Ads)
+  -> Landing datemyhobby.com/printbuddy
+  -> Kategorie (Shirts | Karten | Wissenschaft)
+  -> Produktdetail (Vorschau + Nutzen + Lieferzeit + Bewertungen)
+  -> Personalisierung/Variante
+  -> Checkout (Shop/Plattform)
+  -> Produktion (GPU + Export + Fulfillment)
+  -> Versand/Download + Follow-up E-Mail
+</pre>
+    <p class="checklist-note">Vertiefung empfohlen bei Bedarf: Checkout UX, Warenkorb-Optimierung, Wiederkauf-Funnel.</p>
+  </div>
+</div>
+
+<!-- ============================================================ TAB 3: TECH ARCHITEKTUR -->
+<div class="section">
+  <h2>System-Architektur (Technisch)</h2>
+  <div class="card">
+    <h3>Übergeordnetes System-Diagramm</h3>
+<pre>
+┌──────────────────────────────────────────────────────────────────────┐
+│                         INTERNET / CLIENTS                           │
+│   Browser │ API-Clients │ Shopify-Webhooks │ Etsy-Manager-Tool       │
+└───────────────────────────┬──────────────────────────────────────────┘
+                            │ HTTPS (Nginx Reverse Proxy)
+                            ▼
+┌──────────────────────────────────────────────────────────────────────┐
+│                    VPS (HETZNER DEUTSCHLAND)                         │
+│  Ubuntu 22.04  │  4 vCPU  │  8–16 GB RAM  │  ~€ 10–20/Monat         │
+│                                                                      │
+│  ┌────────────────┐   ┌─────────────────┐   ┌─────────────────────┐ │
+│  │ Django (WSGI)  │   │  PostgreSQL 15  │   │  Redis 7 (Broker)   │ │
+│  │ Gunicorn:8000  │◄──│  Port 5432      │   │  Port 6379          │ │
+│  │ REST API + ERP │   │  Metadaten,     │   │  Task-Queue,        │ │
+│  │ Admin Portal   │   │  Jobs, Assets   │   │  Rate Limiting      │ │
+│  └───────┬────────┘   └─────────────────┘   └─────────────────────┘ │
+│          │ enqueue_task()                                            │
+└──────────┼───────────────────────────────────────────────────────────┘
+           │ Celery Task (via Redis)
+           ▼
+┌──────────────────────────────────────────────────────────────────────┐
+│                   GPU-SERVER (RunPod EU / Lokal)                     │
+│  NVIDIA RTX 4090  │  24 GB VRAM  │  ~€ 0,40/h (pay-per-use)         │
+│                                                                      │
+│  Celery Worker gpu_queue:                                            │
+│  ├─ generate_image(prompt, model, params) → raw_PNG                 │
+│  ├─ upscale_image(path, factor) → upscaled_TIFF                     │
+│  └─ inpaint/controlnet jobs                                         │
+│                                                                      │
+│  Celery Worker cpu_queue:                                            │
+│  ├─ convert_cmyk(tiff) → FOGRA51 CMYK TIFF                          │
+│  └─ export_pdf_x4(tiff, bleed_mm=3) → PDF/X-4                       │
+└──────────┬───────────────────────────────────────────────────────────┘
+           │ NFS v4 (Mount: /mnt/agency_nas)
+           ▼
+┌──────────────────────────────────────────────────────────────────────┐
+│              NAS STORAGE (SYNOLOGY — Lokal oder DE-Rechenzentrum)    │
+│  2x 8TB HDD im RAID-1  │  SMB3 (Win) + NFSv4 (Linux)                │
+│  /clients/[id]/raw_renders/   ← PNG direkt von GPU                   │
+│  /clients/[id]/print_ready/   ← CMYK TIFF + PDF/X-4                  │
+│  /pod_exports/                ← Designs für Etsy/Amazon/Redbubble    │
+│  /archive/YYYY/MM/            ← Abgeschlossene Projekte               │
+└──────────────────────────────────────────────────────────────────────┘
+</pre>
+  </div>
+  <div class="card">
+    <h3>Sicherheit & DSGVO-Konformität</h3>
+    <div class="grid2">
+      <div>
+        <h4>Server-Härtung</h4>
+        <ul>
+          <li>Nur Port 80/443 öffentlich (Nginx)</li>
+          <li>SSH nur per Key, fail2ban aktiv</li>
+          <li>PostgreSQL + Redis: localhost-only</li>
+          <li>Firewall: ufw (deny all, allow 22/80/443)</li>
+          <li>Hetzner-Datacenter: ausschließlich Deutschland (Nürnberg/Falkenstein)</li>
+        </ul>
+      </div>
+      <div>
+        <h4>DSGVO-Maßnahmen</h4>
+        <ul>
+          <li>Kundendaten nur auf EU-Servern (Hetzner DE)</li>
+          <li>Datenschutzerklärung + Cookie-Hinweis auf Website</li>
+          <li>Auftragsverarbeitungsvertrag (AVV) für B2B-Kunden</li>
+          <li>Recht auf Löschung: Soft-Delete in allen Modellen</li>
+          <li>Keine Weitergabe an US-Anbieter ohne SCCs</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ TAB 4: ERP SYSTEM -->
+<div class="section">
+  <h2>ERP System (Django Code Architecture)</h2>
+  <div class="card">
+    <h3>Client</h3>
+<pre>
+class Client(models.Model):
+    name = models.CharField(max_length=255)
+    email = models.EmailField(unique=True)
+    company = models.CharField(max_length=255)
+    vat_number = models.CharField(max_length=50, blank=True)   # USt-ID für Rechnungen
+    language = models.CharField(max_length=5, default='de')
+    notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+</pre>
+    <h3>Project</h3>
+<pre>
+class Project(models.Model):
+    client = models.ForeignKey(Client, on_delete=models.CASCADE)
+    name = models.CharField(max_length=255)
+    description = models.TextField()
+    budget_eur = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
+    deadline = models.DateField(null=True, blank=True)
+    status = models.CharField(choices=[
+        ("draft","Draft"), ("active","Active"),
+        ("paused","Paused"), ("completed","Completed")
+    ], default="draft")
+</pre>
+    <h3>AI Job (mit POD-Export-Support)</h3>
+<pre>
+class AIJob(models.Model):
+    campaign = models.ForeignKey(Campaign, on_delete=models.CASCADE)
+    prompt = models.ForeignKey(Prompt, on_delete=models.SET_NULL, null=True)
+    print_spec = models.ForeignKey('PrintSpec', on_delete=models.SET_NULL, null=True)
+    model_used = models.CharField(choices=[
+        ("flux_dev","FLUX Dev (Höchste Qualität)"),
+        ("flux_schnell","FLUX Schnell (Schnelltest)"),
+        ("sdxl","Stable Diffusion XL"),
+        ("custom_lora","Custom LoRA Model")
+    ])
+    num_images = models.IntegerField(default=4)
+    seed = models.BigIntegerField(null=True, blank=True)
+    steps = models.IntegerField(default=30)
+    guidance_scale = models.FloatField(default=7.5)
+    # POD-Export-Felder
+    pod_export_target = models.CharField(choices=[
+        ("none","Kein POD-Export"),
+        ("etsy","Etsy"),
+        ("redbubble","Redbubble"),
+        ("printful","Printful"),
+        ("amazon_merch","Amazon Merch")
+    ], default="none")
+    status = models.CharField(choices=[
+        ("queued","Queued"), ("running","Running"),
+        ("failed","Failed"), ("done","Done")
+    ], default="queued")
+    celery_task_id = models.CharField(max_length=255, blank=True)
+    cost_estimate_eur = models.DecimalField(max_digits=6, decimal_places=4, default=0)
+</pre>
+    <h3>PrintSpec</h3>
+<pre>
+class PrintSpec(models.Model):
+    name = models.CharField(max_length=50)
+    width_mm = models.DecimalField(max_digits=7, decimal_places=2)
+    height_mm = models.DecimalField(max_digits=7, decimal_places=2)
+    target_dpi = models.IntegerField(default=300)
+    color_profile = models.CharField(choices=[
+        ("FOGRA51","PSO Coated v3 (FOGRA51)"),
+        ("FOGRA52","PSO Uncoated v3 (FOGRA52)"),
+        ("FOGRA39","ISO Coated v2 (FOGRA39)"),
+    ], default="FOGRA51")
+    bleed_mm = models.DecimalField(max_digits=4, decimal_places=1, default=3)
+
+    @property
+    def width_px(self):
+        return int((float(self.width_mm) / 25.4) * self.target_dpi)
+
+    @property
+    def height_px(self):
+        return int((float(self.height_mm) / 25.4) * self.target_dpi)
+</pre>
+    <h3>Asset + Approval</h3>
+<pre>
+class Asset(models.Model):
+    job = models.ForeignKey(AIJob, on_delete=models.CASCADE)
+    print_spec = models.ForeignKey(PrintSpec, on_delete=models.SET_NULL, null=True)
+    preview_image = models.ImageField(upload_to="previews/")
+    master_tiff_path = models.CharField(max_length=500)
+    version = models.IntegerField(default=1)
+    type = models.CharField(choices=[
+        ("raw","Raw Output"), ("upscaled","Upscaled Master"),
+        ("print","Print Ready (CMYK)"), ("web","Web Optimized"),
+        ("pod_export","POD Export (RGB 300dpi)")  # Für Etsy/Redbubble/Printful
+    ])
+    color_space = models.CharField(choices=[("RGB","RGB"),("CMYK","CMYK")], default="RGB")
+    icc_profile_applied = models.CharField(max_length=100, blank=True)
+    metadata = models.JSONField(default=dict)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+class Approval(models.Model):
+    asset = models.ForeignKey(Asset, on_delete=models.CASCADE)
+    status = models.CharField(choices=[
+        ("pending","Pending"), ("approved","Approved"), ("rejected","Rejected")
+    ], default="pending")
+    comment = models.TextField(blank=True)
+    download_token = models.UUIDField(default=uuid.uuid4, unique=True)
+</pre>
+  </div>
+</div>
+
+<!-- ============================================================ TAB 5: PRODUCTION FLOW -->
+<div class="section">
+  <h2>Production Flow — Von Brief bis Druckfile</h2>
+  <div class="card">
+<pre>
+[ 1. BRIEF ] → Format (PrintSpec: A4/A3/T-Shirt/Karte), Stil, Budget im ERP
+       ↓
+[ 2. PROMPT ENGINEERING ] → Rohtext → strukturierter Prompt + Negativ-Prompt + LoRA
+       ↓
+[ 3. GPU GENERATION ] → FLUX-Dev: 4–8 Varianten á 1024px PNG (Celery: gpu_queue)
+       ↓
+[ 4. SELEKTION ] → Operator wählt beste Variante im Django-Admin
+       ↓
+[ 5. UPSCALING ] → Real-ESRGAN 4x / SUPIR für Großformate (tiled, VRAM-Split)
+       ↓
+[ 6. PFAD A: CMYK für Offsetdruck ]     [ PFAD B: RGB für POD / Etsy / Redbubble ]
+   sRGB TIFF → FOGRA51 CMYK TIFF           sRGB PNG 300DPI (kein CMYK nötig!)
+   + PDF/X-4 mit Beschnittmarken           + Mockup-Generierung (T-Shirt, Rahmen)
+       ↓                                       ↓
+[ 7. NAS-ARCHIVIERUNG ]               [ 7. AUTOMATISCHER SHOP-UPLOAD ]
+   /clients/[id]/print_ready/              Etsy API / Redbubble Upload / Printful
+       ↓
+[ 8. KUNDENFREIGABE ] → E-Mail + Vorschau-Link + signierter Download (TTL 7 Tage)
+</pre>
+  </div>
+</div>
+
+<!-- ============================================================ TAB 6: PRINT & DEEP TECH -->
+<div class="section">
+  <h2>Print-Technik & Auflösungen</h2>
+  <div class="card">
+    <h3>DPI-Berechnungen: Pixel = (mm / 25.4) × DPI</h3>
+    <table>
+      <thead>
+        <tr><th>Format / Produkt</th><th>Maß (mm)</th><th>Pixel 300 DPI</th><th>Megapixel</th><th>Upscale-Faktor</th><th>TIFF-Größe (LZW)</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Postkarte A6</td><td>105 × 148</td><td>1240 × 1748</td><td>2.2 MP</td><td>1.2×</td><td>~12 MB</td></tr>
+        <tr><td>Grußkarte A5</td><td>148 × 210</td><td>1748 × 2480</td><td>4.3 MP</td><td>1.7×</td><td>~25 MB</td></tr>
+        <tr><td>A4 Poster/Flyer</td><td>210 × 297</td><td>2480 × 3508</td><td>8.7 MP</td><td>2.5×</td><td>~50 MB</td></tr>
+        <tr><td>A3 Poster</td><td>297 × 420</td><td>3508 × 4960</td><td>17.4 MP</td><td>3.5×</td><td>~100 MB</td></tr>
+        <tr><td>A2 Poster</td><td>420 × 594</td><td>4960 × 7016</td><td>34.8 MP</td><td>5×</td><td>~200 MB</td></tr>
+        <tr><td>A1 Großplakat</td><td>594 × 841</td><td>7016 × 9933</td><td>69.6 MP</td><td>7× (tiled)</td><td>~400 MB</td></tr>
+        <tr><td>T-Shirt Aufdruck (Brustdruck)</td><td>300 × 300</td><td>3543 × 3543</td><td>12.6 MP</td><td>3.5×</td><td>PNG ~30 MB</td></tr>
+        <tr><td>T-Shirt Ganzdruck (All-Over)</td><td>508 × 762</td><td>6000 × 9000</td><td>54 MP</td><td>6× (tiled)</td><td>PNG ~150 MB</td></tr>
+        <tr><td>Tasse (Druck-Wrap)</td><td>207 × 95</td><td>2445 × 1122</td><td>2.7 MP</td><td>2.4×</td><td>PNG ~15 MB</td></tr>
+        <tr><td>F4 Großfläche (Werbung)</td><td>895 × 1280</td><td>10570 × 15118</td><td>160 MP</td><td>10× (progressive tiled)</td><td>~900 MB</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="card">
+    <h3>CMYK Farbprofile — Wann welches?</h3>
+    <table>
+      <thead>
+        <tr><th>Profil</th><th>Geeignet für</th><th>Tintenauftrag</th><th>Anwendung DE</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>FOGRA51 (PSO Coated v3)</td><td>Gestrichenes Papier, Hochglanz</td><td>330%</td><td>Magazine, Kataloge, Plakate, Hochglanzflyer</td></tr>
+        <tr><td>FOGRA52 (PSO Uncoated v3)</td><td>Naturpapier, Offset ungestrichen</td><td>300%</td><td>Zeitungen, Bücher, Briefpapier</td></tr>
+        <tr><td>FOGRA39 (ISO Coated v2)</td><td>Älterer DE-Standard, weit verbreitet</td><td>350%</td><td>FLYERALARM, Saxoprint (Standardprofil)</td></tr>
+      </tbody>
+    </table>
+    <p style="font-size:13px;color:#9ca3af;">Hinweis: POD-Dienste (Printful, Redbubble, Spreadshirt) arbeiten mit RGB — kein CMYK-Export nötig!</p>
+  </div>
+  <div class="card">
+    <h3>Python CMYK-Konverter (Produktionscode)</h3>
+<pre>
+# image_generator/utils/color_converter.py
+from PIL import Image, ImageCms
+import os
+
+ICC_PROFILES = {
+    "FOGRA51": "/usr/share/color/icc/PSOcoated_v3_FOGRA51.icc",
+    "FOGRA52": "/usr/share/color/icc/PSOuncoated_v3_FOGRA52.icc",
+    "FOGRA39": "/usr/share/color/icc/ISOcoated_v2_eci.icc",
+}
+
+def convert_rgb_to_print_cmyk(input_tiff_path, output_tiff_path, profile_key="FOGRA39"):
+    img = Image.open(input_tiff_path)
+    if img.mode != "RGB":
+        img = img.convert("RGB")
+    srgb = ImageCms.createProfile("sRGB")
+    target = ICC_PROFILES.get(profile_key)
+    if not target or not os.path.exists(target):
+        raise FileNotFoundError(f"ICC-Profil '{profile_key}' nicht gefunden")
+    cmyk_profile = ImageCms.getOpenProfile(target)
+    transform = ImageCms.buildTransform(
+        srgb, cmyk_profile, "RGB", "CMYK",
+        renderingIntent=ImageCms.INTENT_RELATIVE_COLORIMETRIC
+    )
+    cmyk_img = ImageCms.applyTransform(img, transform)
+    cmyk_img.save(output_tiff_path, format="TIFF",
+                  compression="tiff_lzw", icc_profile=cmyk_profile.tobytes())
+    return output_tiff_path
+</pre>
+  </div>
+</div>
+
+<!-- ============================================================ TAB 7: TECH DECISIONS -->
+<div class="section">
+  <h2>Technische Entscheidungen & Kosten</h2>
+  <div class="card">
+    <h3>Begründete Technologie-Entscheide</h3>
+    <table>
+      <thead>
+        <tr><th>Technologie</th><th>Wahl</th><th>Alternativen</th><th>Begründung</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Backend</td><td><b>Django 4.2 LTS</b></td><td>FastAPI, Flask</td><td>ORM, Admin, DRF — alles inklusive, Python-ML-Ökosystem</td></tr>
+        <tr><td>Datenbank</td><td><b>PostgreSQL 15</b></td><td>MySQL, SQLite</td><td>JSONField, ACID, skalierbar, kostenlos</td></tr>
+        <tr><td>Task Queue</td><td><b>Celery + Redis</b></td><td>Django-Q, RQ</td><td>Multi-Worker, Priority-Queues, Industriestandard</td></tr>
+        <tr><td>AI-Modell</td><td><b>FLUX Dev</b></td><td>SDXL, DALL·E</td><td>Offene Weights, kommerzielle Nutzung, beste Qualität 2025</td></tr>
+        <tr><td>Upscaler</td><td><b>Real-ESRGAN + SUPIR</b></td><td>Topaz Gigapixel</td><td>Open Source, CLI-integrierbar, kostenlos</td></tr>
+        <tr><td>Farbkonvertierung</td><td><b>Pillow + LittleCMS2</b></td><td>ImageMagick</td><td>Python-nativ, ICC-Profile direkt einbettbar</td></tr>
+        <tr><td>GPU-Hosting</td><td><b>RunPod EU</b></td><td>Vast.ai, AWS</td><td>Günstig, RTX 4090 ~€ 0,40/h, EU-Datacenter</td></tr>
+        <tr><td>VPS</td><td><b>Hetzner (Nürnberg/Falkenstein)</b></td><td>DigitalOcean</td><td>Günstigster EU-Anbieter, DSGVO-konform, DE-Datacenter</td></tr>
+        <tr><td>Storage</td><td><b>Synology NAS (lokal)</b></td><td>AWS S3, Backblaze</td><td>Einmalige Kosten, keine Traffic-Gebühren für Giga-TIFFs</td></tr>
+        <tr><td>POD-Fulfillment</td><td><b>Printful + Printify</b></td><td>Spreadshirt, Teespring</td><td>Größte Produktauswahl, DE-Lager, Shopify/Etsy-Integration</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="card orange">
+    <h3>Monatliche Kostenübersicht (Deutschland)</h3>
+    <table>
+      <thead>
+        <tr><th>Komponente</th><th>Kosten/Monat</th><th>Skalierbarkeit</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>VPS Hetzner CX32</td><td>€ 10–18</td><td>→ CX42 bei Wachstum (€ 28)</td></tr>
+        <tr><td>GPU RunPod (100 Bilder)</td><td>~€ 18–45</td><td>Linear skalierbar</td></tr>
+        <tr><td>GPU RunPod (1.000 Bilder)</td><td>~€ 90–180</td><td>Multi-Worker</td></tr>
+        <tr><td>Domain + SSL</td><td>€ 2–4</td><td>Fix</td></tr>
+        <tr><td>E-Mail Transaktional (Mailgun)</td><td>€ 5–10</td><td>Fix bis 50k Mails</td></tr>
+        <tr><td>Synology NAS (amortisiert)</td><td>€ 40–60</td><td>HDD erweiterbar</td></tr>
+        <tr><td>Etsy-Gebühren (20 Ct/Listing, 6,5% Provision)</td><td>variabel</td><td>Bei 100 Sales: ~€ 50 Gebühren</td></tr>
+        <tr><td><b>Total Fixkosten (ohne GPU)</b></td><td><b>~€ 60–100</b></td><td></td></tr>
+        <tr><td><b>Total 100 Bilder/Monat</b></td><td><b>~€ 80–145</b></td><td>Break-Even: 6–8 verkaufte Bilder</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="card green">
+    <h3>Skalierungs-Schwellwerte</h3>
+    <table>
+      <thead>
+        <tr><th>Bilder/Monat</th><th>Setup</th><th>GPU-Kosten</th><th>Empfohlene Infra</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>0–100</td><td>Solo-Start</td><td>~€ 20–50</td><td>1× RunPod Worker on-demand</td></tr>
+        <tr><td>100–1.000</td><td>Wachstum</td><td>~€ 100–200</td><td>2–3 parallele Workers, Celery Concurrency hoch</td></tr>
+        <tr><td>1.000–10.000</td><td>Skalierung</td><td>~€ 700–1.800</td><td>Dedicated GPU-Server (H100 Mietserver), RunPod Auto-Scaling</td></tr>
+        <tr><td>10.000+</td><td>Enterprise</td><td>~€ 2.500+</td><td>Kubernetes-Cluster, eigene GPU-Farm, Cloudflare R2 CDN</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ============================================================ TAB 8: AUTOMATISIERUNG -->
+<div class="section">
+  <h2>Automatisierung & Zukünftige Workflows</h2>
+  <div class="card">
+    <h3>Automatisierungsgrad nach Phase</h3>
+    <table>
+      <thead><tr><th>Schritt</th><th>Automatisiert?</th><th>Wie?</th></tr></thead>
+      <tbody>
+        <tr><td>GPU-Generierung</td><td>✅ Vollständig</td><td>Celery-Task nach Job-Erstellung</td></tr>
+        <tr><td>Upscaling</td><td>✅ Vollständig</td><td>Auto-Trigger nach Operator-Selektion</td></tr>
+        <tr><td>CMYK-Konvertierung</td><td>✅ Vollständig</td><td>Auto-Trigger nach Upscaling</td></tr>
+        <tr><td>NAS-Archivierung</td><td>✅ Vollständig</td><td>Celery I/O Task</td></tr>
+        <tr><td>Etsy/Redbubble Upload</td><td>✅ Vollständig (Phase 3)</td><td>Shop-APIs + Mockup-Generator</td></tr>
+        <tr><td>Prompt Engineering</td><td>⚠️ Teilweise</td><td>Template-System, Operator gibt Rohtext</td></tr>
+        <tr><td>Rechnungserstellung</td><td>⚠️ Manuell → Phase 4</td><td>Auto-Invoice: Anzahl Assets × Preis</td></tr>
+        <tr><td>LoRA-Training</td><td>◈ Geplant (Phase 5)</td><td>Kohya SS / SimpleTuner Pipeline</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="card cyan">
+    <h3>Automatisierungs-Features (Roadmap)</h3>
+    <h4>1. Batch CSV → 500 Designs automatisch</h4>
+<pre>
+# CSV: nische, prompt, format, varianten, pod_target
+# 001, "funny cat astronaut", T-Shirt, 3, printful
+# 002, "Berlin skyline minimal", A3-Poster, 4, etsy
+# → System generiert alle Jobs, exportiert fertig in Shops
+</pre>
+    <h4>2. Shopify Webhook: Neue Produkte → automatisch Bilder</h4>
+<pre>
+# POST /webhooks/shopify/new_product/
+# → Produkttitel + Kategorie lesen
+# → 3 Varianten generieren (weißer HG, Lifestyle, Detail-Shot)
+# → Via Shopify API zurück in den Shop laden
+</pre>
+    <h4>3. Saisonale Kampagnen-Automation</h4>
+    <ul>
+      <li>Vor Weihnachten (Oktober): 200 Weihnachtskarten-Designs generieren + auf Etsy uploaden</li>
+      <li>Vor Valentinstag: Liebes-Poster-Set automatisch erstellen</li>
+      <li>Cron-Job im ERP plant saisonale Batch-Jobs 8 Wochen im Voraus</li>
+    </ul>
+    <h4>4. LoRA Brand-Training</h4>
+    <ul>
+      <li>Kunden laden 20–30 Referenzbilder hoch</li>
+      <li>System trainiert LoRA automatisch (Kohya SS)</li>
+      <li>Alle zukünftigen Jobs nutzen das Kunden-LoRA → Markenkonformität</li>
+    </ul>
+    <h4>5. Auto-Qualitätsprüfung</h4>
+    <ul>
+      <li>CLIP-Score: Prompt vs. Bild (Schwellwert: 60) → Auto-Retry bei Unterschreitung</li>
+      <li>Blur-Detection: Unscharfe Bilder automatisch aussortieren</li>
+      <li>DPI-Check: Mindestauflösung vor Export prüfen</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ============================================================ TAB 9: PRINT-PRODUKTE & SHOPS -->
+<div class="section">
+  <h2>Print-Produkte & Shop-Strategie</h2>
+
+  <div class="card cyan">
+    <p>Das System generiert nicht nur "Bilder" — sondern fertige <b>verkaufbare Produkte</b> für physische und digitale Kanäle. Jedes generierte Motiv kann auf dutzende Produkte angewendet werden.</p>
+  </div>
+
+  <div class="card">
+    <h3>Produktkatalog: Was lässt sich verkaufen?</h3>
+    <div class="grid4" style="margin-top:10px;">
+      <div class="product-card">
+        <div class="icon">🖼️</div>
+        <h4>Poster & Wandbilder</h4>
+        <p style="font-size:12px;">A4 bis A0, Hochglanz, Matt, Leinwand, gerahmt</p>
+        <div class="price">€ 9–49 Verkaufspreis</div>
+        <div class="margin">Herstellkosten: € 3–12 (Printful)</div>
+        <div class="margin">Marge: 50–70%</div>
+      </div>
+      <div class="product-card">
+        <div class="icon">👕</div>
+        <h4>T-Shirts & Hoodies</h4>
+        <p style="font-size:12px;">Brustdruck, All-Over, Rückendruck; Unisex, Damen, Kinder</p>
+        <div class="price">€ 22–55 Verkaufspreis</div>
+        <div class="margin">Herstellkosten: € 10–20 (Printful)</div>
+        <div class="margin">Marge: 40–55%</div>
+      </div>
+      <div class="product-card">
+        <div class="icon">💌</div>
+        <h4>Grußkarten & Postkarten</h4>
+        <p style="font-size:12px;">A6 Postkarte, A5 Klappkarte, Sets à 5/10 Stück</p>
+        <div class="price">€ 3–18 Verkaufspreis</div>
+        <div class="margin">Herstellkosten: € 0,50–2 (Pixartprinting)</div>
+        <div class="margin">Marge: 60–80%</div>
+      </div>
+      <div class="product-card">
+        <div class="icon">📅</div>
+        <h4>Kalender</h4>
+        <p style="font-size:12px;">Wandkalender A3, Tischkalender A5, 12 Monate</p>
+        <div class="price">€ 19–39 Verkaufspreis</div>
+        <div class="margin">Herstellkosten: € 5–10 (FLYERALARM)</div>
+        <div class="margin">Marge: 55–75%</div>
+      </div>
+      <div class="product-card">
+        <div class="icon">☕</div>
+        <h4>Tassen & Drinkware</h4>
+        <p style="font-size:12px;">Keramik, Reisebecher, Thermobecher; Runddruck oder Patch</p>
+        <div class="price">€ 14–28 Verkaufspreis</div>
+        <div class="margin">Herstellkosten: € 5–9 (Printful)</div>
+        <div class="margin">Marge: 45–60%</div>
+      </div>
+      <div class="product-card">
+        <div class="icon">🧩</div>
+        <h4>Puzzles</h4>
+        <p style="font-size:12px;">500–1000 Teile, A4/A3-Motiv</p>
+        <div class="price">€ 19–34 Verkaufspreis</div>
+        <div class="margin">Herstellkosten: € 7–12 (Printful)</div>
+        <div class="margin">Marge: 45–60%</div>
+      </div>
+      <div class="product-card">
+        <div class="icon">📱</div>
+        <h4>Handyhüllen</h4>
+        <p style="font-size:12px;">iPhone, Samsung; Hard/Soft Case; Custom-Motiv</p>
+        <div class="price">€ 18–32 Verkaufspreis</div>
+        <div class="margin">Herstellkosten: € 7–12 (Printful)</div>
+        <div class="margin">Marge: 45–60%</div>
+      </div>
+      <div class="product-card">
+        <div class="icon">🎒</div>
+        <h4>Taschen & Accessoires</h4>
+        <p style="font-size:12px;">Tote Bag, Kissencover, Schreibtischunterlage</p>
+        <div class="price">€ 15–45 Verkaufspreis</div>
+        <div class="margin">Herstellkosten: € 5–15 (Printful)</div>
+        <div class="margin">Marge: 45–65%</div>
+      </div>
+      <div class="product-card">
+        <div class="icon">🏠</div>
+        <h4>Leinwandbilder</h4>
+        <p style="font-size:12px;">30×30 bis 90×120 cm, aufgespannt oder gerollt</p>
+        <div class="price">€ 35–120 Verkaufspreis</div>
+        <div class="margin">Herstellkosten: € 12–40 (Printful)</div>
+        <div class="margin">Marge: 55–70%</div>
+      </div>
+      <div class="product-card">
+        <div class="icon">🗂️</div>
+        <h4>Digitale Downloads</h4>
+        <p style="font-size:12px;">Druckbare PDF, PNG, SVG — kein physischer Versand</p>
+        <div class="price">€ 3–15 Verkaufspreis</div>
+        <div class="margin">Herstellkosten: € 0,01 (nur GPU)</div>
+        <div class="margin">Marge: 98%+</div>
+      </div>
+      <div class="product-card">
+        <div class="icon">🎁</div>
+        <h4>Geschenkpapier & Wrap</h4>
+        <p style="font-size:12px;">Rollenpapier, individuelles Muster-Design</p>
+        <div class="price">€ 8–22 Verkaufspreis</div>
+        <div class="margin">Herstellkosten: € 3–7 (Redbubble)</div>
+        <div class="margin">Marge: 40–60%</div>
+      </div>
+      <div class="product-card">
+        <div class="icon">🖨️</div>
+        <h4>Unternehmens-Drucksachen</h4>
+        <p style="font-size:12px;">Flyer, Visitenkarten, Briefbogen — B2B</p>
+        <div class="price">€ 80–500/Auftrag</div>
+        <div class="margin">Herstellkosten: € 5–30 (FLYERALARM)</div>
+        <div class="margin">Marge: 80–90%</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Nischen-Strategie für maximalen Etsy-Erfolg</h3>
+    <p>Statt generischer Motive: <b>Micro-Nischen</b> mit wenig Konkurrenz und hoher Kaufbereitschaft:</p>
+    <div class="grid3" style="margin-top:10px;">
+      <div style="background:#0d1527;padding:14px;border-radius:8px;">
+        <h4>Berufs-Nischen</h4>
+        <ul style="font-size:13px;">
+          <li>Krankenpfleger-Poster</li>
+          <li>Lehrer-Tasse</li>
+          <li>Feuerwehrmann-Hoodie</li>
+          <li>Koch-Wandbild</li>
+        </ul>
+      </div>
+      <div style="background:#0d1527;padding:14px;border-radius:8px;">
+        <h4>Hobby-Nischen</h4>
+        <ul style="font-size:13px;">
+          <li>Klettern, Bouldern Poster</li>
+          <li>Gaming-Wandbild</li>
+          <li>Garten-Kalender</li>
+          <li>Hunde-Rassen T-Shirt</li>
+        </ul>
+      </div>
+      <div style="background:#0d1527;padding:14px;border-radius:8px;">
+        <h4>Regionale Motive</h4>
+        <ul style="font-size:13px;">
+          <li>Hamburg Skyline Poster</li>
+          <li>Bayern Trachten-Design</li>
+          <li>Berlin-Typografie-Tasse</li>
+          <li>Schwarzwald Wandbild</li>
+        </ul>
+      </div>
+      <div style="background:#0d1527;padding:14px;border-radius:8px;">
+        <h4>Saisonale Produkte</h4>
+        <ul style="font-size:13px;">
+          <li>Weihnachts-Postkarten-Sets</li>
+          <li>Valentinstag-Poster</li>
+          <li>Ostern-Kinderkarten</li>
+          <li>Silvester-Wanddeko</li>
+        </ul>
+      </div>
+      <div style="background:#0d1527;padding:14px;border-radius:8px;">
+        <h4>Lifestyle & Ästhetik</h4>
+        <ul style="font-size:13px;">
+          <li>Botanische Drucke (Boho)</li>
+          <li>Minimalistische Architekturen</li>
+          <li>Retro-Vintage Stadtposter</li>
+          <li>Abstract Art Sets (3-teilig)</li>
+        </ul>
+      </div>
+      <div style="background:#0d1527;padding:14px;border-radius:8px;">
+        <h4>Personalisierung (on-demand)</h4>
+        <ul style="font-size:13px;">
+          <li>Name + Motiv-Kombis</li>
+          <li>Haustier-Portrait (LoRA)</li>
+          <li>Hochzeitsdatum-Poster</li>
+          <li>Baby-Geburtsposter</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="card green">
+    <h3>Print-on-Demand Fulfillment Partner</h3>
+    <table>
+      <thead>
+        <tr><th>Anbieter</th><th>Produkte</th><th>Lager DE?</th><th>Etsy-Integration</th><th>Besonderheit</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><b>Printful</b></td><td>T-Shirts, Poster, Tassen, Kissen, Hoodies</td><td>✅ Riga (EU)</td><td>✅ Direkt</td><td>Beste Qualität, etwas teurer</td></tr>
+        <tr><td><b>Printify</b></td><td>Alle gängigen Produkte</td><td>✅ DE-Drucker wählbar</td><td>✅ Direkt</td><td>Günstigster Preis, mehr Auswahl</td></tr>
+        <tr><td><b>Redbubble</b></td><td>60+ Produkte, inkl. Sticker, Puzzles</td><td>✅ International</td><td>Eigene Plattform</td><td>Passiv — kein eigener Shop nötig</td></tr>
+        <tr><td><b>Spreadshirt DE</b></td><td>Textilien, Accessoires</td><td>✅ DE (Leipzig)</td><td>Über Spreadshirt-Marktplatz</td><td>Starke DE-Community</td></tr>
+        <tr><td><b>FLYERALARM</b></td><td>Flyer, Plakate, Visitenkarten, Kalender</td><td>✅ DE (Würzburg)</td><td>❌ Kein POD, B2B-API</td><td>FOGRA39-Standard, günstiger Offsetdruck</td></tr>
+        <tr><td><b>Saxoprint</b></td><td>Drucksachen, Großformat</td><td>✅ DE (Dresden)</td><td>❌ B2B-API vorhanden</td><td>FOGRA51, sehr gute Qualität</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ============================================================ TAB 10: VERTRIEBSKANÄLE -->
+<div class="section">
+  <h2>Vertriebskanäle — Vollständige Übersicht</h2>
+
+  <div class="card">
+    <h3>Kanalübersicht</h3>
+    <div class="grid2">
+      <div>
+        <h4>🛍️ Marktplätze (B2C passiv)</h4>
+        <span class="channel-badge ch-etsy">Etsy</span>
+        <span class="channel-badge ch-amazon">Amazon Merch</span>
+        <span class="channel-badge ch-amazon">Redbubble</span>
+        <span class="channel-badge ch-amazon">Society6</span>
+        <span class="channel-badge ch-amazon">Creative Market</span>
+        <span class="channel-badge ch-amazon">Design Bundles</span>
+      </div>
+      <div>
+        <h4>🌐 Eigenkanal</h4>
+        <span class="channel-badge ch-own">Eigene Website</span>
+        <span class="channel-badge ch-own">Shopify-Shop</span>
+        <span class="channel-badge ch-own">Django REST API</span>
+        <span class="channel-badge ch-own">Newsletter</span>
+      </div>
+      <div style="margin-top:12px;">
+        <h4>🤝 B2B & Lizenzierung</h4>
+        <span class="channel-badge ch-print">Adobe Stock</span>
+        <span class="channel-badge ch-print">Shutterstock</span>
+        <span class="channel-badge ch-print">Agentur-Flatrate</span>
+        <span class="channel-badge ch-print">White-Label API</span>
+        <span class="channel-badge ch-print">FLYERALARM Partnerschaft</span>
+      </div>
+      <div style="margin-top:12px;">
+        <h4>📱 Social & Content</h4>
+        <span class="channel-badge ch-social">LinkedIn (B2B)</span>
+        <span class="channel-badge ch-social">Instagram (B2C)</span>
+        <span class="channel-badge ch-social">Pinterest (Inspiration)</span>
+        <span class="channel-badge ch-social">YouTube (How-To)</span>
+        <span class="channel-badge ch-social">TikTok (Virales)</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="card orange">
+    <h3>Etsy — Strategie im Detail</h3>
+    <div class="grid2">
+      <div>
+        <h4>Shop-Aufbau</h4>
+        <ul>
+          <li>Shop-Name: Nischenbezogen (z.B. "NordlichterDesign")</li>
+          <li>Banner + Profilbild professionell mit AI generieren</li>
+          <li>Mindestens 20 Listings beim Start für Sichtbarkeit</li>
+          <li>Produkttitel: SEO-Keywords vorne (z.B. "Poster Berlin Skyline Wandbild A3 druckbar")</li>
+          <li>Tags: alle 13 erlaubten Tags nutzen (Long-tail Keywords)</li>
+        </ul>
+      </div>
+      <div>
+        <h4>Digitale Downloads (höchste Marge)</h4>
+        <ul>
+          <li>PDF oder PNG-Datei → sofortiger Download, kein Versand</li>
+          <li>Preis: € 3–15 pro Design</li>
+          <li>Mehrsprachige Listings (DE + EN für internationale Käufer)</li>
+          <li>Bundle-Listings: "10er Poster-Set Boho" → höherer Warenkorb</li>
+          <li>Kennzeichnung: "KI-generiertes Design" (Etsy-Pflicht)</li>
+        </ul>
+      </div>
+    </div>
+    <h4>Django → Etsy-Automatisierungspipeline</h4>
+<pre>
+# Celery Task: auto_publish_to_etsy
+# 1. Design generieren (FLUX) + Upscale auf 300dpi
+# 2. Mockup erzeugen (Poster in Wohnzimmer, T-Shirt auf Model via Printful Mock API)
+# 3. Etsy Listing via Etsy API v3 erstellen:
+#    - Titel, Tags, Beschreibung aus Prompt-Template
+#    - 5–10 Produktbilder (Design + Mockups)
+#    - Preis + Kategorie
+# 4. Asset-Eintrag in Django DB mit etsy_listing_id speichern
+</pre>
+  </div>
+
+  <div class="card">
+    <h3>Amazon Merch on Demand</h3>
+    <ul>
+      <li><b>Was ist das?</b> Amazon produziert und versendet T-Shirts, Hoodies, Tassen auf Anfrage — komplett passiv</li>
+      <li><b>Royalty:</b> ~ 15–25% pro Verkauf (bei € 20 T-Shirt: ~€ 3–5 Royalty)</li>
+      <li><b>Zugang:</b> Bewerbung nötig (Warteliste, Tier-System 10→25→100→500→1000+ Slots)</li>
+      <li><b>Strategie:</b> Nischen-Designs mit wenig Konkurrenz, hohe Suchvolumina (z.B. "Dackel Mama" statt "Hund")</li>
+      <li><b>Django-Integration:</b> Designs als PNG 4500×5400px exportieren, manuell oder über inoffizielle Tools hochladen</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h3>Redbubble & Society6 — Passiver Einkommensstrom</h3>
+    <div class="grid2">
+      <div>
+        <h4>Redbubble</h4>
+        <ul>
+          <li>1 Design → 60+ Produkttypen automatisch</li>
+          <li>Royalty: 20% Aufschlag auf Basispreis frei einstellbar</li>
+          <li>Keine Shop-Gebühren, keine Mindestanzahl</li>
+          <li>Starke internationale Community (USA, AUS, UK)</li>
+          <li>Schwäche: kein DE-Lager → 10–14 Tage Lieferzeit</li>
+        </ul>
+      </div>
+      <div>
+        <h4>Society6</h4>
+        <ul>
+          <li>Premium-Kunstposter, Leinwände, Wohnaccessoires</li>
+          <li>Höherpreisige Zielgruppe (Kunstaffinität)</li>
+          <li>Royalty: 10% (Poster), 5–10% (andere Produkte)</li>
+          <li>Gut für: Botanische Prints, Abstrakte Kunst, Architektur</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="card green">
+    <h3>Eigene Website / Shopify — Volle Kontrolle</h3>
+    <ul>
+      <li><b>Plattform:</b> Shopify Basic (€ 27/Monat) oder WooCommerce (selbst gehostet)</li>
+      <li><b>Fulfillment:</b> Printful-Plugin → automatischer Druck & Versand</li>
+      <li><b>Vorteil vs. Etsy:</b> Keine Provision (nur Stripe ~2,9%), eigene Kundendaten, Branding</li>
+      <li><b>SEO-Strategie:</b> Blog-Beiträge ("Beste Poster für minimalistisches Wohnzimmer"), Pinterest-Pins</li>
+      <li><b>E-Mail-Liste:</b> Rabatt-Code als Lead-Magnet → Newsletter für Wiederkäufer</li>
+      <li><b>Django-Backend Integration:</b> Webhook bei Bestellung → Generierung kundenspezifischer Variante → Printful-Upload</li>
+    </ul>
+  </div>
+
+  <div class="card cyan">
+    <h3>Adobe Stock / Shutterstock — Lizenz-Einnahmen</h3>
+    <table>
+      <thead>
+        <tr><th>Plattform</th><th>Royalty/Download</th><th>Anforderungen</th><th>Volumen nötig für € 500/Monat</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Adobe Stock</td><td>€ 0,25–3,00</td><td>Modell-Release bei Personen, keine Logos</td><td>~500–2.000 Downloads</td></tr>
+        <tr><td>Shutterstock</td><td>€ 0,10–1,20</td><td>Technische Qualitätsprüfung</td><td>~500–5.000 Downloads</td></tr>
+        <tr><td>Getty / iStock</td><td>€ 1,50–20,00</td><td>Kuratiert, Qualitätshürde hoch</td><td>~50–300 Downloads</td></tr>
+        <tr><td>Dreamstime</td><td>€ 0,20–1,00</td><td>Niedrig, guter Einstieg</td><td>~500–2.500 Downloads</td></tr>
+      </tbody>
+    </table>
+    <p style="font-size:13px;color:#9ca3af;">⚠️ Hinweis: KI-generierte Inhalte müssen bei allen Plattformen als solche deklariert werden. Adobe Stock und Shutterstock haben separate KI-Kategorien eingeführt.</p>
+  </div>
+
+  <div class="card">
+    <h3>B2B Preismodelle für Deutschland</h3>
+    <table>
+      <thead>
+        <tr><th>Modell</th><th>Preis</th><th>Zielgruppe</th><th>Inkludiert</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Einzelbild</td><td>€ 20–60</td><td>Einmalige Anfragen</td><td>1 finales Bild, 3 Varianten, CMYK TIFF</td></tr>
+        <tr><td>10er-Paket</td><td>€ 150–400</td><td>KMUs, Selbstständige</td><td>10 Bilder, 30 Tage gültig</td></tr>
+        <tr><td>Flatrate S</td><td>€ 390/Monat</td><td>Kleine Agenturen</td><td>50 Bilder/Monat, 24h Lieferzeit</td></tr>
+        <tr><td>Flatrate M</td><td>€ 790/Monat</td><td>Verlage, Mittelagenturen</td><td>150 Bilder/Monat, LoRA-Styling, API</td></tr>
+        <tr><td>White-Label API</td><td>€ 1.200+/Monat</td><td>Druckereien, Tech-Partner</td><td>Unlimitiert, eigenes Branding</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ============================================================ TAB 11: BUSINESS LOGIC -->
+<div class="section">
+  <h2>Business Logic & ROI-Analyse</h2>
+
+  <div class="card green">
+    <h3>Return on Investment — Beide Geschäftsmodelle</h3>
+    <table>
+      <thead>
+        <tr><th>Szenario</th><th>Bilder/Monat</th><th>Einnahmen</th><th>Kosten</th><th>Gewinn/Monat</th><th>Marge</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>B2C Start: Etsy digitale Downloads</td><td>200 generiert, 50 verkauft</td><td>€ 350</td><td>€ 80</td><td>€ 270</td><td>77%</td></tr>
+        <tr><td>B2C+POD: Etsy + Redbubble + Amazon</td><td>500 generiert, 150 verkauft</td><td>€ 900</td><td>€ 140</td><td>€ 760</td><td>84%</td></tr>
+        <tr><td>B2B: 3 Flatrate-S-Kunden</td><td>150</td><td>€ 1.170</td><td>€ 175</td><td>€ 995</td><td>85%</td></tr>
+        <tr><td>Mix: B2B + B2C (realistisch, Monat 6)</td><td>400</td><td>€ 2.800</td><td>€ 350</td><td>€ 2.450</td><td>87%</td></tr>
+        <tr><td>Skaliert (2×M + B2C + Lizenzen)</td><td>1.200</td><td>€ 6.200</td><td>€ 700</td><td>€ 5.500</td><td>89%</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <h3>Klassisch vs. AI — Kostenvergleich Deutschland</h3>
+    <table>
+      <thead>
+        <tr><th>Leistung</th><th>Klassisch (€)</th><th>Mit AI-System (€)</th><th>Einsparung</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>A4 Werbebild (print-ready)</td><td>180–500</td><td>12–25</td><td>~95%</td></tr>
+        <tr><td>T-Shirt-Design für POD</td><td>80–200 (Grafiker)</td><td>1–3</td><td>~98%</td></tr>
+        <tr><td>Grußkarten-Set (10 Motive)</td><td>500–1.500</td><td>10–30</td><td>~98%</td></tr>
+        <tr><td>Jahreskalender (12 Motive)</td><td>1.200–3.000</td><td>20–50</td><td>~98%</td></tr>
+        <tr><td>Produktkatalog (50 Bilder)</td><td>5.000–20.000</td><td>50–200</td><td>~99%</td></tr>
+        <tr><td>Großflächensujet F4 (druckfertig)</td><td>1.000–3.500</td><td>50–100</td><td>~97%</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card orange">
+    <h3>Akquise-Prioritäten (Deutschland)</h3>
+    <ul>
+      <li><span class="green-text">SOFORT:</span> <b>Etsy digitale Downloads starten</b> — kein Kapital nötig, sofortige Einnahmen möglich</li>
+      <li><span class="green-text">SOFORT:</span> <b>Redbubble-Account anlegen</b> — 50 Designs hochladen, passiv laufen lassen</li>
+      <li><span class="green-text">MONAT 2:</span> <b>Kleine Werbeagenturen DE (5–20 MA)</b> — direkter ROI-Nachweis möglich</li>
+      <li><span class="orange-text">MONAT 3:</span> <b>E-Commerce-Händler auf Amazon/Shopify</b> — hohe Wiederholungsrate</li>
+      <li><span class="orange-text">MONAT 4:</span> <b>Shopify-Eigenshop + Printful</b> — kein Etsy-Anteil mehr</li>
+      <li><span class="orange-text">MONAT 5:</span> <b>Adobe Stock / Shutterstock</b> — passive Lizenzeinnahmen aufbauen</li>
+      <li><span class="red-text">MONAT 6+:</span> <b>FLYERALARM / Saxoprint White-Label-Partnership</b> — langer Saleszyklus</li>
+    </ul>
+  </div>
+
+  <div class="card cyan">
+    <h3>3-Jahres-Vision Deutschland</h3>
+    <p><b>Jahr 1:</b> System aufgebaut, 3–8 B2B-Kunden, Etsy + Redbubble aktiv, Einnahmen € 2.000–6.000/Monat</p>
+    <p><b>Jahr 2:</b> SaaS-Portal Self-Service, 200+ Etsy/Amazon-Listings, Shopify-Eigenshop, € 8.000–20.000/Monat</p>
+    <p><b>Jahr 3:</b> White-Label für 2–3 Druckereien, Lizenzeinnahmen Stock-Plattformen, ARR > € 150.000</p>
+    <p><b>Exit-Option:</b> Verkauf des Systems (Infrastruktur + Kundenstamm + trainierte Modelle) an Druckerei-Kette oder Mediahaus. Bewertet nach 2–3× Jahresumsatz.</p>
+  </div>
+</div>
+
+<script>
+function showTab(index){
+  const sections = document.querySelectorAll(".section");
+  const tabs = document.querySelectorAll(".tab");
+  for(let i=0;i<sections.length;i++){
+    sections[i].classList.remove("active");
+    tabs[i].classList.remove("active");
+  }
+  sections[index].classList.add("active");
+  tabs[index].classList.add("active");
+}
+
+(function () {
+  const checks = document.querySelectorAll(".todo-check");
+  checks.forEach(function (cb) {
+    const key = "printbuddy-plan-" + cb.getAttribute("data-key");
+    const saved = localStorage.getItem(key);
+    if (saved === "1") {
+      cb.checked = true;
+    }
+    cb.addEventListener("change", function () {
+      localStorage.setItem(key, cb.checked ? "1" : "0");
+    });
+  });
+})();
+</script>
+</body>
+</html>

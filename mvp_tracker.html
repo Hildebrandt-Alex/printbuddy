@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PrintBuddy &mdash; MVP Tracker</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #0b0f1a; color: #c9d1e0; font-family: 'Segoe UI', system-ui, sans-serif; font-size: 14px; line-height: 1.6; }
+    header { background: linear-gradient(135deg, #131929 0%, #1a1f35 100%); border-bottom: 2px solid #7a5cff; padding: 16px 28px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
+    header h1 { color: #fff; font-size: 1.3rem; }
+    header p { color: #5a6a7e; font-size: 0.78rem; margin-top: 2px; }
+    .ref-links { display: flex; gap: 8px; flex-wrap: wrap; }
+    .ref-link { color: #7a5cff; text-decoration: none; font-size: 0.8rem; border: 1px solid #7a5cff44; padding: 5px 12px; border-radius: 4px; white-space: nowrap; }
+    .ref-link:hover { background: #7a5cff22; }
+    .progress-bar-wrapper { background: #131929; border-bottom: 1px solid #1e2540; padding: 8px 28px; position: sticky; top: 0; z-index: 200; }
+    .progress-text { color: #c9d1e0; font-size: 0.78rem; margin-bottom: 6px; }
+    .progress-track { background: #0b0f1a; border-radius: 4px; height: 8px; overflow: hidden; border: 1px solid #1e2540; }
+    #progress-bar { height: 100%; border-radius: 4px; transition: width 0.4s ease, background-color 0.4s; width: 0%; background: #7a5cff; }
+    .tabs { display: flex; flex-wrap: wrap; background: #0f1424; border-bottom: 1px solid #1e2540; padding: 0 16px; gap: 2px; }
+    .tab { padding: 10px 15px; cursor: pointer; color: #8896aa; font-size: 0.79rem; border-bottom: 2px solid transparent; transition: all 0.2s; white-space: nowrap; }
+    .tab:hover { color: #c9d1e0; background: #7a5cff11; }
+    .tab.active { color: #7a5cff; border-bottom-color: #7a5cff; background: #7a5cff11; }
+    .section { display: none; padding: 28px 32px; max-width: 1200px; }
+    .section.active { display: block; }
+    h2 { color: #fff; font-size: 1.25rem; margin-bottom: 6px; }
+    h3 { color: #a78bfa; font-size: 0.95rem; margin: 22px 0 8px; }
+    p { color: #8896aa; margin-bottom: 10px; font-size: 0.85rem; }
+    .card { background: #131929; border: 1px solid #1e2540; border-radius: 8px; padding: 16px 20px; margin-bottom: 14px; }
+    .card.yellow { border-left: 3px solid #f59e0b; }
+    .card.accent { border-left: 3px solid #7a5cff; }
+    table { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 0.82rem; }
+    th { background: #1a1f35; color: #7a5cff; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.5px; padding: 8px 12px; text-align: left; border: 1px solid #1e2540; }
+    td { padding: 8px 12px; border: 1px solid #1e2540; color: #c9d1e0; vertical-align: top; }
+    tr:hover td { background: #131929; }
+    pre { background: #080c16; border: 1px solid #1e2540; border-radius: 6px; padding: 14px 16px; overflow-x: auto; font-size: 0.75rem; line-height: 1.75; color: #a8d8a8; margin: 10px 0; font-family: 'Consolas', 'Monaco', monospace; }
+    code { color: #a78bfa; font-family: monospace; font-size: 0.85em; }
+    .milestone { background: #7a5cff18; border: 1px dashed #7a5cff55; border-radius: 6px; padding: 10px 16px; margin: 12px 0; color: #a78bfa; font-size: 0.83rem; }
+    .check-row { display: flex; align-items: flex-start; gap: 10px; padding: 7px 12px; border-radius: 6px; transition: background 0.15s; }
+    .check-row:hover { background: #131929; }
+    .check-row input[type="checkbox"] { margin-top: 2px; accent-color: #7a5cff; width: 14px; height: 14px; flex-shrink: 0; cursor: pointer; }
+    .check-row input:checked + .cl-text { text-decoration: line-through; color: #4a5568; }
+    .cl-text { color: #c9d1e0; font-size: 0.83rem; }
+    .cl-text small { display: block; color: #5a6a7e; font-size: 0.73rem; margin-top: 1px; }
+    .gate-box { background: #78350f22; border: 1px solid #f59e0b55; border-radius: 8px; padding: 12px 18px; margin: 20px 0; }
+    .gate-label { color: #fcd34d; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-bottom: 6px; }
+    .gate-box p { color: #e2a22a; font-size: 0.83rem; margin: 0; }
+    .info-section { background: #080c16; border: 1px solid #1e2540; border-radius: 8px; padding: 16px 20px; margin-top: 24px; }
+    .info-section > h3 { color: #5a6a7e; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 1px; margin-top: 0; margin-bottom: 14px; }
+    .info-point { margin-bottom: 14px; }
+    .info-point strong { color: #a78bfa; font-size: 0.83rem; display: block; margin-bottom: 3px; }
+    .info-point p { color: #8896aa; font-size: 0.8rem; margin: 0; }
+    .poc { background: #131929; border: 1px solid #1e2540; border-radius: 8px; padding: 14px 18px; margin-bottom: 10px; }
+    .poc-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; flex-wrap: wrap; gap: 6px; }
+    .poc-title { color: #fff; font-weight: 600; font-size: 0.88rem; }
+    .poc-time { color: #5a6a7e; font-size: 0.72rem; font-family: monospace; }
+    .poc-gate { color: #8896aa; font-size: 0.78rem; margin-bottom: 8px; }
+    .poc-mini-bar { height: 4px; background: #0b0f1a; border-radius: 2px; overflow: hidden; border: 1px solid #1e2540; }
+    .poc-mini-fill { height: 100%; border-radius: 2px; background: #7a5cff; transition: width 0.4s; width: 0%; }
+    .hint-box { background: #92400e22; border: 1px solid #f59e0b55; border-radius: 8px; padding: 12px 18px; margin-bottom: 16px; }
+    .hint-box p { color: #fde68a; font-size: 0.83rem; margin: 0; }
+    .hint-box strong { color: #fcd34d; }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #0b0f1a; }
+    ::-webkit-scrollbar-thumb { background: #2d3748; border-radius: 3px; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>PrintBuddy &mdash; MVP Tracker</h1>
+    <p>Phase 0&ndash;6 &middot; datemyhobby.com &middot; Backend + Gallery</p>
+  </div>
+  <div class="ref-links">
+    <a class="ref-link" href="copilot-instructions.md" target="_blank">&rarr; Architektur-Referenz</a>
+    <a class="ref-link" href="umsetzungsplan.html" target="_blank">&rarr; Umsetzungsplan</a>
+  </div>
+</header>
+
+<div class="progress-bar-wrapper">
+  <div id="progress-text" class="progress-text">0 / 76 Schritte abgeschlossen (0%)</div>
+  <div class="progress-track"><div id="progress-bar"></div></div>
+</div>
+
+<div class="tabs">
+  <div class="tab active" onclick="showTab(0)">0 &Uuml;bersicht</div>
+  <div class="tab" onclick="showTab(1)">1 Phase 0 Setup</div>
+  <div class="tab" onclick="showTab(2)">2 Phase 1 Models</div>
+  <div class="tab" onclick="showTab(3)">3 Phase 2 VPS</div>
+  <div class="tab" onclick="showTab(4)">4 Phase 3 GPU</div>
+  <div class="tab" onclick="showTab(5)">5 Phase 4 Studio</div>
+  <div class="tab" onclick="showTab(6)">6 Phase 5+6 Galerie</div>
+</div>
+
+<!-- TAB 0: UBERSICHT -->
+<div class="section active" id="s0">
+  <h2>MVP &Uuml;bersicht</h2>
+  <p>Alle 7 Phasen von der Django-Scaffolding bis zur &ouml;ffentlichen Galerie mit Mockups. Checkboxen werden im Browser gespeichert (<code>localStorage</code>, Prefix <code>mvp-</code>).</p>
+
+  <h3>Phasen-Fortschritt</h3>
+  <div class="poc">
+    <div class="poc-header"><span class="poc-title">Phase 0 &mdash; Django Projektstruktur</span><span class="poc-time">Tag 1 &middot; ~4h</span></div>
+    <div class="poc-gate">Gate: <code>manage.py check</code> ohne Fehler. Admin unter custom URL. GitHub Repo online.</div>
+    <div class="poc-mini-bar"><div class="poc-mini-fill" id="bar-p0"></div></div>
+  </div>
+  <div class="poc">
+    <div class="poc-header"><span class="poc-title">Phase 1 &mdash; Models + Admin</span><span class="poc-time">Tag 2&ndash;3 &middot; ~8h</span></div>
+    <div class="poc-gate">Gate: GalleryImage hochladen &rarr; Thumbnail erscheint. PipelineTemplate anlegen. Job (draft) erstellen.</div>
+    <div class="poc-mini-bar"><div class="poc-mini-fill" id="bar-p1"></div></div>
+  </div>
+  <div class="poc">
+    <div class="poc-header"><span class="poc-title">Phase 2 &mdash; VPS Einrichten</span><span class="poc-time">Parallel zu Phase 1</span></div>
+    <div class="poc-gate">Gate: deploy.sh l&auml;uft durch. Admin HTTPS erreichbar. NAS-Mount sichtbar. Celery online. Bestehende Projekte laufen noch.</div>
+    <div class="poc-mini-bar"><div class="poc-mini-fill" id="bar-p2"></div></div>
+  </div>
+  <div class="poc">
+    <div class="poc-header"><span class="poc-title">Phase 3 &mdash; GPU Pipeline</span><span class="poc-time">Woche 2 &middot; ~2 Tage</span></div>
+    <div class="poc-gate">Gate: MOCK_GPU=true alle JobSteps done. VPS: echtes Bild unter /mnt/agency_nas/exports/preview/. Vast.ai Fallback greift.</div>
+    <div class="poc-mini-bar"><div class="poc-mini-fill" id="bar-p3"></div></div>
+  </div>
+  <div class="poc">
+    <div class="poc-header"><span class="poc-title">Phase 4 &mdash; Studio App</span><span class="poc-time">Woche 3 &middot; ~1.5 Tage</span></div>
+    <div class="poc-gate">Gate: studio_worker erstellt Job. Admin startet via Custom Action. HTMX Status-Update ohne Page-Reload. /admin/ gibt 403.</div>
+    <div class="poc-mini-bar"><div class="poc-mini-fill" id="bar-p4"></div></div>
+  </div>
+  <div class="poc">
+    <div class="poc-header"><span class="poc-title">Phase 5+6 &mdash; Galerie + Mockups</span><span class="poc-time">Woche 3&ndash;4</span></div>
+    <div class="poc-gate">Gate: 5 Bilder &ouml;ffentlich. /gallery/ zeigt Grid. Filter OK. Mockup-Status=ready nach Freigabe.</div>
+    <div class="poc-mini-bar"><div class="poc-mini-fill" id="bar-p56"></div></div>
+  </div>
+
+  <div class="card yellow" style="margin-top:24px">
+    <h3 style="margin-top:0;color:#fcd34d">&#9888; VPS: Bestehende Projekte beachten</h3>
+    <p style="color:#fde68a;margin:0"><strong>VPS besteht bereits &mdash; datemyhobby.com &mdash; andere Projekte laufen bereits darauf.</strong> PrintBuddy verwendet Port <code>8001</code>, Gunicorn-Service <code>gunicorn.printbuddy</code>, Celery-Services <code>celery-printbuddy-gpu</code> und <code>celery-printbuddy-cpu</code>. Bestehende Services, Nginx-Configs und Datenbanken anderer Projekte niemals ver&auml;ndern.</p>
+  </div>
+
+  <h3>Tech-Stack</h3>
+  <div class="card">
+    <table>
+      <tr><th>Layer</th><th>Technologie</th><th>Version</th><th>Zweck</th></tr>
+      <tr><td>Web-Framework</td><td>Django</td><td>4.2 LTS</td><td>App-Server, Admin, ORM, Templates, Sessions</td></tr>
+      <tr><td>Sprache</td><td>Python</td><td>3.11</td><td>Laufzeit</td></tr>
+      <tr><td>Datenbank</td><td>PostgreSQL</td><td>15</td><td>Persistenz, JSONField, UUID-PKs</td></tr>
+      <tr><td>Task-Queue Broker</td><td>Redis</td><td>7</td><td>Celery-Broker</td></tr>
+      <tr><td>Task-Queue</td><td>Celery</td><td>5</td><td>GPU-Tasks + CPU-Postprocessing, 2 Queues</td></tr>
+      <tr><td>GPU prim&auml;r</td><td>RunPod EU</td><td>&mdash;</td><td>FLUX Schnell + SDXL + Real-ESRGAN, On-Demand ~&euro;0.40/h</td></tr>
+      <tr><td>GPU Fallback</td><td>Vast.ai</td><td>&mdash;</td><td>Automatisch bei RunPod-Exception</td></tr>
+      <tr><td>Asset-Speicher</td><td>Synology DS925+</td><td>NFS v4 + Tailscale</td><td>Rohdaten, Exports, Bundles, Backups</td></tr>
+      <tr><td>Fulfillment</td><td>Printful API</td><td>v2</td><td>POD-Druck, Mockup-Generierung, Versand</td></tr>
+    </table>
+  </div>
+
+  <h3>Git-Workflow</h3>
+  <div class="card accent">
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:0.82rem">
+      <div style="background:#0f1424;border:1px solid #7a5cff44;border-radius:6px;padding:7px 14px;font-family:monospace;font-size:0.77rem;text-align:center">Local<br><span style="color:#5a6a7e;font-size:0.7rem">SQLite + MOCK_GPU=true</span></div>
+      <span style="color:#7a5cff;font-size:1.3rem">&rarr;</span>
+      <div style="background:#0f1424;border:1px solid #1e2540;border-radius:6px;padding:7px 14px;font-family:monospace;font-size:0.77rem;text-align:center">feature/xxx<br><span style="color:#5a6a7e;font-size:0.7rem">Lokal entwickeln + testen</span></div>
+      <span style="color:#7a5cff;font-size:1.3rem">&rarr;</span>
+      <div style="background:#0f1424;border:1px solid #1e2540;border-radius:6px;padding:7px 14px;font-family:monospace;font-size:0.77rem;text-align:center">PR &rarr; main<br><span style="color:#5a6a7e;font-size:0.7rem">Review + Merge</span></div>
+      <span style="color:#7a5cff;font-size:1.3rem">&rarr;</span>
+      <div style="background:#14532d;border:1px solid #22c55e44;border-radius:6px;padding:7px 14px;font-family:monospace;font-size:0.77rem;text-align:center">deploy.sh<br><span style="color:#4ade80;font-size:0.7rem">VPS Auto-Deploy &lt;5 Min</span></div>
+    </div>
+    <p style="margin:10px 0 0;font-size:0.78rem;color:#5a6a7e">Branch-Typen: <code>feature/&lt;thema&gt;</code> &middot; <code>fix/&lt;thema&gt;</code> &middot; <code>adr/&lt;nummer&gt;</code> &nbsp;|&nbsp; Commits: <code>feat:</code> / <code>fix:</code> / <code>adr:</code> / <code>chore:</code></p>
+  </div>
+</div>
+
+<!-- TAB 1: PHASE 0 SETUP -->
+<div class="section" id="s1">
+  <h2>Phase 0 &mdash; Django Projektstruktur</h2>
+  <p>Tag 1 &middot; ~4 Stunden &middot; Ziel: Lauff&auml;higes Django-Ger&uuml;st mit allen 10 Apps, settings-Split, .env-Konfiguration und GitHub Repo.</p>
+
+  <div class="check-row"><input type="checkbox" class="sp-check" data-key="p0-01"><span class="cl-text">python -m venv venv + aktivieren<small>Windows: <code>venv\Scripts\activate</code> &middot; Linux/Mac: <code>source venv/bin/activate</code></small></span></div>
+  <div class="check-row"><input type="checkbox" class="sp-check" data-key="p0-02"><span class="cl-text">pip install Django==4.2.* celery redis Pillow stripe runpod django-environ psycopg2-binary black isort whitenoise<small>Danach: <code>pip freeze &gt; requirements.txt</code></small></span></div>
+  <div class="check-row"><input type="checkbox" class="sp-check" data-key="p0-03"><span class="cl-text">django-admin startproject printbuddy . &mdash; Projektstruktur anlegen<small>Punkt am Ende wichtig &rarr; kein extra Unterordner &middot; Ergebnis: manage.py im Root</small></span></div>
+  <div class="check-row"><input type="checkbox" class="sp-check" data-key="p0-04"><span class="cl-text">10 Apps anlegen: gallery shop jobs studio gpu postprocess bundles etsy channels partners<small><code>python manage.py startapp &lt;name&gt;</code> f&uuml;r jede App</small></span></div>
+  <div class="check-row"><input type="checkbox" class="sp-check" data-key="p0-05"><span class="cl-text">settings/ splitten &mdash; base.py &middot; local.py &middot; production.py<small>django-environ: DATABASE_URL, SECRET_KEY, ALLOWED_HOSTS nur aus .env lesen</small></span></div>
+  <div class="check-row"><input type="checkbox" class="sp-check" data-key="p0-06"><span class="cl-text">.env + .env.example anlegen &middot; .env in .gitignore &mdash; niemals committen!<small>Alle Secrets und API-Keys in .env &middot; .env.example zeigt Struktur ohne echte Werte</small></span></div>
+  <div class="check-row"><input type="checkbox" class="sp-check" data-key="p0-07"><span class="cl-text">LOCAL_DEV=true &middot; MOCK_GPU=true &middot; DEBUG=true in .env &middot; SQLite f&uuml;r lokale Dev<small>MOCK_GPU=true &rarr; generate_image gibt Placeholder-PNG zur&uuml;ck, kein RunPod-API-Call</small></span></div>
+  <div class="check-row"><input type="checkbox" class="sp-check" data-key="p0-08"><span class="cl-text">python manage.py migrate (SQLite) + createsuperuser &middot; Custom Admin-URL setzen<small>Nie /admin/ als URL-Pfad (Security) &middot; Custom Path in urls.py</small></span></div>
+  <div class="check-row"><input type="checkbox" class="sp-check" data-key="p0-09"><span class="cl-text">GitHub Repo anlegen &middot; git init &amp;&amp; git commit -m "feat: Phase 0 scaffold"<small>SSH-Key f&uuml;r GitHub konfigurieren &middot; .env darf nicht im ersten Commit sein</small></span></div>
+  <div class="check-row"><input type="checkbox" class="sp-check" data-key="p0-10"><span class="cl-text">requirements.txt + .gitignore + README.md committen und pushen<small>README.md: Projektname, Setup-Anleitung, Link zu copilot-instructions.md</small></span></div>
+
+  <div class="gate-box">
+    <div class="gate-label">&#10003; GATE-CHECK &mdash; Phase 0</div>
+    <p><code>python manage.py check</code> ohne Fehler. <code>runserver</code> zeigt Admin unter custom URL erreichbar. GitHub Repo online. <code>.env</code> nicht im Repo (<code>git log --all -- .env</code> zeigt keine Treffer).</p>
+  </div>
+
+  <div class="info-section">
+    <h3>&#128214; Projektstruktur erkl&auml;rt</h3>
+    <div class="info-point"><strong>Warum settings/ aufteilen?</strong><p>Lokal l&auml;uft SQLite (schnell, kein Server n&ouml;tig), auf dem VPS PostgreSQL 15. DEBUG=True lokal erlaubt, DEBUG=False auf VPS Pflicht. <code>local.py</code> importiert <code>from .base import *</code> und &uuml;berschreibt nur was n&ouml;tig ist.</p></div>
+    <div class="info-point"><strong>Warum MOCK_GPU=true lokal?</strong><p>RunPod kostet Geld pro GPU-Minute. Mit MOCK_GPU=true kann die gesamte Celery-Chain, JobStep-Status-Tracking und File-Saving getestet werden ohne echten API-Call. Placeholder-PNG wird ins richtige Verzeichnis geschrieben.</p></div>
+    <div class="info-point"><strong>INSTALLED_APPS &mdash; alle 10 Apps eintragen</strong><p>Django muss jede App kennen damit Migrations, Admin-Registrierungen und Templates funktionieren.</p></div>
+<pre>INSTALLED_APPS = [
+    'django.contrib.admin',
+    'django.contrib.auth',
+    'django.contrib.contenttypes',
+    'django.contrib.sessions',
+    'django.contrib.messages',
+    'django.contrib.staticfiles',
+    # PrintBuddy Apps
+    'gallery', 'shop', 'jobs', 'studio',
+    'gpu', 'postprocess', 'bundles', 'etsy',
+    'channels', 'partners',
+]</pre>
+    <div class="info-point"><strong>Warum .env niemals committen?</strong><p>API-Keys, DB-Passw&ouml;rter und SECRET_KEY im Git-Repo w&auml;ren ein kritisches Sicherheitsrisiko &mdash; auch in privaten Repos. .env.example zeigt die Struktur, auf VPS manuell anlegen.</p></div>
+  </div>
+</div>
+
+<!-- TAB 2: PHASE 1 MODELS -->
+<div class="section" id="s2">
+  <h2>Phase 1 &mdash; Models + Admin</h2>
+  <p>Tag 2&ndash;3 &middot; ~8 Stunden &middot; Alle Datenmodelle aus der Architektur-Referenz implementieren, Admin konfigurieren, erste Migration erstellen.</p>
+
+  <div class="check-row"><input type="checkbox" class="sp-check" data-key="p1-01"><span class="cl-text">gallery/models.py &mdash; GalleryImage mit UUID PK + _generate_thumbnail() via Pillow<small>Thumbnail 600&times;600 JPEG in save() &middot; ImageField upload_to='gallery/full/' und 'gallery/thumbs/'</small></span></div>
+  <div class="check-row"><input type="checkbox" class="sp-check" data-key="p1-02"><span class="cl-text">jobs/models.py &mdash; PipelineTemplate, Job, JobStep, PromptTemplate<small>Boolean Flags f&uuml;r alle Pipeline-Steps &middot; Job.status + JobStep.status als TextChoices</small></span></div>
+  <div class="check-row"><input type="checkbox" class="sp-check" data-key="p1-03"><span class="cl-text">shop/models.py &mdash; Product, ProductVariant (required_export_types JSONField), Order, OrderLine<small>printful_variant_id pro Variante &middot; Order.shipping_address als JSONField (von Stripe, nie direkt vom User)</small></span></div>
+  <div class="check-row"><input type="checkbox" class="sp-check" data-key="p1-04"><span class="cl-text">shop/models.py &mdash; ImageProduct (Bild&harr;Produkt-Verkn&uuml;pfung, mockup_file, mockup_status)<small>unique_together = [('image', 'product')] &middot; mockup_status: pending / generating / ready / failed</small></span></div>
+  <div class="check-row"><input type="checkbox" class="sp-check" data-key="p1-05"><span class="cl-text">channels/models.py &mdash; SalesChannel (channel_type TextChoices, api_key, webhook_url)<small>channel_type: own_shop / etsy / woocommerce / shopify / manual</small></span></div>
+  <div class="check-row"><input type="checkbox" class="sp-check" data-key="p1-06"><span class="cl-text">partners/models.py &mdash; FulfillmentPartner (user OneToOneField, export_formats JSONField), PartnerProduct, PartnerVariant<small>PartnerProduct: unique_together (partner, product) &middot; PartnerVariant: unique_together (partner, variant)</small></span></div>
+  <div class="check-row"><input type="checkbox" class="sp-check" data-key="p1-07"><span class="cl-text">bundles/models.py &mdash; PrintBundle (order FK, asset_ids JSONField, bundle_path, status)<small>status: pending / building / ready / delivered</small></span></div>
+  <div class="check-row"><input type="checkbox" class="sp-check" data-key="p1-08"><span class="cl-text">Admin registrieren f&uuml;r alle Modelle &mdash; list_display, list_filter, search_fields<small>@admin.register(ModelName) Decorator &middot; sinnvolle Felder f&uuml;r schnellen &Uuml;berblick</small></span></div>
+  <div class="check-row"><input type="checkbox" class="sp-check" data-key="p1-09"><span class="cl-text">Custom Admin Action start_selected_jobs auf JobAdmin &mdash; setzt status=queued<small>ADR-11: nur Admin darf Jobs starten &middot; studio_workers k&ouml;nnen Jobs nur als draft anlegen</small></span></div>
+  <div class="check-row"><input type="checkbox" class="sp-check" data-key="p1-10"><span class="cl-text">makemigrations --name initial_models &middot; migrate<small><code>python manage.py makemigrations --name initial_models &amp;&amp; python manage.py migrate</code></small></span></div>
+
+  <div class="gate-box">
+    <div class="gate-label">&#10003; GATE-CHECK &mdash; Phase 1</div>
+    <p>GalleryImage via Admin hochladen &rarr; Thumbnail erscheint automatisch. PipelineTemplate mit Step-Flags anlegen. Job mit status=draft erstellen und im Admin sehen. Alle Migrations ohne Fehler.</p>
+  </div>
+
+  <div class="info-section">
+    <h3>&#128214; Models erkl&auml;rt</h3>
+    <div class="info-point"><strong>Warum UUID Primary Keys &uuml;berall?</strong><p>Keine sequenziellen IDs in URLs (kein /order/1/ /order/2/ &mdash; Enumeration-Angriff m&ouml;glich). Besser f&uuml;r verteilte Systeme. <code>id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)</code></p></div>
+    <div class="info-point"><strong>Warum JSONField f&uuml;r required_export_types?</strong><p>Jede Produktvariante braucht andere Dateiformate: Poster braucht CMYK TIFF, T-Shirt nur PNG 300dpi (POD). JSONField ist flexibel ohne extra Tabelle. Beispiel: <code>['pod', 'cmyk', 'preview']</code></p></div>
+    <div class="info-point"><strong>Warum FulfillmentPartner.user = OneToOneField?</strong><p>Partner-Dashboard nutzt Djangos eingebautes Auth-System. <code>user.fulfillmentpartner</code> gibt den Partner-Datensatz zur&uuml;ck. is_staff=False verhindert Admin-Zugang.</p></div>
+    <div class="info-point"><strong>Warum GalleryImage.source_job_id kein FK?</strong><p>Loses Coupling &mdash; Gallery-App wei&szlig; nichts von Jobs-App. Kein zirkul&auml;rer Import zwischen Apps. UUID-Referenz ohne DB-Constraint.</p></div>
+  </div>
+</div>
+
+<!-- TAB 3: PHASE 2 VPS -->
+<div class="section" id="s3">
+  <h2>Phase 2 &mdash; VPS Einrichten</h2>
+  <p>Parallel zu Phase 1 &middot; Ziel: PrintBuddy auf dem bestehenden VPS deployen ohne andere Projekte zu st&ouml;ren.</p>
+
+  <div class="hint-box">
+    <p><strong>&#9888; VPS besteht bereits mit anderen Projekten auf datemyhobby.com.</strong> Eigenen Port 8001, eigene Service-Namen (<code>gunicorn.printbuddy</code>, <code>celery-printbuddy-gpu</code>, <code>celery-printbuddy-cpu</code>) und eigene PostgreSQL-DB verwenden. Bestehende Nginx-Configs, Services und Datenbanken anderer Projekte niemals anpassen.</p>
+  </div>
+
+  <div class="check-row"><input type="checkbox" class="sp-check" data-key="p2-01"><span class="cl-text">Python 3.11 pr&uuml;fen/installieren &middot; <code>python3.11 --version</code><small>Falls fehlt: <code>sudo apt install python3.11 python3.11-venv python3.11-dev</code></small></span></div>
+  <div class="check-row"><input type="checkbox" class="sp-check" data-key="p2-02"><span class="cl-text">/opt/printbuddy/ Verzeichnis anlegen<small><code>sudo mkdir /opt/printbuddy &amp;&amp; sudo chown $USER /opt/printbuddy</code></small></span></div>
+  <div class="check-row"><input type="checkbox" class="sp-check" data-key="p2-03"><span class="cl-text">GitHub Deploy-Key f&uuml;r VPS einrichten<small><code>ssh-keygen -t ed25519 -C "vps-printbuddy"</code> &rarr; Public Key in GitHub Repo &rarr; Settings &rarr; Deploy Keys</small></span></div>
+  <div class="check-row"><input type="checkbox" class="sp-check" data-key="p2-04"><span class="cl-text">git clone &lt;repo&gt; /opt/printbuddy<small><code>git clone git@github.com:user/printbuddy.git /opt/printbuddy</code></small></span></div>
+  <div class="check-row"><input type="checkbox" class="sp-check" data-key="p2-05"><span class="cl-text">python3.11 -m venv /opt/printbuddy/venv &middot; pip install -r requirements.txt<small><code>source /opt/printbuddy/venv/bin/activate &amp;&amp; pip install -r requirements.txt</code></small></span></div>
+  <div class="check-row"><input type="checkbox" class="sp-check" data-key="p2-06"><span class="cl-text">PostgreSQL DB + User anlegen &mdash; eigene DB, kein Konflikt<small><code>sudo -u postgres createdb printbuddy &amp;&amp; sudo -u postgres createuser printbuddy</code> &middot; sicheres Passwort</small></span></div>
+  <div class="check-row"><input type="checkbox" class="sp-check" data-key="p2-07"><span class="cl-text">.env f&uuml;r Production in /opt/printbuddy/ anlegen<small>DATABASE_URL, SECRET_KEY &ge;50 Zeichen, DEBUG=False, ALLOWED_HOSTS=datemyhobby.com</small></span></div>
+  <div class="check-row"><input type="checkbox" class="sp-check" data-key="p2-08"><span class="cl-text">python manage.py migrate --settings=printbuddy.settings.production<small>Erst nach DB + .env konfiguriert. Pr&uuml;fen ob alle Tabellen angelegt wurden.</small></span></div>
+  <div class="check-row"><input type="checkbox" class="sp-check" data-key="p2-09"><span class="cl-text">Nginx vhost f&uuml;r datemyhobby.com anlegen &mdash; upstream 127.0.0.1:8001<small>Port 8001 (eigener Port!) &middot; Bestehende Nginx-Configs nicht ver&auml;ndern</small></span></div>
+  <div class="check-row"><input type="checkbox" class="sp-check" data-key="p2-10"><span class="cl-text">Gunicorn systemd Service: gunicorn.printbuddy.service &middot; bind 127.0.0.1:8001, 4 workers<small>Eindeutiger Service-Name &mdash; kein Konflikt mit anderen Gunicorn-Instanzen</small></span></div>
+  <div class="check-row"><input type="checkbox" class="sp-check" data-key="p2-11"><span class="cl-text">Celery systemd: celery-printbuddy-gpu.service (gpu_queue, concurrency=1) + celery-printbuddy-cpu.service (cpu_queue, concurrency=2)<small>Eindeutige Namen &mdash; kein Konflikt mit anderen Projekten</small></span></div>
+  <div class="check-row"><input type="checkbox" class="sp-check" data-key="p2-12"><span class="cl-text">Tailscale pr&uuml;fen &middot; <code>tailscale status</code> &mdash; NAS erreichbar?<small>NAS muss im Tailscale-Netz sichtbar sein bevor NFS-Mount konfiguriert wird</small></span></div>
+  <div class="check-row"><input type="checkbox" class="sp-check" data-key="p2-13"><span class="cl-text">NFS Mount /mnt/agency_nas/ &middot; /etc/fstab Eintrag via Tailscale VPN<small><code>100.x.x.x:/volume1/agency /mnt/agency_nas nfs4 defaults,_netdev 0 0</code></small></span></div>
+  <div class="check-row"><input type="checkbox" class="sp-check" data-key="p2-14"><span class="cl-text">Ordnerstruktur NAS anlegen<small><code>mkdir -p /mnt/agency_nas/{raw,exports/{pod,offset,preview,vector},gallery,bundles,backups/{db,media}}</code></small></span></div>
+  <div class="check-row"><input type="checkbox" class="sp-check" data-key="p2-15"><span class="cl-text">certbot &mdash; TLS f&uuml;r datemyhobby.com pr&uuml;fen, neuen vhost erg&auml;nzen wenn n&ouml;tig<small><code>certbot renew --dry-run</code> &middot; Bestehendes Zertifikat gilt meist auch f&uuml;r neue vhosts</small></span></div>
+  <div class="check-row"><input type="checkbox" class="sp-check" data-key="p2-16"><span class="cl-text">deploy.sh unter /opt/printbuddy/deploy.sh anlegen + ausf&uuml;hrbar machen<small><code>chmod +x /opt/printbuddy/deploy.sh</code> &middot; Inhalt siehe Code-Block unten</small></span></div>
+  <div class="check-row"><input type="checkbox" class="sp-check" data-key="p2-17"><span class="cl-text">Erster Deploy-Test: <code>ssh user@vps "bash /opt/printbuddy/deploy.sh"</code><small>Muss in &lt;5 Min durchlaufen. Admin HTTPS erreichbar. Celery-Services online in Flower.</small></span></div>
+
+  <div class="gate-box">
+    <div class="gate-label">&#10003; GATE-CHECK &mdash; Phase 2</div>
+    <p>deploy.sh l&auml;uft ohne Fehler. Admin unter datemyhobby.com/... &uuml;ber HTTPS erreichbar. <code>ls /mnt/agency_nas/raw/</code> zeigt Ordner. Celery-Workers als online in Flower. Andere bestehende Projekte laufen noch fehlerfrei.</p>
+  </div>
+
+  <div class="info-section">
+    <h3>&#128214; VPS-Konfiguration erkl&auml;rt</h3>
+    <div class="info-point"><strong>Warum Port 8001?</strong><p>Andere Projekte auf dem VPS belegen m&ouml;glicherweise Port 8000. Nginx routet von au&szlig;en (:443) intern zu den jeweiligen Ports. Ports sind nur auf localhost gebunden, nie direkt von au&szlig;en erreichbar.</p></div>
+    <div class="info-point"><strong>Warum eigene systemd Service-Namen?</strong><p>Service-Namen m&uuml;ssen auf dem System einzigartig sein. <code>celery-printbuddy-gpu</code> stellt sicher, dass kein Namenskonflikt mit anderen Projekten entsteht.</p></div>
+    <div class="info-point"><strong>deploy.sh Inhalt</strong></div>
+<pre>#!/bin/bash
+set -e
+cd /opt/printbuddy
+git pull origin main
+source venv/bin/activate
+pip install -r requirements.txt --quiet
+python manage.py migrate --settings=printbuddy.settings.production --run-syncdb
+python manage.py collectstatic --noinput --clear --settings=printbuddy.settings.production
+sudo systemctl restart gunicorn.printbuddy
+sudo systemctl restart celery-printbuddy-gpu celery-printbuddy-cpu
+echo "Deploy $(git rev-parse --short HEAD) done"</pre>
+    <div class="info-point"><strong>Rollback</strong><p><code>git revert HEAD --no-edit &amp;&amp; git push &amp;&amp; ssh user@vps "bash /opt/printbuddy/deploy.sh"</code></p></div>
+  </div>
+</div>
+
+<!-- TAB 4: PHASE 3 GPU -->
+<div class="section" id="s4">
+  <h2>Phase 3 &mdash; GPU Pipeline</h2>
+  <p>Woche 2 &middot; ~2 Tage &middot; Celery-Tasks f&uuml;r Bildgenerierung und Nachbearbeitung. MOCK_GPU=true f&uuml;r sicheres lokales Testing ohne API-Kosten.</p>
+
+  <div class="check-row"><input type="checkbox" class="sp-check" data-key="p3-01"><span class="cl-text">RunPod Account + Endpoint anlegen &middot; RTX 4090, EU-Datacenter<small>FLUX Schnell + SDXL f&uuml;r Generierung, Real-ESRGAN f&uuml;r Upscaling &middot; Separate Endpoints f&uuml;r Generate + Upscale</small></span></div>
+  <div class="check-row"><input type="checkbox" class="sp-check" data-key="p3-02"><span class="cl-text">RUNPOD_API_KEY + RUNPOD_ENDPOINT_ID + RUNPOD_UPSCALE_ENDPOINT in .env (lokal + VPS)</span></div>
+  <div class="check-row"><input type="checkbox" class="sp-check" data-key="p3-03"><span class="cl-text">VASTAI_API_KEY in .env &mdash; Vast.ai als automatischer Fallback<small>Wird automatisch aktiviert wenn RunPod eine Exception wirft</small></span></div>
+  <div class="check-row"><input type="checkbox" class="sp-check" data-key="p3-04"><span class="cl-text">gpu/tasks.py &mdash; generate_image Task<small>MOCK_GPU=true &rarr; Placeholder PNG &middot; MOCK_GPU=false &rarr; runpod.run_sync(timeout=300) &middot; Exception &rarr; Vast.ai Fallback</small></span></div>
+  <div class="check-row"><input type="checkbox" class="sp-check" data-key="p3-05"><span class="cl-text">gpu/tasks.py &mdash; upscale_image Task &middot; Real-ESRGAN 4x via RunPod Upscale-Endpoint<small>Ergebnis in /mnt/agency_nas/raw/ speichern &middot; JobStep.output_asset_id setzen</small></span></div>
+  <div class="check-row"><input type="checkbox" class="sp-check" data-key="p3-06"><span class="cl-text">postprocess/tasks.py &mdash; pod_export &middot; PNG 300dpi sRGB &rarr; /exports/pod/<small>Pillow: img.save(path, 'PNG', dpi=(300,300)) &middot; Color mode RGB</small></span></div>
+  <div class="check-row"><input type="checkbox" class="sp-check" data-key="p3-07"><span class="cl-text">postprocess/tasks.py &mdash; preview_export &middot; JPG 72dpi max 1200px &rarr; /exports/preview/ (IMMER ausf&uuml;hren!)<small>thumbnail((1200,1200)) + JPEG quality=85 &middot; Dieser Step l&auml;uft immer, unabh&auml;ngig von Template-Flags</small></span></div>
+  <div class="check-row"><input type="checkbox" class="sp-check" data-key="p3-08"><span class="cl-text">postprocess/tasks.py &mdash; cmyk_export &middot; Pillow &rarr; TIFF + Ghostscript &rarr; PDF/X-4 3mm Bleed<small>Konditionaler Step (step_cmyk=True) &middot; TIFF als Zwischenschritt, dann gs f&uuml;r PDF/X-4</small></span></div>
+  <div class="check-row"><input type="checkbox" class="sp-check" data-key="p3-09"><span class="cl-text">postprocess/tasks.py &mdash; vectorize_image &middot; Inkscape CLI + Potrace &rarr; SVG &rarr; /exports/vector/<small>Konditionaler Step &middot; inkscape --export-type=svg &middot; ADR-10: Inkscape + Potrace Open Source</small></span></div>
+  <div class="check-row"><input type="checkbox" class="sp-check" data-key="p3-10"><span class="cl-text">postprocess/tasks.py &mdash; auto_qa &middot; CLIP-Score + Blur-Check<small>Konditionaler Step &middot; JobStep.error_msg bei Fail &middot; Kein Hard-Stop &mdash; nur markiert als failed</small></span></div>
+  <div class="check-row"><input type="checkbox" class="sp-check" data-key="p3-11"><span class="cl-text">jobs/services.py &mdash; build_pipeline_chain(job_id) &middot; chain(*steps) mit .si()<small>Liest PipelineTemplate.step_* Flags und baut die Celery-Chain dynamisch auf</small></span></div>
+  <div class="check-row"><input type="checkbox" class="sp-check" data-key="p3-12"><span class="cl-text">jobs/tasks.py &mdash; notify_studio &middot; setzt Job.status='done' am Ende der Chain</span></div>
+  <div class="check-row"><input type="checkbox" class="sp-check" data-key="p3-13"><span class="cl-text">Alle Tasks: bind=True, max_retries=3 &middot; JobStep.status='running' beim Start schreiben<small>@app.task(bind=True, max_retries=3) &middot; step.status='running' beim Start, 'done'/'failed' am Ende</small></span></div>
+  <div class="check-row"><input type="checkbox" class="sp-check" data-key="p3-14"><span class="cl-text">Lokaler Test mit MOCK_GPU=true &middot; alle JobSteps done, preview-Datei vorhanden<small>Job via Admin starten &rarr; Celery Worker lokal l&auml;uft &rarr; alle Steps gr&uuml;n &rarr; Preview-Datei im Ordner</small></span></div>
+  <div class="check-row"><input type="checkbox" class="sp-check" data-key="p3-15"><span class="cl-text">VPS Test mit echtem RunPod Key &middot; Bild unter /mnt/agency_nas/exports/preview/ sichtbar<small>MOCK_GPU=false auf VPS setzen f&uuml;r diesen Test</small></span></div>
+
+  <div class="gate-box">
+    <div class="gate-label">&#10003; GATE-CHECK &mdash; Phase 3</div>
+    <p>MOCK_GPU=true: alle JobStep.status=done, Preview-Datei lokal vorhanden. VPS: echtes Bild unter /mnt/agency_nas/exports/preview/. Vast.ai Fallback greift wenn RUNPOD_API_KEY auf invalid gesetzt wird.</p>
+  </div>
+
+  <div class="info-section">
+    <h3>&#128214; GPU Pipeline erkl&auml;rt</h3>
+    <div class="info-point"><strong>Warum .si() (immutable signatures)?</strong><p>Celery-Chain &uuml;bergibt normalerweise den Return-Value als erstes Argument des n&auml;chsten Tasks. .si() ignoriert den Return-Value &mdash; jeder Task l&auml;dt seinen Zustand selbst aus der DB per job_id. Verhindert unerwartete Argument-Fehler.</p></div>
+    <div class="info-point"><strong>Warum nur UUIDs als Task-Argumente?</strong><p>ORM-Objekte sind nicht JSON-serialisierbar f&uuml;r Redis. UUID &rarr; Task l&auml;dt Objekt selbst aus DB. Wenn zwischen Queue und Ausf&uuml;hrung die DB ge&auml;ndert wurde, l&auml;dt der Task immer den aktuellen Stand.</p></div>
+    <div class="info-point"><strong>Lizenz-Regel: flux_dev NICHT f&uuml;r Verkauf!</strong><p>flux_schnell (Apache 2.0) &rarr; &#10003; kommerziell erlaubt &middot; sdxl (CreativeML Rail+M) &rarr; &#10003; erlaubt &middot; flux_dev &rarr; &#10007; VERBOTEN f&uuml;r Verkauf (nur intern/Test) &middot; custom_lora &rarr; &#9888; Basis-Modell pr&uuml;fen!</p></div>
+<pre>Job queued
+  --> generate_image.si(job_id)      [gpu_queue]
+  --> upscale_image.si(job_id)       [gpu_queue]
+  --> cmyk_export.si(job_id)         [cpu_queue]  (step_cmyk=True)
+  --> pod_export.si(job_id)          [cpu_queue]  (step_pod_export=True)
+  --> preview_export.si(job_id)      [cpu_queue]  (IMMER)
+  --> vectorize_image.si(job_id)     [cpu_queue]  (step_vectorize=True)
+  --> auto_qa.si(job_id)             [cpu_queue]  (step_auto_qa=True)
+  --> notify_studio.si(job_id)       [cpu_queue]</pre>
+  </div>
+</div>
+
+<!-- TAB 5: PHASE 4 STUDIO -->
+<div class="section" id="s5">
+  <h2>Phase 4 &mdash; Studio App</h2>
+  <p>Woche 3 &middot; ~1.5 Tage &middot; Web-Interface f&uuml;r Studio-Mitarbeiter: Job-Erstellung, HTMX-Status-Tracking, Asset-Auswahl und Freigabe f&uuml;r Shop.</p>
+
+  <div class="check-row"><input type="checkbox" class="sp-check" data-key="p4-01"><span class="cl-text">Django User Gruppe studio_workers anlegen &middot; via Admin<small>is_staff=False, is_superuser=False &middot; Neue User der Gruppe zuweisen</small></span></div>
+  <div class="check-row"><input type="checkbox" class="sp-check" data-key="p4-02"><span class="cl-text">studio/views.py &mdash; StudioDashboard &middot; @login_required + Gruppen-Check<small>Redirect auf Login wenn nicht eingeloggt &middot; 403 wenn nicht in studio_workers Gruppe</small></span></div>
+  <div class="check-row"><input type="checkbox" class="sp-check" data-key="p4-03"><span class="cl-text">studio/views.py &mdash; JobCreateView &middot; PipelineTemplate-Dropdown, Prompt, Parameter-Overrides<small>Overrides (width/height/steps/guidance) als collapsible Sektion &middot; Job status=draft nach Submit</small></span></div>
+  <div class="check-row"><input type="checkbox" class="sp-check" data-key="p4-04"><span class="cl-text">studio/views.py &mdash; JobListView &middot; nur Jobs des eingeloggten Users<small>Filter: Job.created_by=request.user &middot; Neueste zuerst &middot; Status-Badge je Status</small></span></div>
+  <div class="check-row"><input type="checkbox" class="sp-check" data-key="p4-05"><span class="cl-text">studio/views.py &mdash; JobDetailView + Status-Partial f&uuml;r HTMX Polling alle 3s<small>Separater View /studio/job/uuid/status/ gibt HTML-Partial zur&uuml;ck &middot; hx-trigger="every 3s"</small></span></div>
+  <div class="check-row"><input type="checkbox" class="sp-check" data-key="p4-06"><span class="cl-text">studio/views.py &mdash; JobResultsView &middot; Grid aller generierten Output-Dateien<small>Alle JobStep.output_asset_id auflisten &middot; Preview-Bilder anzeigen &middot; Selektierbar f&uuml;r Freigabe</small></span></div>
+  <div class="check-row"><input type="checkbox" class="sp-check" data-key="p4-07"><span class="cl-text">studio/views.py &mdash; AssetSelectView (POST) &middot; legt ImageProduct an, l&ouml;st generate_all_mockups aus<small>POST &rarr; ImageProduct erstellen &rarr; generate_all_mockups.delay(gallery_image_id)</small></span></div>
+  <div class="check-row"><input type="checkbox" class="sp-check" data-key="p4-08"><span class="cl-text">studio/views.py &mdash; PromptLibraryView &middot; PromptTemplates durchsuchen + kopieren<small>Filter nach Kategorie &middot; "Kopieren" f&uuml;llt JobCreateView-Formular via URL-Parameter vor</small></span></div>
+  <div class="check-row"><input type="checkbox" class="sp-check" data-key="p4-09"><span class="cl-text">studio/urls.py anlegen + in printbuddy/urls.py einbinden<small><code>path('studio/', include('studio.urls'))</code> im Haupt-Router</small></span></div>
+  <div class="check-row"><input type="checkbox" class="sp-check" data-key="p4-10"><span class="cl-text">Templates anlegen: dashboard.html &middot; job_create.html &middot; job_detail.html (HTMX) &middot; job_results.html<small>HTMX via CDN einbinden &middot; Basis-Template mit Navigation f&uuml;r alle Studio-Seiten</small></span></div>
+  <div class="check-row"><input type="checkbox" class="sp-check" data-key="p4-11"><span class="cl-text">Sicherheitstest: studio_worker Login &rarr; /admin/ muss 403 Forbidden ergeben<small>Admin ist nur f&uuml;r is_staff=True User &middot; Obligatorischer Test vor Deployment</small></span></div>
+
+  <div class="gate-box">
+    <div class="gate-label">&#10003; GATE-CHECK &mdash; Phase 4</div>
+    <p>studio_worker erstellt Job &rarr; status=draft in DB. Admin startet via Custom Action &rarr; status=queued. HTMX Status-Panel aktualisiert sich alle 3s ohne Page-Reload. Login als studio_worker &rarr; /admin/ gibt 403 Forbidden.</p>
+  </div>
+
+  <div class="info-section">
+    <h3>&#128214; Views + Routing erkl&auml;rt</h3>
+    <div class="info-point"><strong>Was ist eine Django View?</strong><p>Funktion oder Klasse die einen HTTP-Request empf&auml;ngt und HTML/JSON zur&uuml;ckgibt. Class-Based Views (CBV) f&uuml;r Standard-Listen und Details, Function-Based Views (FBV) f&uuml;r komplexe Logik wie AssetSelectView.</p></div>
+    <div class="info-point"><strong>Was ist urls.py?</strong><p>Mapping URL-Pattern &rarr; View. <code>printbuddy/urls.py</code> ist der Haupt-Router, der andere Apps via <code>include()</code> einbindet. <code>path('studio/', include('studio.urls'))</code> delegiert alle /studio/... URLs an studio/urls.py.</p></div>
+    <div class="info-point"><strong>Warum @login_required?</strong><p>Ohne Decorator w&auml;re jede Studio-URL ohne Login zug&auml;nglich. @login_required pr&uuml;ft ob g&uuml;ltige Session existiert und leitet sonst auf LOGIN_URL weiter. Grundlage jeder Django-Sicherheit.</p></div>
+    <div class="info-point"><strong>HTMX Polling erkl&auml;rt (ADR-12)</strong><p>Kein JavaScript-Framework, kein WebSocket n&ouml;tig. Im Template: <code>hx-get="/studio/job/uuid/status/"</code> + <code>hx-trigger="every 3s"</code> + <code>hx-target="#status-panel"</code>. HTMX sendet alle 3s GET-Request und ersetzt den Inhalt des Targets mit der Server-Antwort.</p></div>
+  </div>
+</div>
+
+<!-- TAB 6: PHASE 5+6 GALERIE -->
+<div class="section" id="s6">
+  <h2>Phase 5+6 &mdash; Galerie + Mockups</h2>
+  <p>Woche 3&ndash;4 &middot; &Ouml;ffentliche Galerie-Landing Page (Phase 5) + automatische Mockup-Generierung via Printful API (Phase 6).</p>
+
+  <h3 style="margin-top:0">Phase 5 &mdash; Galerie Frontend</h3>
+  <div class="check-row"><input type="checkbox" class="sp-check" data-key="p5-01"><span class="cl-text">gallery/views.py &mdash; GalleryListView &middot; paginate_by=24, ?cat= + ?q= Filter, nur is_public=True<small>GalleryImage.objects.filter(is_public=True) &middot; GET-Parameter f&uuml;r Filter anwenden</small></span></div>
+  <div class="check-row"><input type="checkbox" class="sp-check" data-key="p5-02"><span class="cl-text">gallery/views.py &mdash; GalleryDetailView &middot; 404 wenn is_public=False<small>get_object_or_404(GalleryImage, slug=slug, is_public=True)</small></span></div>
+  <div class="check-row"><input type="checkbox" class="sp-check" data-key="p5-03"><span class="cl-text">gallery/templates/gallery/list.html &middot; CSS Grid 3&ndash;4 Spalten, loading="lazy", Hover-Overlay mit CTA<small>Responsive: 4 Spalten Desktop, 2 Spalten Mobile. Hover zeigt Titel + CTA-Button.</small></span></div>
+  <div class="check-row"><input type="checkbox" class="sp-check" data-key="p5-04"><span class="cl-text">gallery/templates/gallery/detail.html &middot; Vollbild, Tags, CTA-Button je cta_type<small>cta_type: etsy &rarr; "Auf Etsy kaufen" &middot; shop &rarr; "Im Shop kaufen" &middot; contact &rarr; "Kontakt"</small></span></div>
+  <div class="check-row"><input type="checkbox" class="sp-check" data-key="p5-05"><span class="cl-text">Kategorie-Filter per HTMX &middot; kein Page-Reload beim Filtern<small>hx-get="/gallery/?cat=poster" hx-target="#gallery-grid" hx-push-url="true"</small></span></div>
+  <div class="check-row"><input type="checkbox" class="sp-check" data-key="p5-06"><span class="cl-text">gallery/urls.py anlegen + in Haupt-Router einbinden<small>path('gallery/', include('gallery.urls')) &middot; /gallery/ und /gallery/&lt;slug&gt;/ registrieren</small></span></div>
+  <div class="check-row"><input type="checkbox" class="sp-check" data-key="p5-07"><span class="cl-text">static/css/gallery.css &middot; dark/neutral, mobile-first, print-optimiertes Layout<small>Plain CSS f&uuml;r MVP, kein CSS-Framework &middot; collectstatic auf VPS</small></span></div>
+  <div class="check-row"><input type="checkbox" class="sp-check" data-key="p5-08"><span class="cl-text">5 Testbilder via Admin anlegen &middot; GalleryImage.is_public = True setzen<small>Verschiedene Kategorien: shirt, poster, card, art &middot; CTA-URLs und Tags ausf&uuml;llen</small></span></div>
+
+  <div class="gate-box">
+    <div class="gate-label">&#10003; GATE-CHECK &mdash; Phase 5</div>
+    <p>5 Testbilder mit is_public=True. /gallery/ zeigt Grid korrekt. Kategorie-Filter ohne Page-Reload (HTMX). Detail-Seite verlinkt je cta_type korrekt. Mobile-Test auf Handy bestanden.</p>
+  </div>
+
+  <h3>Phase 6 &mdash; Mockup Generierung</h3>
+  <div class="check-row"><input type="checkbox" class="sp-check" data-key="p6-01"><span class="cl-text">postprocess/printful.py &mdash; create_mockup_task(variant_id, image_url, placement, position) &rarr; task_key<small>POST /mockup-generator/create-task/&lt;product-id&gt; mit PRINTFUL_API_KEY</small></span></div>
+  <div class="check-row"><input type="checkbox" class="sp-check" data-key="p6-02"><span class="cl-text">postprocess/printful.py &mdash; poll_mockup_result(task_key) &rarr; mockup_url<small>GET /mockup-generator/task &middot; Retry: sleep 3s, max 10 Versuche &middot; Timeout: status=failed</small></span></div>
+  <div class="check-row"><input type="checkbox" class="sp-check" data-key="p6-03"><span class="cl-text">postprocess/tasks.py &mdash; generate_all_mockups(gallery_image_id) Task implementieren<small>Alle ImageProduct-Eintr&auml;ge des Bildes &middot; create_mockup_task &rarr; poll &rarr; Download &rarr; ImageProduct.mockup_file</small></span></div>
+  <div class="check-row"><input type="checkbox" class="sp-check" data-key="p6-04"><span class="cl-text">ImageProduct.mockup_status: pending &rarr; generating &rarr; ready / failed<small>Status korrekt in Task schreiben &middot; Bei ready: mockup_file enth&auml;lt Pfad zur gespeicherten Datei</small></span></div>
+  <div class="check-row"><input type="checkbox" class="sp-check" data-key="p6-05"><span class="cl-text">PRINTFUL_API_KEY in .env eintragen (lokal + VPS)<small>Printful Dashboard: Stores &rarr; API Access &middot; Gleicher Key f&uuml;r Mockup-API und Order-API</small></span></div>
+
+  <div class="gate-box">
+    <div class="gate-label">&#10003; GATE-CHECK &mdash; Phase 6</div>
+    <p>Bild via AssetSelectView freigeben &rarr; ImageProduct-Eintr&auml;ge angelegt &rarr; generate_all_mockups Task gestartet &rarr; ImageProduct.mockup_status=ready &rarr; Mockup-JPG in Admin unter ImageProduct.mockup_file sichtbar.</p>
+  </div>
+
+  <div class="info-section">
+    <h3>&#128214; Frontend + Templates erkl&auml;rt</h3>
+    <div class="info-point"><strong>Django Template Language (DTL)</strong><p>HTML mit Python-&auml;hnlicher Logik. Kein JS-Framework n&ouml;tig. <code>{% for image in images %}{{ image.title }}{% endfor %}</code> &middot; Django escaped automatisch gegen XSS. Filter: <code>{{ image.created_at|date:"d.m.Y" }}</code></p></div>
+    <div class="info-point"><strong>static/ vs. media/</strong><p><code>static/</code> = CSS, JS, Icons &mdash; in Git, per collectstatic auf VPS gesammelt, von Nginx direkt ausgeliefert (kein Django-Overhead). <code>media/</code> = generierte Bilder &mdash; auf NAS (/mnt/agency_nas/), nicht in Git.</p></div>
+    <div class="info-point"><strong>paginate_by=24</strong><p>Django gibt automatisch ein page_obj in den Template-Kontext. Im Template: <code>{% if page_obj.has_next %}&lt;a href="?page={{ page_obj.next_page_number }}"&gt;Weiter&lt;/a&gt;{% endif %}</code></p></div>
+    <div class="info-point"><strong>Warum HTMX f&uuml;r Galerie-Filter? (ADR-09)</strong><p><code>hx-get="/gallery/?cat=poster"</code> + <code>hx-target="#gallery-grid"</code> l&auml;dt nur das Grid neu. Kein React, kein Vue, kein SPA n&ouml;tig. Django Templates first, HTMX-Upgrade per ADR.</p></div>
+  </div>
+</div>
+
+<script>
+function showTab(i) {
+  document.querySelectorAll('.section').forEach(function(s, idx) {
+    s.classList.toggle('active', idx === i);
+  });
+  document.querySelectorAll('.tab').forEach(function(t, idx) {
+    t.classList.toggle('active', idx === i);
+  });
+}
+
+(function() {
+  var PREFIX = 'mvp-';
+  var phaseBars = [
+    { prefixes: ['p0-'], barId: 'bar-p0' },
+    { prefixes: ['p1-'], barId: 'bar-p1' },
+    { prefixes: ['p2-'], barId: 'bar-p2' },
+    { prefixes: ['p3-'], barId: 'bar-p3' },
+    { prefixes: ['p4-'], barId: 'bar-p4' },
+    { prefixes: ['p5-', 'p6-'], barId: 'bar-p56' }
+  ];
+
+  function updateProgress() {
+    var all = document.querySelectorAll('.sp-check');
+    var checked = 0;
+    all.forEach(function(cb) { if (cb.checked) checked++; });
+    var total = all.length;
+    var pct = total > 0 ? Math.round((checked / total) * 100) : 0;
+    document.getElementById('progress-text').textContent =
+      checked + ' / ' + total + ' Schritte abgeschlossen (' + pct + '%)';
+    var bar = document.getElementById('progress-bar');
+    bar.style.width = pct + '%';
+    bar.style.background = pct > 80 ? '#22c55e' : pct > 40 ? '#f59e0b' : '#7a5cff';
+
+    phaseBars.forEach(function(ph) {
+      var phAll = 0, phChecked = 0;
+      all.forEach(function(cb) {
+        var key = cb.dataset.key || '';
+        if (ph.prefixes.some(function(pre) { return key.startsWith(pre); })) {
+          phAll++;
+          if (cb.checked) phChecked++;
+        }
+      });
+      var fill = document.getElementById(ph.barId);
+      if (fill && phAll > 0) {
+        var phPct = Math.round((phChecked / phAll) * 100);
+        fill.style.width = phPct + '%';
+        fill.style.background = phPct === 100 ? '#22c55e' : phPct > 40 ? '#f59e0b' : '#7a5cff';
+      }
+    });
+  }
+
+  document.querySelectorAll('.sp-check').forEach(function(cb) {
+    var key = cb.dataset.key;
+    if (key && localStorage.getItem(PREFIX + key) === '1') { cb.checked = true; }
+    cb.addEventListener('change', function() {
+      localStorage.setItem(PREFIX + key, this.checked ? '1' : '0');
+      updateProgress();
+    });
+  });
+
+  updateProgress();
+})();
+</script>
+</body>
+</html>

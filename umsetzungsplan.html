@@ -1,0 +1,1751 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Printbuddy – Umsetzungsplan 2026</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #0b0f1a; color: #c9d1e0; font-family: 'Segoe UI', system-ui, sans-serif; font-size: 14px; line-height: 1.6; }
+
+    /* HEADER */
+    header { background: linear-gradient(135deg, #131929 0%, #1a1f35 100%); border-bottom: 2px solid #7a5cff; padding: 16px 28px; display: flex; justify-content: space-between; align-items: center; }
+    header h1 { color: #fff; font-size: 1.3rem; }
+    header p { color: #5a6a7e; font-size: 0.78rem; margin-top: 2px; }
+    .ref-link { color: #7a5cff; text-decoration: none; font-size: 0.8rem; border: 1px solid #7a5cff44; padding: 5px 12px; border-radius: 4px; white-space: nowrap; }
+    .ref-link:hover { background: #7a5cff22; }
+
+    /* TABS */
+    .tabs { display: flex; flex-wrap: wrap; background: #0f1424; border-bottom: 1px solid #1e2540; padding: 0 16px; gap: 2px; }
+    .tab { padding: 10px 15px; cursor: pointer; color: #8896aa; font-size: 0.79rem; border-bottom: 2px solid transparent; transition: all 0.2s; white-space: nowrap; }
+    .tab:hover { color: #c9d1e0; background: #7a5cff11; }
+    .tab.active { color: #7a5cff; border-bottom-color: #7a5cff; background: #7a5cff11; }
+
+    /* SECTIONS */
+    .section { display: none; padding: 28px 32px; max-width: 1200px; }
+    .section.active { display: block; }
+
+    /* TYPOGRAPHY */
+    h2 { color: #fff; font-size: 1.25rem; margin-bottom: 6px; }
+    h3 { color: #a78bfa; font-size: 0.95rem; margin: 22px 0 8px; }
+    h4 { color: #c9d1e0; font-size: 0.83rem; margin: 14px 0 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+    p { color: #8896aa; margin-bottom: 10px; font-size: 0.85rem; }
+
+    /* CARDS */
+    .card { background: #131929; border: 1px solid #1e2540; border-radius: 8px; padding: 16px 20px; margin-bottom: 14px; }
+    .card.accent { border-left: 3px solid #7a5cff; }
+    .card.green { border-left: 3px solid #22c55e; }
+    .card.yellow { border-left: 3px solid #f59e0b; }
+    .card.red { border-left: 3px solid #ef4444; }
+    .card.cyan { border-left: 3px solid #06b6d4; }
+
+    /* GRIDS */
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+    .grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+
+    /* TABLES */
+    table { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 0.82rem; }
+    th { background: #1a1f35; color: #7a5cff; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.5px; padding: 8px 12px; text-align: left; border: 1px solid #1e2540; }
+    td { padding: 8px 12px; border: 1px solid #1e2540; color: #c9d1e0; vertical-align: top; }
+    tr:hover td { background: #131929; }
+
+    /* CODE */
+    pre { background: #080c16; border: 1px solid #1e2540; border-radius: 6px; padding: 14px 16px; overflow-x: auto; font-size: 0.75rem; line-height: 1.75; color: #a8d8a8; margin: 10px 0; font-family: 'Consolas', 'Monaco', monospace; }
+    code { color: #a78bfa; font-family: monospace; font-size: 0.85em; }
+
+    /* BADGES */
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.3px; }
+    .b-accepted { background: #14532d; color: #4ade80; }
+    .b-proposed { background: #1e3a5f; color: #60a5fa; }
+    .b-deprecated { background: #4a1515; color: #f87171; }
+    .b-a { background: #1e3a5f; color: #60a5fa; }
+    .b-b { background: #14532d; color: #4ade80; }
+    .b-ab { background: #3b1f6b; color: #c084fc; }
+    .b-gate { background: #78350f; color: #fcd34d; }
+    .b-cost { background: #1a1f35; color: #94a3b8; border: 1px solid #334155; }
+
+    .milestone { background: #7a5cff18; border: 1px dashed #7a5cff55; border-radius: 6px; padding: 10px 16px; margin: 12px 0; color: #a78bfa; font-size: 0.83rem; }
+    .milestone.go { background: #22c55e11; border-color: #22c55e55; color: #4ade80; }
+
+    /* ADR CARDS */
+    .adr-card { background: #0f1424; border: 1px solid #1e2540; border-radius: 8px; margin-bottom: 16px; overflow: hidden; }
+    .adr-header { background: #131929; padding: 11px 16px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #1e2540; gap: 12px; }
+    .adr-id { color: #7a5cff; font-weight: 700; font-size: 0.78rem; font-family: monospace; flex-shrink: 0; }
+    .adr-title { color: #fff; font-size: 0.88rem; font-weight: 600; flex: 1; }
+    .adr-body { padding: 14px 16px; display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .adr-section label { color: #7a5cff; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 1px; display: block; margin-bottom: 4px; }
+    .adr-section p { color: #8896aa; font-size: 0.8rem; margin: 0; line-height: 1.5; }
+
+    /* INFRA DIAGRAM */
+    .infra-diagram { display: flex; align-items: stretch; gap: 0; margin: 24px 0; flex-wrap: wrap; justify-content: center; }
+    .infra-node { background: #131929; border: 1px solid #1e2540; border-radius: 8px; padding: 14px 18px; text-align: center; min-width: 130px; }
+    .infra-node.primary { border-color: #7a5cff; }
+    .infra-node .ni-icon { font-size: 1.8rem; display: block; margin-bottom: 6px; }
+    .infra-node .ni-name { color: #fff; font-size: 0.82rem; font-weight: 600; }
+    .infra-node .ni-detail { color: #7a5cff; font-size: 0.69rem; margin-top: 4px; line-height: 1.5; }
+    .infra-node .ni-cost { color: #4ade80; font-size: 0.69rem; margin-top: 6px; }
+    .infra-arrow { color: #7a5cff; font-size: 1.5rem; padding: 0 6px; align-self: center; }
+
+    /* FLOW */
+    .flow { display: flex; flex-direction: column; gap: 2px; }
+    .flow-num { width: 26px; height: 26px; background: #7a5cff22; color: #7a5cff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.72rem; font-weight: 700; flex-shrink: 0; margin-top: 9px; }
+    .flow-step { display: flex; align-items: flex-start; gap: 10px; }
+    .flow-box { background: #131929; border: 1px solid #1e2540; border-radius: 6px; padding: 9px 14px; flex: 1; }
+    .flow-box .fb-title { color: #fff; font-weight: 600; font-size: 0.84rem; }
+    .flow-box .fb-detail { color: #7a5cff; font-size: 0.74rem; }
+    .flow-down { color: #7a5cff44; font-size: 0.9rem; padding-left: 42px; }
+
+    /* CHECKLIST */
+    .check-group { margin-bottom: 20px; }
+    .check-group-title { color: #7a5cff; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 1px; padding: 6px 12px; background: #0f1424; border-radius: 4px; margin-bottom: 6px; }
+    .check-row { display: flex; align-items: flex-start; gap: 10px; padding: 7px 12px; border-radius: 6px; transition: background 0.15s; }
+    .check-row:hover { background: #131929; }
+    .check-row input[type="checkbox"] { margin-top: 2px; accent-color: #7a5cff; width: 14px; height: 14px; flex-shrink: 0; cursor: pointer; }
+    .check-row input:checked + .cl-text { text-decoration: line-through; color: #4a5568; }
+    .cl-text { color: #c9d1e0; font-size: 0.83rem; }
+    .cl-text small { display: block; color: #5a6a7e; font-size: 0.73rem; margin-top: 1px; }
+
+    /* PHASE CARDS */
+    .phase-card { background: #0f1424; border: 1px solid #1e2540; border-radius: 8px; margin-bottom: 14px; overflow: hidden; }
+    .phase-card-header { background: #131929; padding: 10px 16px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #1e2540; }
+    .pch-title { color: #fff; font-size: 0.88rem; font-weight: 600; }
+    .pch-weeks { color: #7a5cff; font-size: 0.75rem; font-family: monospace; }
+    .phase-row { display: grid; grid-template-columns: 20px 1fr 70px 60px; gap: 10px; align-items: start; padding: 7px 16px; border-bottom: 1px solid #0b0f1a; }
+    .phase-row:last-child { border-bottom: none; }
+    .phase-row input[type="checkbox"] { accent-color: #7a5cff; cursor: pointer; margin-top: 3px; }
+    .pr-text { color: #c9d1e0; font-size: 0.82rem; }
+    .pr-text small { display: block; color: #5a6a7e; font-size: 0.72rem; }
+    .pr-owner { text-align: right; }
+    .pr-effort { color: #8896aa; font-size: 0.73rem; text-align: right; }
+
+    /* PRICING */
+    .price-good { color: #4ade80; font-weight: 600; }
+    .price-warn { color: #fcd34d; }
+    .price-bad { color: #f87171; }
+
+    /* GPU FLOW GRID */
+    .gpu-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; align-items: center; text-align: center; margin: 6px 0; }
+    .gpu-arrow { color: #7a5cff; font-size: 1.1rem; align-self: center; }
+
+    /* SCROLLBAR */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #0b0f1a; }
+    ::-webkit-scrollbar-thumb { background: #2d3748; border-radius: 3px; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>Printbuddy – Umsetzungsplan</h1>
+    <p>Shirts · Hoodies · Poster · Karten &nbsp;|&nbsp; Django + Stripe &nbsp;|&nbsp; RunPod EU + Hetzner VPS + Synology DS925+</p>
+  </div>
+  <a class="ref-link" href="buisnes_architecture.html" target="_blank">→ Strategie-Dokument</a>
+</header>
+
+<div class="tabs">
+  <div class="tab active" onclick="showTab(0)">0 Projektziel</div>
+  <div class="tab" onclick="showTab(1)">1 Infrastruktur</div>
+  <div class="tab" onclick="showTab(2)">2 Galerie-DB</div>
+  <div class="tab" onclick="showTab(3)">3 Merch-Shop</div>
+  <div class="tab" onclick="showTab(4)">4 Vertrieb-Kanäle</div>
+  <div class="tab" onclick="showTab(5)">5 GPU-Pipeline</div>
+  <div class="tab" onclick="showTab(6)">6 ADR-Entscheidungen</div>
+  <div class="tab" onclick="showTab(7)">7 Security &amp; DSGVO</div>
+  <div class="tab" onclick="showTab(8)">8 Wochen-Plan</div>
+  <div class="tab" onclick="showTab(9)">9 Studio App</div>
+  <div class="tab" onclick="showTab(10)">10 Deployment</div>
+  <div class="tab" onclick="showTab(11)">11 Partner &amp; Channels</div>
+</div>
+
+<!-- ═══════════════════════════════════ TAB 0: PROJEKTZIEL ═══ -->
+<div class="section active" id="s0">
+  <h2>Projektziel &amp; Endzustand</h2>
+  <p>Ende Woche 8 ist PrintBuddy ein produktiver Betrieb: ein eigener Merch-Shop ist live, Etsy-Listings sind aktiv, die Galerie-Datenbank befeuert eine öffentliche Landing Page als Akquise-Tool für Druckjobs, und die GPU-Pipeline produziert druckfertige Dateien automatisch.</p>
+
+  <div class="grid3" style="margin-top:20px">
+    <div class="card green">
+      <h3 style="margin-top:0">🛒 Kernergebnis 1</h3>
+      <p style="color:#c9d1e0;margin-bottom:8px">Eigener Merch-Shop live</p>
+      <p>URL: <code>/shop/</code> auf datemyhobby.com/printbuddy<br>Produkte: Shirts, Hoodies, Poster, Karten<br>Fulfillment: Printful API<br>Zahlung: Stripe Checkout + Webhook</p>
+    </div>
+    <div class="card cyan">
+      <h3 style="margin-top:0">🖼 Kernergebnis 2</h3>
+      <p style="color:#c9d1e0;margin-bottom:8px">Galerie-Landing Page live</p>
+      <p>URL: <code>/gallery/</code> öffentlich<br>≥10 kuratierte Bilder<br>CTAs zu Shop + Etsy<br>Kategorie-Filterung</p>
+    </div>
+    <div class="card yellow">
+      <h3 style="margin-top:0">💰 Kernergebnis 3</h3>
+      <p style="color:#c9d1e0;margin-bottom:8px">Erste echte Bestellungen</p>
+      <p>≥1 Etsy-Verkauf (Shirt/Poster)<br>≥1 Shop-Transaktion (Stripe live)<br>Marge ≥ 35% pro Einheit bestätigt</p>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div class="card accent">
+      <h3 style="margin-top:0">👥 Teamrollen</h3>
+      <table>
+        <tr><th>Person</th><th>Fokus</th><th>Verantwortung</th></tr>
+        <tr><td><span class="badge b-a">A</span></td><td>Infra / Backend / Deploy</td><td>VPS, Django, GPU-Pipeline, Stripe-Webhook, Security</td></tr>
+        <tr><td><span class="badge b-b">B</span></td><td>Content / Produkt / Vertrieb</td><td>Bildgenerierung, Etsy-Listings, Galerie-Kuration, Marketing</td></tr>
+        <tr><td><span class="badge b-ab">A+B</span></td><td>Gemeinsam</td><td>Rechtsform W1, Produktauswahl, KPI-Review, Go-Live W8</td></tr>
+      </table>
+    </div>
+    <div class="card">
+      <h3 style="margin-top:0">🏗 Tech-Stack</h3>
+      <table>
+        <tr><th>Layer</th><th>Technologie</th><th>Zweck</th></tr>
+        <tr><td>Web</td><td>Django 4.2 LTS + Gunicorn</td><td>App-Server, Admin, REST</td></tr>
+        <tr><td>Proxy</td><td>Nginx</td><td>SSL, Routing, Static Files</td></tr>
+        <tr><td>DB</td><td>PostgreSQL 15</td><td>Persistenz, JSONField, UUID</td></tr>
+        <tr><td>Queue</td><td>Redis 7 + Celery 5</td><td>GPU-Jobs, Printful-Tasks</td></tr>
+        <tr><td>GPU</td><td>RunPod EU + Vast.ai FB</td><td>FLUX-Dev, SDXL, ESRGAN</td></tr>
+        <tr><td>Storage</td><td>Synology DS925+ (NFS v4)</td><td>Raw, Exports, Backups</td></tr>
+        <tr><td>Fulfillment</td><td>Printful API v2</td><td>Druck, Versand alle Kanäle</td></tr>
+        <tr><td>Zahlung</td><td>Stripe Checkout</td><td>PCI SAQ A, SCA/3DS</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <div class="milestone">
+    ⚠️ <strong>Gate Woche 1: Rechtsform-Entscheidung (vor erstem Live-Verkauf)</strong> — Einzelunternehmen + KUR (bis €22.000/Jahr, kein Vorsteuerabzug, sofort startklar) |
+    Einzelunternehmen + Regelbesteuerung (Vorsteuerabzug auf GPU-Kosten, monatl. USt-Voranmeldung) |
+    UG haftungsbeschränkt (ab €1, Handelsregistereintrag ~€400, erst ab stabilen Umsätzen).
+    <strong>Empfehlung MVP: Einzelunternehmen + KUR.</strong>
+  </div>
+
+  <h3>Produkt-Prioritäten</h3>
+  <table>
+    <tr><th>Prio</th><th>Produkt</th><th>Druckfläche</th><th>Printful-Produkt</th><th>Marge (est.)</th><th>Kanäle</th></tr>
+    <tr><td>1</td><td>T-Shirts (Unisex)</td><td>30×40 cm (DTG)</td><td>Bella+Canvas 3001 / Gildan 64000</td><td class="price-good">45–55%</td><td>Etsy, Shop, Redbubble</td></tr>
+    <tr><td>1</td><td>Hoodies</td><td>25×35 cm (DTG)</td><td>Gildan 18500</td><td class="price-good">42–52%</td><td>Etsy, Shop</td></tr>
+    <tr><td>2</td><td>Poster (A2/A1)</td><td>420×594 mm</td><td>Printful Premium Poster</td><td class="price-good">55–65%</td><td>Etsy, Shop, B2B</td></tr>
+    <tr><td>2</td><td>Grußkarten (A5)</td><td>148×210 mm</td><td>Printful Greeting Cards</td><td class="price-warn">35–45%</td><td>Etsy, B2B</td></tr>
+  </table>
+</div>
+
+<!-- ═══════════════════════════════════ TAB 1: INFRASTRUKTUR ═══ -->
+<div class="section" id="s1">
+  <h2>Infrastruktur-Übersicht</h2>
+  <p>Drei eigenständige Nodes mit klarer Rollentrennung. Verbindungen laufen ausschließlich verschlüsselt. Keine DB, kein Redis, kein NFS direkt aus dem Internet erreichbar.</p>
+
+  <div class="infra-diagram">
+    <div class="infra-node primary">
+      <span class="ni-icon">🖥</span>
+      <div class="ni-name">Hetzner VPS</div>
+      <div class="ni-detail">Ubuntu 22.04 LTS<br>Nginx · Django · Gunicorn<br>PostgreSQL 15 · Redis 7<br>Celery Worker × 2</div>
+      <div class="ni-cost">~€10–20 / Monat</div>
+    </div>
+    <div class="infra-arrow">⟺</div>
+    <div class="infra-node">
+      <span class="ni-icon">📦</span>
+      <div class="ni-name">Synology DS925+</div>
+      <div class="ni-detail">Home-NAS, DSM 7.x<br>NFS v4 (via Tailscale VPN)<br>raw/ exports/ backups/<br>RAID + Snapshot täglich</div>
+      <div class="ni-cost">Vorhanden (CapEx = 0)</div>
+    </div>
+    <div class="infra-arrow">⟺</div>
+    <div class="infra-node">
+      <span class="ni-icon">⚡</span>
+      <div class="ni-name">RunPod EU</div>
+      <div class="ni-detail">RTX 4090 On-Demand<br>FLUX-Dev · SDXL · LoRA<br>Real-ESRGAN 4× Upscale<br>Nürnberg / Frankfurt</div>
+      <div class="ni-cost">~€0.40/h (On-Demand)</div>
+    </div>
+    <div class="infra-arrow" style="color:#f87171">⇢</div>
+    <div class="infra-node" style="border-style:dashed; opacity:0.8">
+      <span class="ni-icon">🔀</span>
+      <div class="ni-name">Vast.ai Fallback</div>
+      <div class="ni-detail">Fallback GPU<br>Auto-aktiviert wenn<br>RunPod unavailable</div>
+      <div class="ni-cost">~€0.25–0.35/h</div>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div>
+      <h3>Komponenten-Tabelle</h3>
+      <table>
+        <tr><th>Node</th><th>Rolle</th><th>Stack</th><th>EUR/Mo</th><th>Owner</th></tr>
+        <tr><td>Hetzner VPS</td><td>App-Server, DB, Queue</td><td>Ubuntu 22.04, Nginx, Django, PG15, Redis</td><td>€10–20</td><td><span class="badge b-a">A</span></td></tr>
+        <tr><td>Synology DS925+</td><td>File-Storage, Backup</td><td>DSM 7.x, NFS v4, Hyper Backup</td><td>€0</td><td><span class="badge b-a">A</span></td></tr>
+        <tr><td>RunPod EU</td><td>GPU-Rendering primär</td><td>CUDA 12.x, PyTorch, RunPod SDK</td><td>~€20–60*</td><td><span class="badge b-a">A</span></td></tr>
+        <tr><td>Vast.ai</td><td>GPU-Rendering Fallback</td><td>CUDA 12.x, vastai CLI</td><td>~€5–15*</td><td><span class="badge b-a">A</span></td></tr>
+        <tr><td>Printful</td><td>Druck + Versand</td><td>Printful API v2</td><td>Per Order</td><td><span class="badge b-ab">A+B</span></td></tr>
+        <tr><td>Stripe</td><td>Zahlungsabwicklung</td><td>Stripe Checkout + Webhooks</td><td>2.9%+€0.25</td><td><span class="badge b-a">A</span></td></tr>
+        <tr><td>Etsy</td><td>Marktplatz-Vertrieb</td><td>Etsy Open API v3</td><td>€0.20/Listing</td><td><span class="badge b-b">B</span></td></tr>
+      </table>
+      <p><small>* GPU-Kosten on-demand, nur bei aktiver Bildgenerierung</small></p>
+    </div>
+    <div>
+      <h3>NAS-Ordnerstruktur &amp; Mount</h3>
+      <pre>/agency_nas/                  ← NFS v4 Mount auf VPS
+  raw/                        ← GPU-Roh-Outputs (PNG voll)
+  exports/
+    pod/                      ← Printful-ready PNG 300dpi sRGB
+    offset/                   ← CMYK PDF/X-4, 3mm Bleed
+    preview/                  ← JPG 72dpi für Web / Galerie
+  gallery/                    ← Kuratierte öffentliche Bilder
+  backups/
+    db/                       ← pg_dump täglich
+    media/                    ← Django media/ wöchentlich</pre>
+      <pre># /etc/fstab (Hetzner VPS) – via Tailscale VPN
+100.x.x.x:/volume1/agency_nas \
+  /mnt/agency_nas \
+  nfs4 defaults,_netdev,noatime,soft 0 0
+
+# Mount testen
+sudo mount -a
+ls /mnt/agency_nas/raw/</pre>
+      <h3>Backup-Zeitplan</h3>
+      <table>
+        <tr><th>Was</th><th>Cron</th><th>Ziel</th><th>Retention</th></tr>
+        <tr><td>PostgreSQL pg_dump</td><td>02:00 täglich</td><td>/mnt/agency_nas/backups/db/</td><td>14 Tage</td></tr>
+        <tr><td>Synology Snapshot</td><td>03:00 täglich</td><td>Synology intern</td><td>30 Tage</td></tr>
+        <tr><td>Django media/</td><td>Sonntag 04:00</td><td>/mnt/agency_nas/backups/media/</td><td>4 Wochen</td></tr>
+        <tr><td>Restore-Drill</td><td>Manuell monatl.</td><td>Staging-VPS</td><td>—</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <h3>Netzwerk-Sicherheitsregeln (UFW-Kurzübersicht)</h3>
+  <table>
+    <tr><th>Dienst</th><th>Port</th><th>Erreichbar von</th><th>Gesperrt für</th></tr>
+    <tr><td>Nginx HTTPS</td><td>443</td><td>Internet öffentlich</td><td>—</td></tr>
+    <tr><td>Nginx HTTP</td><td>80</td><td>Internet (Redirect → 443)</td><td>—</td></tr>
+    <tr><td>Django/Gunicorn</td><td>8000</td><td>Nur Nginx (127.0.0.1)</td><td>Internet</td></tr>
+    <tr><td>PostgreSQL</td><td>5432</td><td>Nur Django (127.0.0.1)</td><td>Internet</td></tr>
+    <tr><td>Redis</td><td>6379</td><td>Nur Django + Celery (127.0.0.1)</td><td>Internet</td></tr>
+    <tr><td>SSH</td><td>22 (oder custom)</td><td>Key-Auth only, IP-Allowlist</td><td>Password-Auth</td></tr>
+    <tr><td>RunPod API</td><td>HTTPS 443</td><td>VPS → RunPod (outbound)</td><td>—</td></tr>
+    <tr><td>NFS v4</td><td>2049</td><td>VPS ↔ Synology via Tailscale</td><td>Internet direkt</td></tr>
+  </table>
+</div>
+
+<!-- ═══════════════════════════════════ TAB 2: GALERIE-DB ═══ -->
+<div class="section" id="s2">
+  <h2>Galerie-Datenbank &amp; Landing Page</h2>
+  <p>Kuratierte KI-Bilder werden über Django-Admin gepflegt. <code>is_public=True</code> → Bild erscheint sofort auf <code>/gallery/</code> — kein Deployment nötig. Je <code>cta_type</code> bekommt jedes Bild einen anderen Call-to-Action-Button.</p>
+
+  <div class="grid2">
+    <div>
+      <h3>Django-Modell: GalleryImage</h3>
+      <pre># gallery/models.py
+from django.db import models
+import uuid
+
+class GalleryImage(models.Model):
+    CATEGORY = [
+        ('shirt',  'Shirt / Hoodie'),
+        ('poster', 'Poster / Druck'),
+        ('card',   'Grußkarte'),
+        ('art',    'Fine Art'),
+    ]
+    CTA = [
+        ('etsy',    'Etsy-Listing'),
+        ('shop',    'Eigener Shop'),
+        ('contact', 'Bestellformular'),
+    ]
+    id            = models.UUIDField(
+                      primary_key=True, default=uuid.uuid4)
+    title         = models.CharField(max_length=120)
+    slug          = models.SlugField(unique=True)
+    description   = models.TextField(blank=True)
+    file_path     = models.ImageField(
+                      upload_to='gallery/full/')
+    thumb_path    = models.ImageField(
+                      upload_to='gallery/thumbs/', blank=True)
+    category      = models.CharField(
+                      max_length=20, choices=CATEGORY)
+    tags          = models.CharField(
+                      max_length=250, blank=True,
+                      help_text='kommasepariert')
+    cta_type      = models.CharField(
+                      max_length=20, choices=CTA, default='shop')
+    cta_url       = models.URLField(
+                      blank=True,
+                      help_text='Etsy-URL oder Shop-Produktpfad')
+    is_public     = models.BooleanField(default=False)
+    sort_order    = models.PositiveIntegerField(default=0)
+    source_job_id = models.UUIDField(
+                      null=True, blank=True,
+                      help_text='Referenz auf AIJob')
+    created_at    = models.DateTimeField(auto_now_add=True)
+    updated_at    = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['sort_order', '-created_at']
+
+    def save(self, *args, **kwargs):
+        if self.file_path and not self.thumb_path:
+            self._generate_thumbnail()
+        super().save(*args, **kwargs)
+
+    def _generate_thumbnail(self):
+        from PIL import Image, ImageOps
+        from io import BytesIO
+        from django.core.files.base import ContentFile
+        img = Image.open(self.file_path)
+        img = ImageOps.exif_transpose(img)
+        img.thumbnail((600, 600), Image.LANCZOS)
+        buf = BytesIO()
+        img.save(buf, format='JPEG', quality=85, optimize=True)
+        fname = 'thumb_' + self.file_path.name.split('/')[-1]
+        self.thumb_path.save(
+            fname, ContentFile(buf.getvalue()), save=False)</pre>
+    </div>
+    <div>
+      <h3>Admin-Konfiguration</h3>
+      <pre># gallery/admin.py
+from django.contrib import admin
+from .models import GalleryImage
+
+@admin.register(GalleryImage)
+class GalleryImageAdmin(admin.ModelAdmin):
+    list_display  = (
+        'title', 'category', 'is_public',
+        'cta_type', 'sort_order', 'created_at')
+    list_editable = ('is_public', 'sort_order', 'cta_type')
+    list_filter   = ('category', 'is_public', 'cta_type')
+    search_fields = ('title', 'tags')
+    prepopulated_fields = {'slug': ('title',)}
+    readonly_fields = (
+        'thumb_path', 'created_at', 'updated_at')
+    fieldsets = (
+        ('Inhalt', {
+            'fields': (
+                'title', 'slug', 'description',
+                'file_path', 'thumb_path')
+        }),
+        ('Kategorisierung', {
+            'fields': ('category', 'tags', 'sort_order')
+        }),
+        ('Vertrieb / CTA', {
+            'fields': ('cta_type', 'cta_url', 'is_public')
+        }),
+        ('Technisch', {
+            'fields': ('source_job_id',
+                       'created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )</pre>
+      <h3>Admin-Workflow</h3>
+      <div class="flow">
+        <div class="flow-step">
+          <div class="flow-num">1</div>
+          <div class="flow-box"><div class="fb-title">GPU generiert Bild</div><div class="fb-detail">Output in /mnt/agency_nas/raw/ gespeichert</div></div>
+        </div>
+        <div class="flow-down">↓</div>
+        <div class="flow-step">
+          <div class="flow-num">2</div>
+          <div class="flow-box"><div class="fb-title">Admin → GalleryImage → Add</div><div class="fb-detail">file_path hochladen, title, slug befüllen</div></div>
+        </div>
+        <div class="flow-down">↓</div>
+        <div class="flow-step">
+          <div class="flow-num">3</div>
+          <div class="flow-box"><div class="fb-title">Kategorie + Tags + CTA setzen</div><div class="fb-detail">category, cta_type, cta_url konfigurieren</div></div>
+        </div>
+        <div class="flow-down">↓</div>
+        <div class="flow-step">
+          <div class="flow-num">4</div>
+          <div class="flow-box"><div class="fb-title">is_public = True speichern</div><div class="fb-detail">Bild erscheint sofort auf /gallery/ — kein Deploy</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <h3>Views &amp; URL-Struktur</h3>
+  <div class="grid2">
+    <pre># gallery/views.py
+from django.views.generic import ListView, DetailView
+from .models import GalleryImage
+
+class GalleryListView(ListView):
+    model               = GalleryImage
+    template_name       = 'gallery/list.html'
+    context_object_name = 'images'
+    paginate_by         = 24
+
+    def get_queryset(self):
+        qs  = GalleryImage.objects.filter(is_public=True)
+        cat = self.request.GET.get('cat')
+        if cat:
+            qs = qs.filter(category=cat)
+        return qs
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx['categories'] = GalleryImage.CATEGORY
+        ctx['active_cat'] = self.request.GET.get('cat','')
+        return ctx
+
+class GalleryDetailView(DetailView):
+    model         = GalleryImage
+    template_name = 'gallery/detail.html'
+    queryset      = GalleryImage.objects.filter(
+                      is_public=True)</pre>
+    <pre># gallery/urls.py
+from django.urls import path
+from .views import GalleryListView, GalleryDetailView
+
+urlpatterns = [
+    path('gallery/',
+         GalleryListView.as_view(),
+         name='gallery-list'),
+    path('gallery/&lt;slug:slug&gt;/',
+         GalleryDetailView.as_view(),
+         name='gallery-detail'),
+]
+
+# Öffentliche URLs:
+#  /gallery/               → Landing Page mit Filter
+#  /gallery/&lt;slug&gt;/       → Detailseite mit großem Bild
+#  /admin/gallery/         → Admin-Verwaltung (intern)
+
+# Nginx-Routing:
+# datemyhobby.com/gallery/ → Django via Gunicorn:8000</pre>
+  </div>
+
+  <h3>CTA-Template-Logik</h3>
+  <pre>{# gallery/templates/gallery/list.html — CTA-Abschnitt #}
+{% for image in images %}
+&lt;div class="gallery-item"&gt;
+  &lt;img src="{{ image.thumb_path.url }}"
+       alt="{{ image.title }}" loading="lazy"&gt;
+  &lt;div class="overlay"&gt;
+    &lt;strong&gt;{{ image.title }}&lt;/strong&gt;
+    {% if image.cta_type == 'etsy' %}
+      &lt;a href="{{ image.cta_url }}" target="_blank"
+         class="btn-etsy"&gt;🛒 Auf Etsy kaufen&lt;/a&gt;
+    {% elif image.cta_type == 'shop' %}
+      &lt;a href="/shop/product/{{ image.slug }}/"
+         class="btn-shop"&gt;🏪 Im Shop kaufen&lt;/a&gt;
+    {% else %}
+      &lt;a href="/contact/?ref={{ image.slug }}"
+         class="btn-contact"&gt;📬 Druckjob anfragen&lt;/a&gt;
+    {% endif %}
+  &lt;/div&gt;
+&lt;/div&gt;
+{% endfor %}
+
+{# Kategorie-Filter-Buttons #}
+&lt;a href="?cat="   class="filter {% if not active_cat %}active{% endif %}"&gt;Alle&lt;/a&gt;
+{% for value, label in categories %}
+&lt;a href="?cat={{ value }}"
+   class="filter {% if active_cat == value %}active{% endif %}"&gt;
+  {{ label }}
+&lt;/a&gt;
+{% endfor %}</pre>
+</div>
+
+<!-- ═══════════════════════════════════ TAB 3: MERCH-SHOP ═══ -->
+<div class="section" id="s3">
+  <h2>Merch-Shop — Django + Stripe</h2>
+  <p>Vollständiger Checkout-Flow: Produkt → Warenkorb → Stripe Hosted Checkout → Webhook → Printful-Bestellung → Tracking. Kartendaten landen nie auf dem eigenen Server (PCI SAQ A).</p>
+
+  <div class="grid2">
+    <div>
+      <h3>Django-Modelle</h3>
+      <pre># shop/models.py
+from django.db import models
+import uuid
+
+class Product(models.Model):
+    id          = models.UUIDField(
+                    primary_key=True, default=uuid.uuid4)
+    name        = models.CharField(max_length=100)
+    slug        = models.SlugField(unique=True)
+    description = models.TextField()
+    category    = models.CharField(max_length=40)
+    base_image  = models.ImageField(
+                    upload_to='shop/products/')
+    is_active   = models.BooleanField(default=True)
+    created_at  = models.DateTimeField(auto_now_add=True)
+
+class ProductVariant(models.Model):
+    product             = models.ForeignKey(
+                            Product,
+                            on_delete=models.CASCADE,
+                            related_name='variants')
+    size                = models.CharField(max_length=10)
+    color               = models.CharField(max_length=40)
+    printful_variant_id = models.CharField(max_length=50)
+    price_eur           = models.DecimalField(
+                            max_digits=8, decimal_places=2)
+    cost_eur            = models.DecimalField(
+                            max_digits=8, decimal_places=2)
+    is_active           = models.BooleanField(default=True)
+
+class Order(models.Model):
+    STATUS = [
+        ('pending',    'Ausstehend'),
+        ('paid',       'Bezahlt'),
+        ('processing', 'In Produktion'),
+        ('shipped',    'Versandt'),
+        ('delivered',  'Geliefert'),
+        ('cancelled',  'Storniert'),
+    ]
+    id                = models.UUIDField(
+                          primary_key=True, default=uuid.uuid4)
+    stripe_session_id = models.CharField(
+                          max_length=200, unique=True)
+    stripe_payment_id = models.CharField(
+                          max_length=200, blank=True)
+    printful_order_id = models.CharField(
+                          max_length=50, blank=True)
+    status            = models.CharField(
+                          max_length=20, choices=STATUS,
+                          default='pending')
+    email             = models.EmailField()
+    name              = models.CharField(max_length=100)
+    shipping_address  = models.JSONField()
+    total_eur         = models.DecimalField(
+                          max_digits=10, decimal_places=2)
+    tracking_code     = models.CharField(
+                          max_length=100, blank=True)
+    source_channel    = models.CharField(
+                          max_length=30, default='shop')
+    created_at        = models.DateTimeField(auto_now_add=True)
+    updated_at        = models.DateTimeField(auto_now=True)
+
+class OrderLine(models.Model):
+    order    = models.ForeignKey(
+                 Order, on_delete=models.CASCADE,
+                 related_name='lines')
+    variant  = models.ForeignKey(
+                 ProductVariant, on_delete=models.PROTECT)
+    quantity = models.PositiveIntegerField(default=1)
+    price    = models.DecimalField(
+                 max_digits=8, decimal_places=2)</pre>
+    </div>
+    <div>
+      <h3>Stripe Checkout Session</h3>
+      <pre># shop/views.py
+import stripe
+from django.conf import settings
+from django.http import JsonResponse, HttpResponse
+from django.views.decorators.csrf import csrf_exempt
+
+stripe.api_key = settings.STRIPE_SECRET_KEY
+
+def create_checkout_session(request):
+    """POST – erstellt Stripe Checkout Session."""
+    cart = request.session.get('cart', {})
+    line_items = []
+    for variant_id, qty in cart.items():
+        v = ProductVariant.objects.get(id=variant_id)
+        line_items.append({
+            'price_data': {
+                'currency': 'eur',
+                'product_data': {
+                    'name': (f"{v.product.name} "
+                             f"– {v.size} {v.color}")
+                },
+                'unit_amount': int(v.price_eur * 100),
+            },
+            'quantity': qty,
+        })
+    session = stripe.checkout.Session.create(
+        payment_method_types=['card'],
+        line_items=line_items,
+        mode='payment',
+        shipping_address_collection={
+            'allowed_countries': ['DE','AT','CH','NL',
+                                  'FR','BE']},
+        success_url=(settings.BASE_URL
+                     + '/shop/success/'
+                     '?session_id={CHECKOUT_SESSION_ID}'),
+        cancel_url=settings.BASE_URL + '/shop/cart/',
+    )
+    return JsonResponse({'url': session.url})</pre>
+      <h3>Stripe Webhook → Printful</h3>
+      <pre># shop/views.py (Webhook-Handler)
+@csrf_exempt   # Stripe sendet keine Django-Session-Cookies
+def stripe_webhook(request):
+    payload = request.body
+    sig     = request.headers.get('Stripe-Signature', '')
+    try:
+        event = stripe.Webhook.construct_event(
+            payload, sig,
+            settings.STRIPE_WEBHOOK_SECRET  # aus .env!
+        )
+    except stripe.error.SignatureVerificationError:
+        return HttpResponse(status=400)  # Ablehnen
+
+    if event['type'] == 'checkout.session.completed':
+        sess  = event['data']['object']
+        order = Order.objects.get(
+                    stripe_session_id=sess['id'])
+        order.status            = 'paid'
+        order.stripe_payment_id = sess['payment_intent']
+        addr = sess['shipping_details']['address']
+        order.shipping_address  = addr
+        order.name = sess['shipping_details']['name']
+        order.save()
+        create_printful_order.delay(str(order.id))
+    return HttpResponse(status=200)</pre>
+      <h3>Printful-Order-Task (Celery)</h3>
+      <pre># shop/tasks.py
+import requests
+from celery import shared_task
+from django.conf import settings
+
+@shared_task(bind=True, max_retries=3, queue='cpu_queue')
+def create_printful_order(self, order_id):
+    order = Order.objects.get(id=order_id)
+    items = [
+        {'sync_variant_id': line.variant.printful_variant_id,
+         'quantity': line.quantity}
+        for line in order.lines.all()
+    ]
+    payload = {
+        'recipient': {
+            'name':         order.name,
+            'email':        order.email,
+            'address1':     order.shipping_address['line1'],
+            'city':         order.shipping_address['city'],
+            'zip':          order.shipping_address[
+                                'postal_code'],
+            'country_code': order.shipping_address[
+                                'country'],
+        },
+        'items': items,
+    }
+    try:
+        r = requests.post(
+            'https://api.printful.com/orders',
+            json=payload,
+            headers={'Authorization':
+                     f"Bearer {settings.PRINTFUL_API_KEY}"},
+            timeout=15,
+        )
+        r.raise_for_status()
+        pf = r.json()['result']
+        order.printful_order_id = str(pf['id'])
+        order.status = 'processing'
+        order.save()
+    except Exception as exc:
+        raise self.retry(exc=exc, countdown=60)</pre>
+    </div>
+  </div>
+
+  <h3>URL-Struktur</h3>
+  <table>
+    <tr><th>URL</th><th>View</th><th>Beschreibung</th></tr>
+    <tr><td><code>/shop/</code></td><td>ProductListView</td><td>Produktkatalog, Kategorie-Filter</td></tr>
+    <tr><td><code>/shop/product/&lt;slug&gt;/</code></td><td>ProductDetailView</td><td>Produktseite: Variante wählen, in Warenkorb legen</td></tr>
+    <tr><td><code>/shop/cart/</code></td><td>CartView</td><td>Warenkorb-Übersicht, Menge anpassen</td></tr>
+    <tr><td><code>/shop/checkout/</code></td><td>create_checkout_session</td><td>Stripe Session erstellen → Redirect zu Stripe Hosted Page</td></tr>
+    <tr><td><code>/shop/success/</code></td><td>OrderSuccessView</td><td>Bestätigungs-Seite nach Payment (liest Session-ID aus URL)</td></tr>
+    <tr><td><code>/shop/webhook/stripe/</code></td><td>stripe_webhook</td><td>Stripe Webhook Endpoint – CSRF-exempt, Signatur geprüft</td></tr>
+  </table>
+
+  <div class="card yellow">
+    <h4 style="color:#fcd34d; margin-top:0">⚠️ Security-Pflichtpunkte für den Shop</h4>
+    <ul style="color:#8896aa; padding-left:18px; font-size:0.83rem; line-height:2">
+      <li>Stripe Webhook: <code>STRIPE_WEBHOOK_SECRET</code> aus ENV – Signatur <strong>immer</strong> prüfen</li>
+      <li><code>STRIPE_SECRET_KEY</code> und <code>PRINTFUL_API_KEY</code> ausschließlich in <code>.env</code>, nie im Repo</li>
+      <li>Stripe Hosted Checkout: Kartendaten landen nie auf eigenem Server → PCI SAQ A (einfachste Stufe)</li>
+      <li>Webhook-Endpoint <code>@csrf_exempt</code> korrekt, weil Stripe keine Django-Session-Cookies sendet – Authentizität via Signatur sichergestellt</li>
+      <li>Bestelladresse kommt vom Stripe-Event (nicht vom User-Input) → kein Address-Injection-Risiko</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════ TAB 4: VERTRIEB ═══ -->
+<div class="section" id="s4">
+  <h2>Vertrieb-Kanäle Setup</h2>
+  <p>Vier primäre Kanäle. Printful ist das normierte Fulfillment-Backend für alle – eine Druckdatei, ein Lieferant, automatische Bestellung per Webhook. Eigener Shop hat die höchste Marge, Etsy den größten organischen Traffic.</p>
+
+  <h3>Kanal-Matrix</h3>
+  <table>
+    <tr><th>Kanal</th><th>Gebühren</th><th>Produkte</th><th>Marge (Shirt ~€26 VK)</th><th>Prio</th></tr>
+    <tr>
+      <td>🏪 Eigener Django-Shop</td><td>Stripe 2.9% + €0.25</td><td>Alle</td>
+      <td class="price-good">~55–60%</td><td>Prio 1</td>
+    </tr>
+    <tr>
+      <td>🟠 Etsy</td><td>€0.20 Listing + 6.5% Tx</td><td>Shirts, Hoodies, Poster, Karten</td>
+      <td class="price-good">~40–48%</td><td>Prio 1</td>
+    </tr>
+    <tr>
+      <td>🔴 Redbubble</td><td>0% Listing, Base Price fix</td><td>Shirts, Poster, Karten</td>
+      <td class="price-warn">~20–28%</td><td>Prio 2</td>
+    </tr>
+    <tr>
+      <td>📧 B2B Direktanfragen</td><td>0%</td><td>Poster, Karten, Wissenschaftsbilder</td>
+      <td class="price-good">~60–70%</td><td>Prio 2</td>
+    </tr>
+    <tr>
+      <td>🔵 Amazon Merch on Demand</td><td>Amazon Base-Price fix</td><td>Shirts</td>
+      <td class="price-warn">~15–22%</td><td>Prio 3 (später)</td>
+    </tr>
+  </table>
+
+  <h3>Preislogik (Beispiel: Shirt Unisex Größe M)</h3>
+  <table>
+    <tr><th>Position</th><th>Eigener Shop</th><th>Etsy</th><th>Redbubble</th></tr>
+    <tr><td>Printful Produktkosten</td><td>€11.00</td><td>€11.00</td><td>— (Redbubble Base)</td></tr>
+    <tr><td>Printful Versand DE</td><td>€3.99</td><td>€3.99</td><td>— (inkl.)</td></tr>
+    <tr><td>Verkaufspreis (VK)</td><td>€28.00</td><td>€26.00</td><td>€22.00</td></tr>
+    <tr><td>Kanal-Gebühr</td><td>€1.07 (Stripe 2.9%+0.25)</td><td>€1.89 (6.5%+€0.20)</td><td>Basis abgezogen</td></tr>
+    <tr><td><strong>Marge (€)</strong></td><td class="price-good"><strong>€12.94</strong></td><td class="price-good"><strong>€9.11</strong></td><td class="price-warn"><strong>~€5–6</strong></td></tr>
+    <tr><td><strong>Marge (%)</strong></td><td class="price-good"><strong>~46%</strong></td><td class="price-good"><strong>~35%</strong></td><td class="price-warn"><strong>~23–27%</strong></td></tr>
+  </table>
+
+  <div class="grid2">
+    <div>
+      <h3>Etsy Open API v3 — Listing-Helper</h3>
+      <pre># etsy/listing.py
+import requests
+from django.conf import settings
+
+ETSY_BASE = "https://openapi.etsy.com/v3/application"
+
+def create_listing(access_token: str,
+                   shop_id: str,
+                   product: dict) -> dict:
+    """Erstellt ein Etsy-Draft-Listing."""
+    headers = {
+        "x-api-key":     settings.ETSY_API_KEY,
+        "Authorization": f"Bearer {access_token}",
+        "Content-Type":  "application/json",
+    }
+    payload = {
+        "title":              product["title"],
+        "description":        product["description"],
+        "price":              product["price_eur"],
+        "quantity":           999,   # on-demand
+        "who_made":           "i_did",
+        "when_made":          "made_to_order",
+        "taxonomy_id":        68887659,  # Clothing > Shirts
+        "shipping_profile_id":product["shipping_profile_id"],
+        "state":              "draft",
+        "tags":               product["tags"][:13],
+    }
+    r = requests.post(
+        f"{ETSY_BASE}/shops/{shop_id}/listings",
+        json=payload, headers=headers, timeout=10)
+    r.raise_for_status()
+    return r.json()
+
+def upload_listing_image(access_token, shop_id,
+                         listing_id, image_path):
+    """Lädt das Produktbild für ein Etsy-Listing hoch."""
+    headers = {
+        "x-api-key":     settings.ETSY_API_KEY,
+        "Authorization": f"Bearer {access_token}",
+    }
+    with open(image_path, 'rb') as f:
+        r = requests.post(
+            f"{ETSY_BASE}/shops/{shop_id}/"
+            f"listings/{listing_id}/images",
+            headers=headers,
+            files={"image": f},
+            timeout=30)
+    r.raise_for_status()
+
+def activate_listing(access_token, shop_id, listing_id):
+    """Setzt Draft-Listing auf 'active'."""
+    headers = {
+        "x-api-key":     settings.ETSY_API_KEY,
+        "Authorization": f"Bearer {access_token}",
+        "Content-Type":  "application/json",
+    }
+    r = requests.patch(
+        f"{ETSY_BASE}/shops/{shop_id}/"
+        f"listings/{listing_id}",
+        json={"state": "active"},
+        headers=headers, timeout=10)
+    r.raise_for_status()</pre>
+    </div>
+    <div>
+      <h3>Produktzuordnung je Kanal</h3>
+      <table>
+        <tr><th>Produkt</th><th>Shop</th><th>Etsy</th><th>Redbubble</th><th>B2B</th></tr>
+        <tr><td>Shirts</td><td>✅</td><td>✅</td><td>✅</td><td>—</td></tr>
+        <tr><td>Hoodies</td><td>✅</td><td>✅</td><td>—</td><td>—</td></tr>
+        <tr><td>Poster A2/A1</td><td>✅</td><td>✅</td><td>✅</td><td>✅</td></tr>
+        <tr><td>Grußkarten A5</td><td>✅</td><td>✅</td><td>—</td><td>✅</td></tr>
+        <tr><td>Wissenschaftsbilder</td><td>—</td><td>—</td><td>—</td><td>✅</td></tr>
+      </table>
+
+      <h3>KPI-Targets (Woche 8)</h3>
+      <table>
+        <tr><th>KPI</th><th>Messung</th><th>Ziel W8</th></tr>
+        <tr><td>Conversion Rate Etsy</td><td>Klicks → Käufer</td><td>≥2%</td></tr>
+        <tr><td>Conversion Rate Shop</td><td>Besucher → Käufer</td><td>≥1%</td></tr>
+        <tr><td>Ø Marge je Kanal</td><td>Marge€ / VK€</td><td>≥35% überall</td></tr>
+        <tr><td>Rücklaufquote</td><td>Retouren / Bestellungen</td><td>≤5%</td></tr>
+        <tr><td>Live-Listings Etsy</td><td>Aktive Listings</td><td>≥10</td></tr>
+        <tr><td>Galerie-Traffic</td><td>Unique Visits /gallery/</td><td>≥50/Woche</td></tr>
+      </table>
+
+      <h3>Etsy OAuth 2.0 Setup</h3>
+      <pre># settings.py / .env
+ETSY_API_KEY      = env("ETSY_API_KEY")
+ETSY_API_SECRET   = env("ETSY_API_SECRET")
+ETSY_REDIRECT_URI = (
+    "https://datemyhobby.com/etsy/callback/")
+ETSY_SCOPES = (
+    "listings_w listings_r shops_r "
+    "transactions_r profile_r")
+
+# Scopes Erklärung:
+# listings_w  → Listings erstellen/bearbeiten
+# listings_r  → Listings lesen
+# shops_r     → Shop-Infos lesen
+# transactions_r → Bestellungen einsehen
+# profile_r   → Shop-Profil
+
+# Access Token: TTL 3600s
+# Refresh Token: TTL 90 Tage → in DB speichern!</pre>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════ TAB 5: GPU-PIPELINE ═══ -->
+<div class="section" id="s5">
+  <h2>GPU-Pipeline: Generate → Upscale → Export</h2>
+  <p>Vollständig asynchron über Celery. RunPod EU ist primär. Vast.ai wird automatisch als Fallback aktiviert. Alle Exports werden lokal auf dem VPS erstellt und auf dem NAS abgelegt.</p>
+
+  <h3>Gesamt-Flow</h3>
+  <div style="display:grid; grid-template-columns:repeat(8,1fr); gap:6px; align-items:center; text-align:center; margin:16px 0">
+    <div class="flow-box"><div class="fb-title">Prompt</div><div class="fb-detail">Admin / API</div></div>
+    <div style="color:#7a5cff">→</div>
+    <div class="flow-box"><div class="fb-title">Celery Task</div><div class="fb-detail">gpu_queue</div></div>
+    <div style="color:#7a5cff">→</div>
+    <div class="flow-box"><div class="fb-title">RunPod API</div><div class="fb-detail">FLUX-Dev / SDXL</div></div>
+    <div style="color:#7a5cff">→</div>
+    <div class="flow-box"><div class="fb-title">Real-ESRGAN</div><div class="fb-detail">4× Upscale</div></div>
+    <div style="color:#7a5cff44; font-size:0.7rem">Fallback↓<br>Vast.ai</div>
+  </div>
+  <div style="display:grid; grid-template-columns:repeat(8,1fr); gap:6px; align-items:center; text-align:center; margin-bottom:16px">
+    <div class="flow-box"><div class="fb-title">Export POD</div><div class="fb-detail">PNG 300dpi sRGB</div></div>
+    <div style="color:#7a5cff">+</div>
+    <div class="flow-box"><div class="fb-title">Export Offset</div><div class="fb-detail">PDF/X-4 CMYK</div></div>
+    <div style="color:#7a5cff">+</div>
+    <div class="flow-box"><div class="fb-title">Export Preview</div><div class="fb-detail">JPG 72dpi</div></div>
+    <div style="color:#7a5cff">→</div>
+    <div class="flow-box"><div class="fb-title">NAS speichern</div><div class="fb-detail">/mnt/agency_nas/</div></div>
+    <div style="color:#7a5cff">→</div>
+  </div>
+
+  <div class="grid2">
+    <div>
+      <h3>Celery-Tasks</h3>
+      <pre># gpu/tasks.py
+import runpod
+from celery import shared_task
+from django.conf import settings
+import requests
+
+@shared_task(bind=True, max_retries=2,
+             queue='gpu_queue')
+def generate_image(self, job_id: str):
+    """Sendet Job an RunPod. Fallback: Vast.ai."""
+    job = AIJob.objects.get(id=job_id)
+    try:
+        result = _run_on_runpod(job)
+    except Exception as exc:
+        if self.request.retries == 0:
+            try:
+                result = _run_on_vastai(job)
+            except Exception as exc2:
+                raise self.retry(exc=exc2, countdown=60)
+        else:
+            raise self.retry(exc=exc, countdown=30)
+    job.raw_output_path = result['output_path']
+    job.status = 'upscaling'
+    job.save()
+    upscale_image.delay(job_id)
+
+def _run_on_runpod(job):
+    runpod.api_key = settings.RUNPOD_API_KEY
+    run = runpod.run_sync(
+        endpoint_id=settings.RUNPOD_ENDPOINT_ID,
+        input={
+            "prompt":         job.prompt,
+            "model":          job.model,
+            "width":          job.width,
+            "height":         job.height,
+            "num_steps":      job.steps,
+            "guidance_scale": job.guidance,
+        },
+        timeout=300,
+    )
+    url = run['output']['images'][0]['url']
+    return _download_output(url, job.id)
+
+def _run_on_vastai(job):
+    """Vast.ai HTTP-API Fallback."""
+    import vastai
+    client = vastai.VastAI(
+        api_key=settings.VASTAI_API_KEY)
+    # Instance suchen und Job senden
+    # (Details: vastai SDK Dokumentation)
+    pass
+
+@shared_task(bind=True, max_retries=2,
+             queue='gpu_queue')
+def upscale_image(self, job_id: str):
+    job = AIJob.objects.get(id=job_id)
+    runpod.api_key = settings.RUNPOD_API_KEY
+    result = runpod.run_sync(
+        endpoint_id=settings.RUNPOD_UPSCALE_ENDPOINT,
+        input={
+            "image_path": job.raw_output_path,
+            "scale": 4,
+            "model": "RealESRGAN_x4plus",
+        },
+        timeout=180,
+    )
+    job.upscaled_path = result['output']['image_path']
+    job.status = 'exporting'
+    job.save()
+    export_for_channel.delay(job_id)
+
+@shared_task(queue='cpu_queue')
+def export_for_channel(job_id: str):
+    """Erstellt alle drei Export-Varianten (CPU-lokal)."""
+    job = AIJob.objects.get(id=job_id)
+    base = f"/mnt/agency_nas/raw/{job_id}.png"
+    export_pod(base, job_id)
+    export_offset(base, job_id)
+    export_preview(base, job_id)
+    job.status = 'done'
+    job.save()
+    notify_gallery.delay(job_id)
+
+@shared_task(queue='cpu_queue')
+def notify_gallery(job_id: str):
+    """Legt automatisch GalleryImage-Eintrag an."""
+    from gallery.models import GalleryImage
+    job = AIJob.objects.get(id=job_id)
+    GalleryImage.objects.get_or_create(
+        source_job_id=job.id,
+        defaults={
+            'title':    job.title or f"AI-{job_id[:8]}",
+            'slug':     f"ai-{job_id[:8]}",
+            'file_path': job.preview_path,
+            'category': job.category or 'art',
+            'is_public': False,  # Admin schaltet frei
+        }
+    )</pre>
+    </div>
+    <div>
+      <h3>Export-Funktionen</h3>
+      <pre># gpu/export.py
+from PIL import Image, ImageCms
+import subprocess, os
+
+def export_pod(src: str, job_id: str):
+    """PNG 300dpi sRGB — Printful / POD-Partner."""
+    img = Image.open(src).convert('RGB')
+    out = f"/mnt/agency_nas/exports/pod/{job_id}.png"
+    img.save(out, format='PNG', dpi=(300, 300),
+             optimize=True)
+
+def export_offset(src: str, job_id: str):
+    """CMYK TIFF → PDF/X-4 mit 3mm Bleed
+    für Offset-Druck (FLYERALARM, Saxoprint)."""
+    srgb = ImageCms.createProfile('sRGB')
+    cmyk = ImageCms.getOpenProfile(
+        '/opt/icc/ISOcoated_v2_eci.icc')  # FOGRA39
+    img_rgb  = Image.open(src).convert('RGB')
+    img_cmyk = ImageCms.profileToProfile(
+        img_rgb, srgb, cmyk, outputMode='CMYK')
+    tif = f"/mnt/agency_nas/exports/offset/{job_id}.tif"
+    img_cmyk.save(tif, format='TIFF', dpi=(300, 300))
+    # TIF → PDF/X-4 via Ghostscript
+    pdf = tif.replace('.tif', '.pdf')
+    subprocess.run([
+        'gs', '-dBATCH', '-dNOPAUSE',
+        '-sDEVICE=pdfwrite',
+        '-dPDFX', '-dPDFSETTINGS=/prepress',
+        f'-sOutputFile={pdf}', tif
+    ], check=True, timeout=120)
+
+def export_preview(src: str, job_id: str):
+    """JPG 72dpi max 1200px — Web / Galerie."""
+    img = Image.open(src).convert('RGB')
+    img.thumbnail((1200, 1200), Image.LANCZOS)
+    out = (f"/mnt/agency_nas/exports/preview/"
+           f"{job_id}_preview.jpg")
+    img.save(out, format='JPEG', quality=85,
+             optimize=True, dpi=(72, 72))</pre>
+
+      <h3>Kostenkalkulation GPU</h3>
+      <table>
+        <tr><th>Vorgang</th><th>Zeit (est.)</th><th>Kosten (RunPod RTX 4090)</th></tr>
+        <tr><td>FLUX-Dev 1024×1024 (30 Steps)</td><td>~20–40s</td><td>~€0.004–0.008</td></tr>
+        <tr><td>SDXL 1024×1024 (30 Steps)</td><td>~15–30s</td><td>~€0.003–0.006</td></tr>
+        <tr><td>Real-ESRGAN 4× Upscale</td><td>~30–60s</td><td>~€0.005–0.010</td></tr>
+        <tr><td>Export (CPU, lokal)</td><td>~10–20s</td><td>€0 (VPS inkl.)</td></tr>
+        <tr><td><strong>Gesamt / Bild</strong></td><td>~1–2 min</td><td class="price-good"><strong>~€0.01–0.02</strong></td></tr>
+        <tr><td>Batch 50 Bilder</td><td>~1–2h</td><td class="price-good"><strong>~€0.50–1.00</strong></td></tr>
+      </table>
+
+      <h3>Fehlerbehandlung</h3>
+      <table>
+        <tr><th>Fehler</th><th>Reaktion</th></tr>
+        <tr><td>RunPod API Timeout</td><td>Retry 1× → Vast.ai Fallback</td></tr>
+        <tr><td>Vast.ai auch unavailable</td><td>Dead-Letter-Queue + Admin-Alert</td></tr>
+        <tr><td>Export fehlgeschlagen</td><td>Retry 2× (cpu_queue), dann Error-Status</td></tr>
+        <tr><td>NAS nicht erreichbar</td><td>Lokaler /tmp/-Fallback, Re-Upload per Cron</td></tr>
+        <tr><td>Redis-Crash (Queue leer)</td><td>Redis: appendonly yes → persistente Queue</td></tr>
+      </table>
+
+      <h3>Celery-Konfiguration</h3>
+      <pre># printbuddy/celery.py
+from celery import Celery
+app = Celery('printbuddy')
+app.config_from_object('django.conf:settings',
+                        namespace='CELERY')
+
+# settings.py
+CELERY_BROKER_URL    = 'redis://127.0.0.1:6379/0'
+CELERY_RESULT_BACKEND= 'redis://127.0.0.1:6379/0'
+CELERY_TASK_QUEUES   = {
+    'gpu_queue': {'exchange': 'gpu_queue'},
+    'cpu_queue': {'exchange': 'cpu_queue'},
+}
+CELERY_TASK_DEFAULT_QUEUE = 'cpu_queue'
+
+# Systemd-Services (VPS):
+# celery-gpu.service → -Q gpu_queue --concurrency=1
+# celery-cpu.service → -Q cpu_queue --concurrency=2</pre>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════ TAB 6: ADR ═══ -->
+<div class="section" id="s6">
+  <h2>Architektur-Entscheidungen (ADR)</h2>
+  <p>Jede Entscheidung ist dokumentiert: Kontext, Begründung und Konsequenzen. <span class="badge b-accepted">Accepted</span> = bindend &nbsp; <span class="badge b-proposed">Proposed</span> = noch offen &nbsp; <span class="badge b-deprecated">Deprecated</span> = ersetzt. Neue Subsysteme brauchen eine neue ADR.</p>
+
+  <div class="adr-card">
+    <div class="adr-header">
+      <span class="adr-id">ADR-01</span>
+      <span class="adr-title">Django 4.2 LTS als Web-Framework (nicht FastAPI / Node.js)</span>
+      <span class="badge b-accepted">Accepted</span>
+    </div>
+    <div class="adr-body">
+      <div class="adr-section"><label>Kontext</label><p>Benötigt: REST-API, Admin-Interface, Auth, File-Handling, ORM in einer Einheit. Team-Skill in Python vorhanden. ML-Ökosystem (Celery, PIL, ICC) ist Python-first. 2-Personen-Team braucht minimalen Boilerplate.</p></div>
+      <div class="adr-section"><label>Entscheidung</label><p>Django 4.2 LTS (Security-Support bis April 2026). LTS-Upgrade auf Django 5.2 LTS geplant für Q2 2025. Kein Django REST Framework nötig für MVP – Django-Views reichen für Webhooks und einfache APIs.</p></div>
+      <div class="adr-section"><label>Konsequenzen ✅</label><p>Admin out-of-the-box (kein separates Tool). ORM mit Migrations reduziert Fehler. Bestehende Django-Projekte auf VPS wiederverwendbar. Django Security-Defaults sind stark (CSRF, XSS, SQLi).</p></div>
+      <div class="adr-section"><label>Konsequenzen ⚠️</label><p>Mehr Overhead als FastAPI für reine API-Endpoints. Monolith erfordert klare App-Trennung (gallery/, shop/, gpu/) um Skalierbarkeit offen zu halten. Kein Auto-Scaling im MVP.</p></div>
+    </div>
+  </div>
+
+  <div class="adr-card">
+    <div class="adr-header">
+      <span class="adr-id">ADR-02</span>
+      <span class="adr-title">PostgreSQL 15 als primäre Datenbank</span>
+      <span class="badge b-accepted">Accepted</span>
+    </div>
+    <div class="adr-body">
+      <div class="adr-section"><label>Kontext</label><p>Metadaten für AI-Jobs, Bestellungen und Galerie-Bilder sind relational strukturiert. Teile (Prompt-Parameter, Exportpfade, Shipping-Adresse) sind semistrukturiert. DSGVO erfordert EU-Datenhaltung und Löschkonzept.</p></div>
+      <div class="adr-section"><label>Entscheidung</label><p>PostgreSQL 15 auf dem Hetzner VPS (DE-Datacenter). Bietet JSONField für semistrukturierte Daten, ACID-Transaktionen für Bezahl-Flow, UUID-Primary-Keys nativ, DSGVO-konformes Soft-Delete via is_deleted-Flag.</p></div>
+      <div class="adr-section"><label>Konsequenzen ✅</label><p>JSONField ersetzt separate Metadata-Tabellen. UUID verhindert sequenzielle ID-Enumeration (Sicherheit). pg_dump für tägliche Backups trivial einzurichten. Bewährt in Django-Ökosystem.</p></div>
+      <div class="adr-section"><label>Konsequenzen ⚠️</label><p>Single-Node PostgreSQL – kein HA. Für MVP ausreichend; Read-Replica erst nötig ab signifikantem Traffic. pg_hba.conf muss auf localhost beschränkt bleiben.</p></div>
+    </div>
+  </div>
+
+  <div class="adr-card">
+    <div class="adr-header">
+      <span class="adr-id">ADR-03</span>
+      <span class="adr-title">Celery 5 + Redis 7 als Task-Queue (zwei Queues)</span>
+      <span class="badge b-accepted">Accepted</span>
+    </div>
+    <div class="adr-body">
+      <div class="adr-section"><label>Kontext</label><p>GPU-Rendering, Bild-Export und Printful-Bestellungen dürfen den HTTP-Request-Cycle nicht blockieren. Zwei verschiedene Worker-Typen nötig: GPU-Tasks (1 concurrent, RunPod-bound) und CPU-Tasks (2 concurrent, Export+API).</p></div>
+      <div class="adr-section"><label>Entscheidung</label><p>Celery 5.x mit Redis 7 als Broker + Result Backend. Zwei Queues: gpu_queue (1 Worker) und cpu_queue (2 Worker). Retry-Decorator mit exponential backoff. Redis appendonly yes für Queue-Persistenz.</p></div>
+      <div class="adr-section"><label>Konsequenzen ✅</label><p>Entkopplung GPU-Calls vom Web-Prozess. Retry-Logik verhindert verlorene Jobs. Flower-Dashboard für Queue-Monitoring. Skalierung: weitere Worker ohne Architekturänderung.</p></div>
+      <div class="adr-section"><label>Konsequenzen ⚠️</label><p>Redis ohne appendonly yes verliert Queue bei Neustart. Redis ist Single-Node – Ausfall = Queue-Ausfall. Lösung: Redis Sentinel bei Wachstum. Celery-Worker-Logs müssen überwacht werden.</p></div>
+    </div>
+  </div>
+
+  <div class="adr-card">
+    <div class="adr-header">
+      <span class="adr-id">ADR-04</span>
+      <span class="adr-title">RunPod EU (primär) + Vast.ai (Fallback) statt eigenem GPU-Server</span>
+      <span class="badge b-accepted">Accepted</span>
+    </div>
+    <div class="adr-body">
+      <div class="adr-section"><label>Kontext</label><p>Kein eigener GPU vorhanden. RTX 4090 Kaufpreis ~€1.800. Bei sporadischem Rendering-Bedarf im MVP lohnt CapEx nicht. GPU-Rendering ist async (Queue) – Latenz unkritisch. EU-Datacenter für DSGVO-Nähe bevorzugt.</p></div>
+      <div class="adr-section"><label>Entscheidung</label><p>RunPod EU (Frankfurt/Nürnberg) primär: RTX 4090 ~€0.40/h on-demand, stündliche Abrechnung, keine Mindestlaufzeit. Vast.ai als automatischer Fallback im Celery-Task wenn RunPod unavailable.</p></div>
+      <div class="adr-section"><label>Konsequenzen ✅</label><p>Kein Hardware-CapEx, kein Betrieb/Kühlung/Strom. Kosten direkt proportional zu Nutzung (~€0.01–0.02/Bild). Kein Lock-in – bei Wachstum eigenen GPU-Server nachziehen (ADR-04b).</p></div>
+      <div class="adr-section"><label>Konsequenzen ⚠️</label><p>Abhängigkeit von zwei Drittanbietern. Netzwerk-Latenz für große Outputs (~100–500MB). Lösung: Outputs direkt auf RunPod-Storage zwischenspeichern, nur URL zurückgeben, dann selektiv herunterladen.</p></div>
+    </div>
+  </div>
+
+  <div class="adr-card">
+    <div class="adr-header">
+      <span class="adr-id">ADR-05</span>
+      <span class="adr-title">Printful als normiertes Fulfillment-Backend (alle Kanäle)</span>
+      <span class="badge b-accepted">Accepted</span>
+    </div>
+    <div class="adr-body">
+      <div class="adr-section"><label>Kontext</label><p>Mehrere Vertriebskanäle (Etsy, Shop, B2B). Ohne normierten Fulfillment-Partner müssten Druckdateien kanalspezifisch aufbereitet werden. 2-Personen-Team hat keine Kapazität für eigenes Lager/Versand. Printify als Alternative mit ähnlicher API.</p></div>
+      <div class="adr-section"><label>Entscheidung</label><p>Printful als einziges Fulfillment-Backend: eine Druckdatei → Printful übernimmt Druck, Verpackung, Versand für alle Kanäle. Printify als Backup konfiguriert (ähnliche API-Struktur, einfache Migration möglich).</p></div>
+      <div class="adr-section"><label>Konsequenzen ✅</label><p>Normierte Druckdatei einmal erstellen, überall verwenden. DE-Lager → Lieferung DE/AT/CH 3–5 Tage. Kein Lagerrisiko. Printful↔Etsy-Integration fertig out-of-the-box. Qualitätskonstanz über alle Kanäle.</p></div>
+      <div class="adr-section"><label>Konsequenzen ⚠️</label><p>Printful-Produktkosten reduzieren Marge vs. eigenem Druck. Qualität abhängig vom Printful-Drucknetzwerk. Migration zu Printify möglich wenn Preise unvorteilhaft werden.</p></div>
+    </div>
+  </div>
+
+  <div class="adr-card">
+    <div class="adr-header">
+      <span class="adr-id">ADR-06</span>
+      <span class="adr-title">Stripe Checkout als Zahlungsanbieter (Hosted Sessions + Webhooks)</span>
+      <span class="badge b-accepted">Accepted</span>
+    </div>
+    <div class="adr-body">
+      <div class="adr-section"><label>Kontext</label><p>EU-Zahlungen erfordern PSD2/SCA (Strong Customer Authentication). Eigene Kartendaten-Verarbeitung würde PCI DSS Level 1 erfordern – unrealistisch für 2-Personen-Team. Zuverlässige Webhooks kritisch für Printful-Trigger.</p></div>
+      <div class="adr-section"><label>Entscheidung</label><p>Stripe Checkout (Hosted): Kartendaten landen nie auf eigenem Server → PCI SAQ A (einfachste Stufe). Webhook-Signatur-Validierung mit STRIPE_WEBHOOK_SECRET. Vollständige Testmodus-Unterstützung für E2E-Tests.</p></div>
+      <div class="adr-section"><label>Konsequenzen ✅</label><p>PCI-Compliance out-of-the-box. SCA/3DS automatisch. Zuverlässige Webhooks (Stripe Retry-Logik). EUR-native. Stripe-Dashboard für Transaktions-Übersicht. Keine eigene Zahlungsseite nötig.</p></div>
+      <div class="adr-section"><label>Konsequenzen ⚠️</label><p>2.9% + €0.25/Transaktion. Stripe-Outage beeinflusst Checkout (Monitoring: status.stripe.com). Kein eigenes Checkout-UI möglich (bewusst akzeptiert für PCI-Compliance).</p></div>
+    </div>
+  </div>
+
+  <div class="adr-card">
+    <div class="adr-header">
+      <span class="adr-id">ADR-07</span>
+      <span class="adr-title">Synology DS925+ als primäres File-Storage via NFS v4 + Tailscale</span>
+      <span class="badge b-accepted">Accepted</span>
+    </div>
+    <div class="adr-body">
+      <div class="adr-section"><label>Kontext</label><p>GPU-Outputs sind groß (100–500MB/Bild nach Upscale). S3-Storage wäre bei Volumen teuer. NAS ist bereits vorhanden, kein zusätzlicher CapEx. Verbindung VPS↔Home-NAS muss sicher und performant sein.</p></div>
+      <div class="adr-section"><label>Entscheidung</label><p>Synology DS925+ via NFS v4 auf VPS gemountet (/mnt/agency_nas/). Verbindung über Tailscale VPN (Mesh-VPN, kein offenes NFS im Internet). Synology Hyper Backup für Offsite. RAID für lokale Redundanz.</p></div>
+      <div class="adr-section"><label>Konsequenzen ✅</label><p>CapEx bereits amortisiert. Große Files ohne Cloud-Storage-Kosten. Täglich Snapshots. Django sieht NAS als normales lokales Dateisystem – kein SDK nötig. Tailscale verschlüsselt die NFS-Verbindung.</p></div>
+      <div class="adr-section"><label>Konsequenzen ⚠️</label><p>NAS + Heimanschluss sind Single Points of Failure für File-Storage. Empfehlung: kritische Exports (final_pod/) zusätzlich auf Hetzner-Volume spiegeln. Tailscale muss auf beiden Nodes laufen.</p></div>
+    </div>
+  </div>
+
+  <div class="adr-card">
+    <div class="adr-header">
+      <span class="adr-id">ADR-08</span>
+      <span class="adr-title">Hetzner VPS (Nürnberg / Falkenstein) als App-Server</span>
+      <span class="badge b-accepted">Accepted</span>
+    </div>
+    <div class="adr-body">
+      <div class="adr-section"><label>Kontext</label><p>Django, PostgreSQL, Redis, Celery und Nginx auf einem Server. DSGVO erfordert EU-Datenhaltung für Nutzerdaten (Bestellungen, E-Mails). Bestehender Hetzner VPS aus anderen Django-Projekten verfügbar.</p></div>
+      <div class="adr-section"><label>Entscheidung</label><p>Hetzner Cloud VPS (CX21 oder CX31), Rechenzentrum Nürnberg/Falkenstein (Deutschland). Ubuntu 22.04 LTS. Hetzner ist ISO 27001-zertifiziert, DSGVO-konform, dedizierte IPv4+IPv6. ~€10–20/Monat.</p></div>
+      <div class="adr-section"><label>Konsequenzen ✅</label><p>DSGVO: Nutzerdaten in Deutschland. Günstiger als AWS/GCP. Stack bereits bekannt (bestehende Projekte). Hetzner Managed Backups optional (+€2/Mo). Snapshot für schnelles Rollback.</p></div>
+      <div class="adr-section"><label>Konsequenzen ⚠️</label><p>Kein Auto-Scaling – Spikes erfordern manuelles Resize. Kein managed Kubernetes – alles manuell. Monitoring (Hetzner Metrics + UptimeRobot) zwingend empfohlen um Ausfälle frühzeitig zu erkennen.</p></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════ TAB 7: SECURITY ═══ -->
+<div class="section" id="s7">
+  <h2>Security-Baseline &amp; DSGVO-Checkliste</h2>
+  <p>Interaktive Checkliste — Fortschritt wird im Browser gespeichert. Alle mit <span class="badge b-gate">GATE</span> markierten Punkte sind Blocker für Go-Live (Woche 8).</p>
+
+  <div class="grid2">
+    <div>
+      <div class="check-group">
+        <div class="check-group-title">🔐 Infrastruktur-Härtung (VPS)</div>
+        <div class="check-row"><input type="checkbox" class="sp-check" data-key="sec-i01"><span class="cl-text">SSH: Password-Auth deaktivieren (<code>PasswordAuthentication no</code> in sshd_config)<small>Pflicht — verhindert Brute-Force-Zugriff</small></span></div>
+        <div class="check-row"><input type="checkbox" class="sp-check" data-key="sec-i02"><span class="cl-text">SSH: Root-Login deaktivieren (<code>PermitRootLogin no</code>)</span></div>
+        <div class="check-row"><input type="checkbox" class="sp-check" data-key="sec-i03"><span class="cl-text">fail2ban installiert — SSH: max 5 Versuche → 1h Ban<small>apt install fail2ban; /etc/fail2ban/jail.local</small></span></div>
+        <div class="check-row"><input type="checkbox" class="sp-check" data-key="sec-i04"><span class="cl-text">UFW aktiv: <code>ufw allow 22,80,443/tcp; ufw enable</code><small>Alle anderen Ports gesperrt</small></span></div>
+        <div class="check-row"><input type="checkbox" class="sp-check" data-key="sec-i05"><span class="cl-text">Redis bind 127.0.0.1 in /etc/redis/redis.conf</span></div>
+        <div class="check-row"><input type="checkbox" class="sp-check" data-key="sec-i06"><span class="cl-text">Redis: <code>appendonly yes</code> in redis.conf (Queue-Persistenz)</span></div>
+        <div class="check-row"><input type="checkbox" class="sp-check" data-key="sec-i07"><span class="cl-text">PostgreSQL pg_hba.conf: nur localhost-Zugriff für App-User</span></div>
+        <div class="check-row"><input type="checkbox" class="sp-check" data-key="sec-i08"><span class="cl-text">Nginx: TLS 1.2+ only, HSTS-Header (<code>Strict-Transport-Security</code>)</span></div>
+        <div class="check-row"><input type="checkbox" class="sp-check" data-key="sec-i09"><span class="cl-text">Let's Encrypt Zertifikat mit Auto-Renewal (<code>certbot renew --dry-run</code> testen)</span></div>
+        <div class="check-row"><input type="checkbox" class="sp-check" data-key="sec-i10"><span class="cl-text">Unattended-upgrades aktiv für automatische Security-Patches</span></div>
+      </div>
+
+      <div class="check-group">
+        <div class="check-group-title">🔑 Secrets &amp; Konfiguration</div>
+        <div class="check-row"><input type="checkbox" class="sp-check" data-key="sec-s01"><span class="cl-text">Django <code>SECRET_KEY</code> aus ENV (≥50 Zeichen, zufällig generiert) <span class="badge b-gate">GATE</span></span></div>
+        <div class="check-row"><input type="checkbox" class="sp-check" data-key="sec-s02"><span class="cl-text"><code>STRIPE_SECRET_KEY</code> + <code>STRIPE_WEBHOOK_SECRET</code> nur in .env <span class="badge b-gate">GATE</span></span></div>
+        <div class="check-row"><input type="checkbox" class="sp-check" data-key="sec-s03"><span class="cl-text"><code>PRINTFUL_API_KEY</code>, <code>ETSY_API_KEY/SECRET</code> nur in .env</span></div>
+        <div class="check-row"><input type="checkbox" class="sp-check" data-key="sec-s04"><span class="cl-text">.env steht in .gitignore — nie im Repo <span class="badge b-gate">GATE</span></span></div>
+        <div class="check-row"><input type="checkbox" class="sp-check" data-key="sec-s05"><span class="cl-text">Django <code>DEBUG=False</code> in Produktion <span class="badge b-gate">GATE</span></span></div>
+        <div class="check-row"><input type="checkbox" class="sp-check" data-key="sec-s06"><span class="cl-text">Django <code>ALLOWED_HOSTS</code> exakt auf Domain gesetzt (kein *)</span></div>
+        <div class="check-row"><input type="checkbox" class="sp-check" data-key="sec-s07"><span class="cl-text">RunPod API-Key: IP-Whitelist auf VPS-IP im RunPod Dashboard gesetzt</span></div>
+        <div class="check-row"><input type="checkbox" class="sp-check" data-key="sec-s08"><span class="cl-text">Stripe API-Key: Restricted Key (nur benötigte Berechtigungen, kein Full-Access)</span></div>
+      </div>
+    </div>
+    <div>
+      <div class="check-group">
+        <div class="check-group-title">🛡 Django App-Security</div>
+        <div class="check-row"><input type="checkbox" class="sp-check" data-key="sec-a01"><span class="cl-text">CSRF-Middleware aktiv (Django Default — nicht deaktiviert lassen)</span></div>
+        <div class="check-row"><input type="checkbox" class="sp-check" data-key="sec-a02"><span class="cl-text">Stripe Webhook: <code>stripe.Webhook.construct_event()</code> Signatur-Validierung <span class="badge b-gate">GATE</span><small>HTTP 400 bei ungültiger Signatur</small></span></div>
+        <div class="check-row"><input type="checkbox" class="sp-check" data-key="sec-a03"><span class="cl-text">File-Upload-Validierung: MIME-Type via Pillow prüfen (kein blindes Speichern)<small>try: Image.open(file); except: reject</small></span></div>
+        <div class="check-row"><input type="checkbox" class="sp-check" data-key="sec-a04"><span class="cl-text">Upload-Größe limitiert: <code>DATA_UPLOAD_MAX_MEMORY_SIZE = 20971520</code> (20 MB)</span></div>
+        <div class="check-row"><input type="checkbox" class="sp-check" data-key="sec-a05"><span class="cl-text">Admin-URL nicht auf Standardpfad /admin/ — custom path in urls.py</span></div>
+        <div class="check-row"><input type="checkbox" class="sp-check" data-key="sec-a06"><span class="cl-text">Django SecurityMiddleware: <code>SECURE_SSL_REDIRECT=True</code>, <code>SECURE_HSTS_SECONDS=31536000</code></span></div>
+        <div class="check-row"><input type="checkbox" class="sp-check" data-key="sec-a07"><span class="cl-text"><code>pip-audit</code> ohne kritische CVEs vor Go-Live<small>pip install pip-audit; pip-audit</small></span></div>
+        <div class="check-row"><input type="checkbox" class="sp-check" data-key="sec-a08"><span class="cl-text">Django <code>X_FRAME_OPTIONS = 'DENY'</code> (Clickjacking-Schutz)</span></div>
+      </div>
+
+      <div class="check-group">
+        <div class="check-group-title">🇪🇺 DSGVO-Anforderungen</div>
+        <div class="check-row"><input type="checkbox" class="sp-check" data-key="sec-d01"><span class="cl-text">Impressum vorhanden (§5 TMG: Name, Adresse, E-Mail, Kontakt) <span class="badge b-gate">GATE</span></span></div>
+        <div class="check-row"><input type="checkbox" class="sp-check" data-key="sec-d02"><span class="cl-text">Datenschutzerklärung (Art. 13/14 DSGVO): Welche Daten, wie lange, Rechtsgrundlage <span class="badge b-gate">GATE</span></span></div>
+        <div class="check-row"><input type="checkbox" class="sp-check" data-key="sec-d03"><span class="cl-text">Cookie-Banner bei Einsatz von Tracking oder Analytics</span></div>
+        <div class="check-row"><input type="checkbox" class="sp-check" data-key="sec-d04"><span class="cl-text">Bestelldaten-Retention: max. 10 Jahre (§147 AO) → danach Anonymisierung oder Löschung</span></div>
+        <div class="check-row"><input type="checkbox" class="sp-check" data-key="sec-d05"><span class="cl-text">Recht auf Löschung: Admin-Funktion um Kundendaten zu anonymisieren (DSGVO Art. 17)</span></div>
+        <div class="check-row"><input type="checkbox" class="sp-check" data-key="sec-d06"><span class="cl-text">AVV (Auftragsverarbeitungsvertrag) mit Stripe, Printful, Hetzner abgeschlossen<small>Stripe: automatisch mit Nutzungsbedingungen; Printful: im Dashboard; Hetzner: auf Anfrage</small></span></div>
+        <div class="check-row"><input type="checkbox" class="sp-check" data-key="sec-d07"><span class="cl-text">Galerie-Bilder: keine erkennbaren Personen ohne Einwilligung (KI-generiert = kein Problem)</span></div>
+      </div>
+
+      <div class="check-group">
+        <div class="check-group-title">📊 Monitoring &amp; Ops</div>
+        <div class="check-row"><input type="checkbox" class="sp-check" data-key="sec-o01"><span class="cl-text">UptimeRobot (kostenlos) für VPS-HTTPS-Monitoring + Alert-Mail</span></div>
+        <div class="check-row"><input type="checkbox" class="sp-check" data-key="sec-o02"><span class="cl-text">Django LOGGING: ERROR-Level in Datei + E-Mail-Alert (<code>ADMINS</code> in settings.py)</span></div>
+        <div class="check-row"><input type="checkbox" class="sp-check" data-key="sec-o03"><span class="cl-text">Celery Flower Dashboard mit HTTP Basic Auth gesichert</span></div>
+        <div class="check-row"><input type="checkbox" class="sp-check" data-key="sec-o04"><span class="cl-text">Backup-Restore-Drill: pg_dump → pg_restore auf Staging erfolgreich</span></div>
+        <div class="check-row"><input type="checkbox" class="sp-check" data-key="sec-o05"><span class="cl-text">Rollback-Prozedur dokumentiert und unter 15 Minuten reproduzierbar</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card yellow">
+    <h4 style="color:#fcd34d; margin-top:0">💡 Rechtsform-Entscheidungsmatrix (Gate Woche 1)</h4>
+    <table>
+      <tr><th>Form</th><th>Voraussetzungen</th><th>Vorteile</th><th>Nachteile</th><th>Kosten</th><th>Empfehlung</th></tr>
+      <tr>
+        <td><strong>EU + KUR</strong><br><small>Einzelunternehmen + Kleinunternehmerregelung</small></td>
+        <td>Jahresumsatz ≤ €22.000 (§19 UStG)</td>
+        <td>Sofort startklar, kein Handelsregister, minimaler Verwaltungsaufwand, Gewerbeanmeldung reicht</td>
+        <td>Kein Vorsteuerabzug (GPU-Kosten nicht absetzbar), Umsatzgrenze beachten</td>
+        <td>~€30 Gewerbeanmeldung</td>
+        <td class="price-good">✅ MVP-Start</td>
+      </tr>
+      <tr>
+        <td><strong>EU + Regelbesteuerung</strong></td>
+        <td>Gewerbeanmeldung + Finanzamt-Antrag</td>
+        <td>Vorsteuerabzug auf RunPod, Printful, Hardware; keine Umsatzgrenze; professioneller für B2B</td>
+        <td>Monatliche USt-Voranmeldung, etwas mehr Buchhaltungsaufwand</td>
+        <td>~€30 + Steuerberater optional</td>
+        <td class="price-warn">⚡ Bei GPU-Investitionen</td>
+      </tr>
+      <tr>
+        <td><strong>UG (haftungsbeschränkt)</strong></td>
+        <td>Notar, Handelsregistereintrag, Mindest-Stammkapital €1</td>
+        <td>Haftungsbeschränkung, B2B-Verträge einfacher, Kapitalgesellschaft</td>
+        <td>Notar ~€400, jährliche Bilanz, Steuerberater empfohlen, lfd. höhere Kosten</td>
+        <td>€1 + ~€400–600 Gründungskosten</td>
+        <td class="price-bad">⏳ Ab ~€12k Jahresumsatz</td>
+      </tr>
+    </table>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════ TAB 8: 8-WOCHEN-PLAN ═══ -->
+<div class="section" id="s8">
+  <h2>8-Wochen Umsetzungsplan</h2>
+  <p>Jede Phase baut auf der vorherigen auf. Checkboxen speichern Fortschritt im Browser. <span class="badge b-gate">GATE</span> = Blocker für nächste Phase oder Go-Live. Vollständige Architektur-Referenz: <code>.github/copilot-instructions.md</code></p>
+
+  <div class="phase-card">
+    <div class="phase-card-header">
+      <span class="pch-title">Phase 0 — Local Dev Setup &amp; Projektstruktur</span>
+      <span class="pch-weeks">Tag 1 — ~4h</span>
+    </div>
+    <div class="phase-body">
+      <div class="phase-row"><input type="checkbox" class="sp-check" data-key="p0-01"><div class="pr-text"><code>django-admin startproject printbuddy .</code><small>Neues Django-Projekt anlegen</small></div><div class="pr-owner"><span class="badge b-a">A</span></div><div class="pr-effort">0.5h</div></div>
+      <div class="phase-row"><input type="checkbox" class="sp-check" data-key="p0-02"><div class="pr-text">8 Apps anlegen: <code>gallery shop jobs studio gpu postprocess bundles etsy</code><small>python manage.py startapp &lt;name&gt; für jede App</small></div><div class="pr-owner"><span class="badge b-a">A</span></div><div class="pr-effort">0.5h</div></div>
+      <div class="phase-row"><input type="checkbox" class="sp-check" data-key="p0-03"><div class="pr-text"><code>requirements.txt</code> anlegen<small>Django 4.2, celery, redis, Pillow, stripe, runpod, django-environ, psycopg2-binary, black, isort</small></div><div class="pr-owner"><span class="badge b-a">A</span></div><div class="pr-effort">0.5h</div></div>
+      <div class="phase-row"><input type="checkbox" class="sp-check" data-key="p0-04"><div class="pr-text"><code>settings/</code> splitten: <code>base.py</code>, <code>local.py</code>, <code>production.py</code><small>.env.example nach Vorlage aus copilot-instructions.md anlegen</small></div><div class="pr-owner"><span class="badge b-a">A</span></div><div class="pr-effort">1h</div></div>
+      <div class="phase-row"><input type="checkbox" class="sp-check" data-key="p0-05"><div class="pr-text"><code>python manage.py migrate</code> (SQLite lokal)<small>LOCAL_DEV=true, MOCK_GPU=true in .env setzen</small></div><div class="pr-owner"><span class="badge b-a">A</span></div><div class="pr-effort">0.25h</div></div>
+      <div class="phase-row"><input type="checkbox" class="sp-check" data-key="p0-06"><div class="pr-text"><code>python manage.py createsuperuser</code><small>Admin erreichbar unter custom URL (nicht /admin/)</small></div><div class="pr-owner"><span class="badge b-a">A</span></div><div class="pr-effort">0.25h</div></div>
+      <div class="phase-row"><input type="checkbox" class="sp-check" data-key="p0-07"><div class="pr-text">GitHub-Repo anlegen, <code>.gitignore</code> mit <code>.env</code>, <code>*.pyc</code>, <code>media/</code><small>Erster Commit: feat: Phase 0 — Django project scaffold</small></div><div class="pr-owner"><span class="badge b-a">A</span></div><div class="pr-effort">0.5h</div></div>
+    </div>
+    <div class="gate-row"><span class="badge b-gate">GATE</span><span><code>python manage.py check</code> ohne Fehler. <code>runserver</code> zeigt Admin. GitHub-Repo online. Celery lokal startbar.</span></div>
+  </div>
+  <div class="milestone">🏁 <strong>Milestone P0:</strong> Lokale Entwicklungsumgebung steht. Alle 8 Apps registriert. Copilot-Instructions als Architekturreferenz vorhanden.</div>
+
+  <div class="phase-card">
+    <div class="phase-card-header">
+      <span class="pch-title">Phase 1 — Infrastruktur-Baseline &amp; Rechtsform</span>
+      <span class="pch-weeks">Woche 1–2</span>
+    </div>
+    <div class="phase-body">
+      <div class="phase-row"><input type="checkbox" class="sp-check" data-key="p1-01"><div class="pr-text">Rechtsform entscheiden + Gewerbe anmelden <span class="badge b-gate">GATE</span><small>Einzelunternehmen KUR empfohlen als Start</small></div><div class="pr-owner"><span class="badge b-ab">A+B</span></div><div class="pr-effort">4h</div></div>
+      <div class="phase-row"><input type="checkbox" class="sp-check" data-key="p1-02"><div class="pr-text">Hetzner VPS: SSH-Keys, fail2ban, UFW, unattended-upgrades<small>Security-Baseline lt. Tab 7 – Infra-Abschnitt</small></div><div class="pr-owner"><span class="badge b-a">A</span></div><div class="pr-effort">3h</div></div>
+      <div class="phase-row"><input type="checkbox" class="sp-check" data-key="p1-03"><div class="pr-text">PostgreSQL 15 + Redis 7 installieren und absichern<small>pg_hba.conf localhost only, Redis bind 127.0.0.1, appendonly yes</small></div><div class="pr-owner"><span class="badge b-a">A</span></div><div class="pr-effort">2h</div></div>
+      <div class="phase-row"><input type="checkbox" class="sp-check" data-key="p1-04"><div class="pr-text">Tailscale VPN einrichten (VPS + Synology DS925+)<small>Sicherer Tunnel für NFS v4 Mount</small></div><div class="pr-owner"><span class="badge b-a">A</span></div><div class="pr-effort">2h</div></div>
+      <div class="phase-row"><input type="checkbox" class="sp-check" data-key="p1-05"><div class="pr-text">NAS NFS v4 Mount auf VPS unter /mnt/agency_nas/ einrichten<small>Ordnerstruktur raw/ exports/ backups/ gallery/ anlegen</small></div><div class="pr-owner"><span class="badge b-a">A</span></div><div class="pr-effort">2h</div></div>
+      <div class="phase-row"><input type="checkbox" class="sp-check" data-key="p1-06"><div class="pr-text">Django Projektstruktur: apps gallery/, shop/, gpu/ anlegen<small>virtualenv, requirements.txt, .env, settings.py mit django-environ</small></div><div class="pr-owner"><span class="badge b-a">A</span></div><div class="pr-effort">4h</div></div>
+      <div class="phase-row"><input type="checkbox" class="sp-check" data-key="p1-07"><div class="pr-text">Nginx konfigurieren: datemyhobby.com/printbuddy → Gunicorn<small>SSL via certbot, systemd-Service für Gunicorn</small></div><div class="pr-owner"><span class="badge b-a">A</span></div><div class="pr-effort">3h</div></div>
+      <div class="phase-row"><input type="checkbox" class="sp-check" data-key="p1-08"><div class="pr-text">Celery Worker + Systemd Services (gpu_queue, cpu_queue)<small>celery-gpu.service, celery-cpu.service, Flower mit Auth</small></div><div class="pr-owner"><span class="badge b-a">A</span></div><div class="pr-effort">3h</div></div>
+      <div class="phase-row"><input type="checkbox" class="sp-check" data-key="p1-09"><div class="pr-text">Backup-Automation: pg_dump Cron + Restore-Drill durchführen<small>pg_restore auf Staging erfolgreich testen</small></div><div class="pr-owner"><span class="badge b-a">A</span></div><div class="pr-effort">2h</div></div>
+    </div>
+  </div>
+  <div class="milestone">🏁 <strong>Milestone P1:</strong> HTTPS erreichbar, Django-Admin öffnet, Celery-Worker laufen (Flower zeigt Queue), NAS gemountet, Backup einmal erfolgreich restored.</div>
+
+  <div class="phase-card">
+    <div class="phase-card-header">
+      <span class="pch-title">Phase 2 — Galerie-Datenbank &amp; Landing Page</span>
+      <span class="pch-weeks">Woche 3–4</span>
+    </div>
+    <div class="phase-body">
+      <div class="phase-row"><input type="checkbox" class="sp-check" data-key="p2-01"><div class="pr-text">GalleryImage-Modell implementieren + Django-Migration anwenden<small>Alle Felder lt. Tab 2: uuid, title, slug, category, cta_type, is_public, thumb_path…</small></div><div class="pr-owner"><span class="badge b-a">A</span></div><div class="pr-effort">3h</div></div>
+      <div class="phase-row"><input type="checkbox" class="sp-check" data-key="p2-02"><div class="pr-text">Admin-Konfiguration: list_editable für is_public, sort_order, cta_type<small>Schnelles Kuratieren direkt aus der Listenansicht</small></div><div class="pr-owner"><span class="badge b-a">A</span></div><div class="pr-effort">2h</div></div>
+      <div class="phase-row"><input type="checkbox" class="sp-check" data-key="p2-03"><div class="pr-text">Thumbnail-Generierung in GalleryImage.save() (Pillow)<small>600×600 JPEG, Quality 85 — automatisch beim Upload</small></div><div class="pr-owner"><span class="badge b-a">A</span></div><div class="pr-effort">2h</div></div>
+      <div class="phase-row"><input type="checkbox" class="sp-check" data-key="p2-04"><div class="pr-text">Gallery Landing Page /gallery/ mit Kategorie-Filter<small>ListView, paginate_by=24, GET ?cat=shirt</small></div><div class="pr-owner"><span class="badge b-a">A</span></div><div class="pr-effort">4h</div></div>
+      <div class="phase-row"><input type="checkbox" class="sp-check" data-key="p2-05"><div class="pr-text">CTA-Logik im Template: Etsy / Shop / Kontaktformular je cta_type<small>Buttons sichtbar auf Karte + Detailseite</small></div><div class="pr-owner"><span class="badge b-a">A</span></div><div class="pr-effort">2h</div></div>
+      <div class="phase-row"><input type="checkbox" class="sp-check" data-key="p2-06"><div class="pr-text">≥10 Bilder mit GPU generieren (Shirts 3×, Poster 3×, Karten 2×, Art 2×)<small>Verschiedene Styles, Farben, Motive</small></div><div class="pr-owner"><span class="badge b-b">B</span></div><div class="pr-effort">6h</div></div>
+      <div class="phase-row"><input type="checkbox" class="sp-check" data-key="p2-07"><div class="pr-text">Bilder in Admin taggen, kategorisieren, is_public=True setzen<small>Title, Slug, CTA-URL für jedes Bild korrekt befüllen</small></div><div class="pr-owner"><span class="badge b-b">B</span></div><div class="pr-effort">3h</div></div>
+      <div class="phase-row"><input type="checkbox" class="sp-check" data-key="p2-08"><div class="pr-text">Galerie auf Mobile-Geräten testen, alle CTAs prüfen<small>Chrome DevTools Mobile + echtes Gerät</small></div><div class="pr-owner"><span class="badge b-ab">A+B</span></div><div class="pr-effort">1h</div></div>
+    </div>
+  </div>
+  <div class="milestone">🏁 <strong>Milestone P2:</strong> /gallery/ öffentlich erreichbar, ≥10 Bilder live, Kategorie-Filter funktioniert, CTA-Links zeigen auf korrekte Ziele, Mobile-Test bestanden.</div>
+
+  <div class="phase-card">
+    <div class="phase-card-header">
+      <span class="pch-title">Phase 3 — Merch-Shop (Django + Stripe + Printful)</span>
+      <span class="pch-weeks">Woche 5–6</span>
+    </div>
+    <div class="phase-body">
+      <div class="phase-row"><input type="checkbox" class="sp-check" data-key="p3-01"><div class="pr-text">Shop-Modelle implementieren: Product, ProductVariant, Order, OrderLine<small>Migrations anwenden, Admin-Konfiguration erstellen</small></div><div class="pr-owner"><span class="badge b-a">A</span></div><div class="pr-effort">4h</div></div>
+      <div class="phase-row"><input type="checkbox" class="sp-check" data-key="p3-02"><div class="pr-text">Stripe Checkout Session View implementieren<small>line_items aus Session-Cart, EUR, shipping_address_collection</small></div><div class="pr-owner"><span class="badge b-a">A</span></div><div class="pr-effort">4h</div></div>
+      <div class="phase-row"><input type="checkbox" class="sp-check" data-key="p3-03"><div class="pr-text">Stripe Webhook Handler: checkout.session.completed<small>Signatur-Validierung, Order-Status → 'paid', Printful-Task triggern</small></div><div class="pr-owner"><span class="badge b-a">A</span></div><div class="pr-effort">3h</div></div>
+      <div class="phase-row"><input type="checkbox" class="sp-check" data-key="p3-04"><div class="pr-text">Printful-Bestellungs-Celery-Task: create_printful_order<small>POST /orders, Error-Handling, Retry 3×, tracking_code zurückschreiben</small></div><div class="pr-owner"><span class="badge b-a">A</span></div><div class="pr-effort">4h</div></div>
+      <div class="phase-row"><input type="checkbox" class="sp-check" data-key="p3-05"><div class="pr-text">Erste Produkte anlegen: Shirts S/M/L/XL + Hoodies M/L/XL<small>Printful Variant IDs, Preise, Produktbilder hochladen</small></div><div class="pr-owner"><span class="badge b-b">B</span></div><div class="pr-effort">4h</div></div>
+      <div class="phase-row"><input type="checkbox" class="sp-check" data-key="p3-06"><div class="pr-text">Shop-Templates: /shop/, /shop/product/&lt;slug&gt;/, /shop/success/<small>Responsive, Variantenauswahl (Größe/Farbe), Warenkorb-Logik</small></div><div class="pr-owner"><span class="badge b-a">A</span></div><div class="pr-effort">6h</div></div>
+      <div class="phase-row"><input type="checkbox" class="sp-check" data-key="p3-07"><div class="pr-text">E2E-Test im Stripe Testmodus: Checkout → Webhook → Printful-Sandbox<small>Vollständige Bestellung von A bis Z, alle Status-Übergänge prüfen</small></div><div class="pr-owner"><span class="badge b-ab">A+B</span></div><div class="pr-effort">3h</div></div>
+      <div class="phase-row"><input type="checkbox" class="sp-check" data-key="p3-08"><div class="pr-text">Security-Checkliste Tab 7 komplett durcharbeiten und abhaken<small>Besonders: Secrets in ENV, STRIPE_WEBHOOK_SECRET, DEBUG=False</small></div><div class="pr-owner"><span class="badge b-a">A</span></div><div class="pr-effort">3h</div></div>
+    </div>
+  </div>
+  <div class="milestone">🏁 <strong>Milestone P3:</strong> /shop/ erreichbar, Stripe Testbestellung erfolgreich (stripe-cli webhook test), Printful-Sandbox-Order erstellt, Webhook-Signatur-Check aktiv.</div>
+
+  <div class="phase-card">
+    <div class="phase-card-header">
+      <span class="pch-title">Phase 4 — Etsy-Kanal &amp; Listing-Pipeline</span>
+      <span class="pch-weeks">Woche 7</span>
+    </div>
+    <div class="phase-body">
+      <div class="phase-row"><input type="checkbox" class="sp-check" data-key="p4-01"><div class="pr-text">Etsy Shop eröffnen + OAuth 2.0 App registrieren (developer.etsy.com)<small>API-Key + Secret generieren, Redirect-URI eintragen</small></div><div class="pr-owner"><span class="badge b-b">B</span></div><div class="pr-effort">2h</div></div>
+      <div class="phase-row"><input type="checkbox" class="sp-check" data-key="p4-02"><div class="pr-text">Printful ↔ Etsy-Integration aktivieren (Printful Dashboard)<small>Fulfillment für Etsy-Bestellungen automatisch via Printful</small></div><div class="pr-owner"><span class="badge b-ab">A+B</span></div><div class="pr-effort">1h</div></div>
+      <div class="phase-row"><input type="checkbox" class="sp-check" data-key="p4-03"><div class="pr-text">Erste 5 Etsy-Listings manuell erstellen (Shirts + Poster)<small>Titel, Beschreibung, Tags (max 13), Preis, Versandprofil</small></div><div class="pr-owner"><span class="badge b-b">B</span></div><div class="pr-effort">4h</div></div>
+      <div class="phase-row"><input type="checkbox" class="sp-check" data-key="p4-04"><div class="pr-text">Etsy-Listing-Helper implementieren (etsy/listing.py lt. Tab 4)<small>create_listing() + upload_listing_image() + activate_listing()</small></div><div class="pr-owner"><span class="badge b-a">A</span></div><div class="pr-effort">3h</div></div>
+      <div class="phase-row"><input type="checkbox" class="sp-check" data-key="p4-05"><div class="pr-text">Redbubble Account eröffnen + erste 3–5 Designs hochladen<small>Shirts + Poster als Einstieg, Marge-Kalkulation prüfen</small></div><div class="pr-owner"><span class="badge b-b">B</span></div><div class="pr-effort">2h</div></div>
+      <div class="phase-row"><input type="checkbox" class="sp-check" data-key="p4-06"><div class="pr-text">KPI-Tracking: source_channel-Feld in Order, Django-Admin-Auswertung<small>Bestellungen je Kanal sichtbar machen</small></div><div class="pr-owner"><span class="badge b-a">A</span></div><div class="pr-effort">2h</div></div>
+    </div>
+  </div>
+  <div class="milestone">🏁 <strong>Milestone P4:</strong> ≥5 Etsy-Listings live, Printful-Etsy-Verbindung aktiv (Test-Bestellung), Redbubble-Account mit ersten Uploads, KPI-Tracking in Admin sichtbar.</div>
+
+  <div class="phase-card">
+    <div class="phase-card-header">
+      <span class="pch-title">Phase 5 — Go-Live, Drills &amp; erste Verkäufe</span>
+      <span class="pch-weeks">Woche 8</span>
+    </div>
+    <div class="phase-body">
+      <div class="phase-row"><input type="checkbox" class="sp-check" data-key="p5-01"><div class="pr-text">Impressum + Datenschutzerklärung live schalten <span class="badge b-gate">GATE</span><small>Ohne Impressum kein Go-Live — Abmahnrisiko</small></div><div class="pr-owner"><span class="badge b-ab">A+B</span></div><div class="pr-effort">3h</div></div>
+      <div class="phase-row"><input type="checkbox" class="sp-check" data-key="p5-02"><div class="pr-text">Security-Checkliste Tab 7: alle GATE-Punkte abgehakt <span class="badge b-gate">GATE</span></div><div class="pr-owner"><span class="badge b-a">A</span></div><div class="pr-effort">1h</div></div>
+      <div class="phase-row"><input type="checkbox" class="sp-check" data-key="p5-03"><div class="pr-text">Stripe Testmodus → Live-Modus umschalten<small>Live API-Keys in .env, Webhook-URL in Stripe Dashboard aktualisieren</small></div><div class="pr-owner"><span class="badge b-a">A</span></div><div class="pr-effort">1h</div></div>
+      <div class="phase-row"><input type="checkbox" class="sp-check" data-key="p5-04"><div class="pr-text">Erster echter Testkauf (intern): Shop → Stripe → Printful echte Bestellung<small>Mit echter Kreditkarte, echte Printful-Bestellung auslösen und stornieren</small></div><div class="pr-owner"><span class="badge b-ab">A+B</span></div><div class="pr-effort">1h</div></div>
+      <div class="phase-row"><input type="checkbox" class="sp-check" data-key="p5-05"><div class="pr-text">Rollback-Drill: Deployment-Rollback unter 15 Minuten<small>Git-Tag → Gunicorn Restart → ggf. DB-Rollback dokumentiert</small></div><div class="pr-owner"><span class="badge b-a">A</span></div><div class="pr-effort">2h</div></div>
+      <div class="phase-row"><input type="checkbox" class="sp-check" data-key="p5-06"><div class="pr-text">Incident-Drill: GPU-Down-Szenario (RunPod abschalten → Vast.ai Fallback greift)<small>Celery-Task muss erfolgreich auf Vast.ai ausweichen</small></div><div class="pr-owner"><span class="badge b-a">A</span></div><div class="pr-effort">1h</div></div>
+      <div class="phase-row"><input type="checkbox" class="sp-check" data-key="p5-07"><div class="pr-text">Erste Social-Media-Posts: Galerie + Shop bewerben<small>Instagram / Pinterest / Reddit mit /gallery/-Link</small></div><div class="pr-owner"><span class="badge b-b">B</span></div><div class="pr-effort">2h</div></div>
+      <div class="phase-row"><input type="checkbox" class="sp-check" data-key="p5-08"><div class="pr-text">KPI-Baseline dokumentieren für Woche-1-Review nach Launch<small>Galerie-Traffic, Etsy-Views, Shop-Visits, erste Conversions</small></div><div class="pr-owner"><span class="badge b-ab">A+B</span></div><div class="pr-effort">1h</div></div>
+    </div>
+  </div>
+
+  <div class="milestone go">
+    🚀 <strong>GO-LIVE:</strong> Shop unter datemyhobby.com/shop/ aktiv &nbsp;|&nbsp; Galerie unter /gallery/ live &nbsp;|&nbsp; ≥5 Etsy-Listings aktiv &nbsp;|&nbsp; Stripe im Live-Modus &nbsp;|&nbsp; Security-Checkliste 100% &nbsp;|&nbsp; Impressum + Datenschutz vorhanden
+  </div>
+
+  <h3>Zeitaufwands-Übersicht</h3>
+  <table>
+    <tr><th>Phase</th><th>Wochen</th><th>Person A (h)</th><th>Person B (h)</th><th>Gesamt</th></tr>
+    <tr><td>P1 — Infrastruktur-Baseline</td><td>1–2</td><td>~21h</td><td>~4h (Rechtsform, Info)</td><td>~25h</td></tr>
+    <tr><td>P2 — Galerie-DB &amp; Landing Page</td><td>3–4</td><td>~13h</td><td>~9h (Content generieren)</td><td>~22h</td></tr>
+    <tr><td>P3 — Merch-Shop</td><td>5–6</td><td>~24h</td><td>~7h (Produkte, Test)</td><td>~31h</td></tr>
+    <tr><td>P4 — Etsy-Kanal</td><td>7</td><td>~5h</td><td>~9h (Listings, Redbubble)</td><td>~14h</td></tr>
+    <tr><td>P5 — Go-Live &amp; Drills</td><td>8</td><td>~6h</td><td>~6h</td><td>~12h</td></tr>
+    <tr><td><strong>Gesamt</strong></td><td><strong>8 Wochen</strong></td><td class="price-warn"><strong>~69h (A)</strong></td><td class="price-good"><strong>~35h (B)</strong></td><td class="price-good"><strong>~104h</strong></td></tr>
+  </table>
+</div>
+
+<!-- ═══════════════════════════════════ TAB 9: STUDIO APP ══ -->
+<div class="section" id="s9">
+  <h2>Studio Web App — Externer Mitarbeiter Zugang</h2>
+  <p>Die Studio App ist eine separate Django-App (<code>studio/</code>) für externe Mitarbeiter. Sie ermöglicht Job-Erstellung, Bild-Sichtung und Asset-Selektion — aber <strong>nicht</strong> den Job-Start (ADR-11: nur Admin startet Jobs).</p>
+
+  <h3>Benutzergruppen &amp; Rechte</h3>
+  <table class="tbl">
+    <thead><tr><th>Gruppe</th><th>Darf</th><th>Darf nicht</th></tr></thead>
+    <tbody>
+      <tr><td><code>studio_workers</code></td><td>Jobs erstellen (draft), Bilder sichten, Assets selektieren, Prompts aus Library nutzen</td><td>Jobs starten, Admin aufrufen, andere User sehen</td></tr>
+      <tr><td><code>admin</code></td><td>Alles + Jobs starten via Custom Action <code>start_selected_jobs</code></td><td>—</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Studio Views &amp; URLs</h3>
+  <table class="tbl">
+    <thead><tr><th>URL</th><th>View</th><th>Funktion</th></tr></thead>
+    <tbody>
+      <tr><td><code>/studio/</code></td><td><code>StudioDashboard</code></td><td>Übersicht: offene Jobs, letzte Ergebnisse, Schnell-Actions</td></tr>
+      <tr><td><code>/studio/job/new/</code></td><td><code>JobCreateView</code></td><td>Formular: PipelineTemplate-Dropdown, Prompt, Parameter-Overrides</td></tr>
+      <tr><td><code>/studio/job/&lt;uuid&gt;/</code></td><td><code>JobDetailView</code></td><td>Job-Status, HTMX-Polling alle 3s</td></tr>
+      <tr><td><code>/studio/job/&lt;uuid&gt;/results/</code></td><td><code>JobResultsView</code></td><td>Grid aller generierten Outputs</td></tr>
+      <tr><td><code>/studio/job/&lt;uuid&gt;/select/</code></td><td><code>AssetSelectView</code> (POST)</td><td>Bild selektieren + Kommentar hinterlassen</td></tr>
+      <tr><td><code>/studio/jobs/</code></td><td><code>JobListView</code></td><td>Alle Jobs des eingeloggten Users</td></tr>
+      <tr><td><code>/studio/prompts/</code></td><td><code>PromptLibraryView</code></td><td>Öffentliche PromptTemplates durchsuchen &amp; kopieren</td></tr>
+    </tbody>
+  </table>
+
+  <h3>PipelineTemplate-System</h3>
+  <p>Jeder Job basiert auf einem <code>PipelineTemplate</code>, das die auszuführenden Schritte als Boolean-Flags speichert. Studio-Mitarbeiter wählen das Template im Job-Formular; Admin kann Templates im Django-Admin verwalten.</p>
+  <table class="tbl">
+    <thead><tr><th>Template-Kategorie</th><th>Aktivierte Steps</th><th>Use Case</th></tr></thead>
+    <tbody>
+      <tr><td><code>shirt_batch</code></td><td>generate, upscale, pod_export, preview</td><td>Printful T-Shirt PNG 300dpi</td></tr>
+      <tr><td><code>poster_offset</code></td><td>generate, upscale, cmyk, pod_export, preview</td><td>Offset-Druck CMYK TIFF + PDF/X-4</td></tr>
+      <tr><td><code>card_pod</code></td><td>generate, upscale, pod_export, preview, mockup</td><td>Postkarte mit Mockup-Vorschau</td></tr>
+      <tr><td><code>vector_art</code></td><td>generate, upscale, vectorize, preview</td><td>Logo/Icon als SVG</td></tr>
+      <tr><td><code>custom</code></td><td>Alle Steps konfigurierbar</td><td>Sonderprojekte</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Job-Lifecycle</h3>
+  <ol>
+    <li>Studio-Mitarbeiter erstellt Job → Status: <code>draft</code></li>
+    <li>Admin prüft und startet via Custom Action → Status: <code>queued</code></li>
+    <li>Celery-Chain startet automatisch → Status: <code>running</code></li>
+    <li>Pipeline-Steps laufen durch → <code>JobStep.status</code> zeigt Fortschritt</li>
+    <li>HTMX-Polling zeigt Live-Status im Browser (alle 3s, kein Page-Reload)</li>
+    <li>Pipeline fertig → Status: <code>done</code>, Studio-Mitarbeiter sieht Ergebnisse</li>
+    <li>Asset-Selektion: Mitarbeiter markiert beste Bilder für Galerie/Shop/Etsy</li>
+  </ol>
+
+  <h3>HTMX-Integration (ADR-12)</h3>
+  <p>Status-Updates in <code>job_detail.html</code> via HTMX Polling — kein WebSocket, kein JavaScript-Framework. Upgrade zu Vue.js nur per ADR-14 wenn HTMX nicht ausreicht.</p>
+  <pre><code>&lt;!-- job_detail.html --&gt;
+&lt;div hx-get="/studio/job/{{ job.id }}/status/"
+     hx-trigger="every 3s"
+     hx-target="#job-status-panel"
+     hx-swap="innerHTML"&gt;
+  &lt;div id="job-status-panel"&gt;...&lt;/div&gt;
+&lt;/div&gt;</code></pre>
+</div>
+
+<!-- ═══════════════════════════════════ TAB 10: DEPLOYMENT ══ -->
+<div class="section" id="s10">
+  <h2>Deployment Workflow: Local → GitHub → VPS</h2>
+  <p><strong>Prinzip:</strong> Kein Docker im MVP. Lokal entwickeln, VPS deployen mit einem Kommando. Erst lokal testen, dann pushen, dann deployen.</p>
+
+  <h3>Entwicklungs-Workflow</h3>
+  <table class="tbl">
+    <thead><tr><th>Schritt</th><th>Aktion</th><th>Umgebung</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td>Feature-Branch anlegen: <code>git checkout -b feature/&lt;thema&gt;</code></td><td>Lokal</td></tr>
+      <tr><td>2</td><td>Code schreiben, <code>python manage.py check</code>, Tests laufen lassen</td><td>Lokal (SQLite + MOCK_GPU=true)</td></tr>
+      <tr><td>3</td><td><code>black . &amp;&amp; isort .</code> — Formatierung vor Commit</td><td>Lokal</td></tr>
+      <tr><td>4</td><td>Commit mit Conventional Commits: <code>feat: ...</code> / <code>fix: ...</code> / <code>adr: ...</code></td><td>Lokal</td></tr>
+      <tr><td>5</td><td>PR erstellen → Review → Merge nach <code>main</code></td><td>GitHub</td></tr>
+      <tr><td>6</td><td><code>ssh user@vps 'bash /opt/printbuddy/deploy.sh'</code></td><td>VPS (Hetzner DE)</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Branch-Strategie</h3>
+  <table class="tbl">
+    <thead><tr><th>Branch</th><th>Zweck</th><th>Regel</th></tr></thead>
+    <tbody>
+      <tr><td><code>main</code></td><td>Production (VPS)</td><td>Nur per PR mergen, nie direkt pushen</td></tr>
+      <tr><td><code>feature/&lt;thema&gt;</code></td><td>Neue Features</td><td>Lokal entwickeln + testen → PR → main</td></tr>
+      <tr><td><code>fix/&lt;thema&gt;</code></td><td>Bugfixes</td><td>Lokal testen → PR → main</td></tr>
+      <tr><td><code>adr/&lt;nummer&gt;</code></td><td>ADR-Dokumentation</td><td>ADR-Commits, kein Code</td></tr>
+    </tbody>
+  </table>
+
+  <h3>deploy.sh (auf VPS)</h3>
+  <pre><code>#!/bin/bash
+set -e
+cd /opt/printbuddy
+git pull origin main
+source venv/bin/activate
+pip install -r requirements.txt --quiet
+python manage.py migrate --run-syncdb
+python manage.py collectstatic --noinput --clear
+sudo systemctl restart gunicorn
+sudo systemctl restart celery-gpu celery-cpu
+echo "Deploy $(git rev-parse --short HEAD) abgeschlossen"</code></pre>
+  <p>Aufruf: <code>ssh user@vps 'bash /opt/printbuddy/deploy.sh'</code> — läuft in &lt; 5 Minuten.<br>
+  Rollback: <code>git revert HEAD --no-edit &amp;&amp; git push &amp;&amp; ssh user@vps 'bash deploy.sh'</code></p>
+
+  <h3>Lokale Entwicklungsumgebung</h3>
+  <pre><code>python -m venv venv
+source venv/Scripts/activate      # Windows
+pip install -r requirements.txt
+cp .env.example .env              # LOCAL_DEV=true, MOCK_GPU=true
+python manage.py migrate          # SQLite lokal
+python manage.py createsuperuser
+python manage.py runserver        # http://127.0.0.1:8000
+
+# Celery lokal (separates Terminal):
+celery -A printbuddy worker -Q cpu_queue --loglevel=info</code></pre>
+
+  <h3>Environment-Variablen</h3>
+  <table class="tbl">
+    <thead><tr><th>Variable</th><th>Lokal</th><th>VPS (Production)</th></tr></thead>
+    <tbody>
+      <tr><td><code>DEBUG</code></td><td>True</td><td><strong>False</strong> (absolutes Verbot)</td></tr>
+      <tr><td><code>LOCAL_DEV</code></td><td>true</td><td>false</td></tr>
+      <tr><td><code>MOCK_GPU</code></td><td>true</td><td>false</td></tr>
+      <tr><td><code>DATABASE_URL</code></td><td>SQLite (auto)</td><td>postgres://... (PG 15)</td></tr>
+      <tr><td><code>STRIPE_SECRET_KEY</code></td><td>sk_test_...</td><td>sk_live_...</td></tr>
+      <tr><td><code>ALLOWED_HOSTS</code></td><td>127.0.0.1,localhost</td><td>datemyhobby.com</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Go-Live Checkliste</h3>
+  <div class="phase-body">
+    <div class="phase-row"><input type="checkbox" class="sp-check" data-key="golive-01"><div class="pr-text">DEBUG=False in .env Production<small>Absolutes Verbot für DEBUG=True in Produktion</small></div><div class="pr-owner"><span class="badge b-a">A</span></div><div class="pr-effort">—</div></div>
+    <div class="phase-row"><input type="checkbox" class="sp-check" data-key="golive-02"><div class="pr-text">Stripe Webhook Signatur-Check aktiv<small>Verifiziert mit stripe-cli: stripe listen --forward-to ...</small></div><div class="pr-owner"><span class="badge b-a">A</span></div><div class="pr-effort">—</div></div>
+    <div class="phase-row"><input type="checkbox" class="sp-check" data-key="golive-03"><div class="pr-text">Alle Secrets in .env, .env in .gitignore<small>pip-audit ohne kritische CVEs</small></div><div class="pr-owner"><span class="badge b-a">A</span></div><div class="pr-effort">—</div></div>
+    <div class="phase-row"><input type="checkbox" class="sp-check" data-key="golive-04"><div class="pr-text">Admin-URL custom (nicht /admin/)<small>CUSTOM_ADMIN_PATH in .env gesetzt</small></div><div class="pr-owner"><span class="badge b-a">A</span></div><div class="pr-effort">—</div></div>
+    <div class="phase-row"><input type="checkbox" class="sp-check" data-key="golive-05"><div class="pr-text">Backup-Restore erfolgreich auf Staging<small>pg_dump + Restore einmal vollständig getestet</small></div><div class="pr-owner"><span class="badge b-a">A</span></div><div class="pr-effort">—</div></div>
+    <div class="phase-row"><input type="checkbox" class="sp-check" data-key="golive-06"><div class="pr-text">Stripe Test-Key → Live-Key eingetragen<small>Stripe Webhook-Endpoint in Dashboard aktualisieren</small></div><div class="pr-owner"><span class="badge b-a">A</span></div><div class="pr-effort">—</div></div>
+    <div class="phase-row"><input type="checkbox" class="sp-check" data-key="golive-07"><div class="pr-text">Rollback-Drill: Deploy-Rollback unter 15 Minuten<small>git revert HEAD + deploy.sh auf Staging testen</small></div><div class="pr-owner"><span class="badge b-a">A</span></div><div class="pr-effort">—</div></div>
+    <div class="phase-row"><input type="checkbox" class="sp-check" data-key="golive-08"><div class="pr-text">Impressum + Datenschutzerklärung erreichbar<small>Pflicht für .de-Domain und EU-Kunden</small></div><div class="pr-owner"><span class="badge b-b">B</span></div><div class="pr-effort">—</div></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════ TAB 11: PARTNER & CHANNELS ══ -->
+<div class="section" id="s11">
+  <h2>Partner &amp; Channels — Multi-Shop &amp; Druckpartner-System</h2>
+  <p>Das Grundprinzip: Bestellungen kommen über verschiedene Vertriebskanäle rein — eigener Shop, Etsy, externe WooCommerce/Shopify-Shops oder manuelle Aufträge. Jede Bestellung wird automatisch an den zuständigen Druckpartner weitergeleitet, der die passenden Druckdateien bekommt und direkt an den Endkunden verschickt. Das ist das Standard Drop-Shipping Modell — wie Printful, nur für lokale Druckstudios.</p>
+
+  <h3>Kern-Flow</h3>
+  <pre><code>Bestellung eingehend (beliebiger Kanal)
+    ↓
+  Order-Objekt in DB  (channel FK auf SalesChannel)
+    ↓
+  Fulfillment-Partner zuweisen (via Admin oder Produkt-Routing-Regel)
+    ↓
+  create_print_bundle Task  →  ZIP mit Druckdateien auf NAS
+    ↓
+  notify_fulfillment_partner Task  →  E-Mail + optionaler Webhook
+    ↓
+  Partner loggt ein, sieht Auftrag, lädt Bundle herunter
+    ↓
+  Partner druckt und verschickt  →  Tracking-Code einpflegen  →  Status: shipped</code></pre>
+
+  <h3>SalesChannel — Vertriebskanäle</h3>
+  <p>Jeder Kanal (eigener Shop, Etsy, externer WooCommerce-Shop, manuell) wird als <code>SalesChannel</code>-Objekt in der DB gespeichert. <code>Order.channel</code> FK verbindet Bestellung mit Kanal.</p>
+  <table class="tbl">
+    <thead><tr><th>channel_type</th><th>Beispiel</th><th>Integration</th></tr></thead>
+    <tbody>
+      <tr><td><code>own_shop</code></td><td>datemyhobby.com/shop</td><td>Stripe Webhook (bereits gebaut)</td></tr>
+      <tr><td><code>etsy</code></td><td>Etsy Store</td><td>Etsy Open API v3 (etsy/ App)</td></tr>
+      <tr><td><code>woocommerce</code></td><td>WordPress-Partner-Shop</td><td>WooCommerce REST API + webhook_url</td></tr>
+      <tr><td><code>shopify</code></td><td>Shopify-Partner-Shop</td><td>Shopify Webhooks + api_key/secret</td></tr>
+      <tr><td><code>manual</code></td><td>Telefon/E-Mail-Bestellung</td><td>Manuell via Admin eingepflegt</td></tr>
+    </tbody>
+  </table>
+
+  <h3>FulfillmentPartner — Druckstudios</h3>
+  <p>Jedes Druckstudio ist ein <code>FulfillmentPartner</code> mit eigenem Django-Login (Gruppe: <code>print_partners</code>). Admin weist Produkte via <code>PartnerProduct</code> zu. Pro Produkt wird festgelegt, welche Dateitypen der Partner erhält.</p>
+  <table class="tbl">
+    <thead><tr><th>Feld</th><th>Inhalt</th><th>Beispiel</th></tr></thead>
+    <tbody>
+      <tr><td><code>name</code></td><td>Studioname</td><td>Druckstudio München</td></tr>
+      <tr><td><code>user</code></td><td>Django-Login (OneToOne)</td><td>partner_muenchen / Passwort</td></tr>
+      <tr><td><code>export_formats</code></td><td>Druckfähigkeiten</td><td>['cmyk','pod'] — kein vector</td></tr>
+      <tr><td><code>notify_email</code></td><td>E-Mail bei neuen Aufträgen</td><td>True</td></tr>
+      <tr><td><code>notify_webhook_url</code></td><td>Optional: Webhook-Endpoint</td><td>https://partner.de/api/orders</td></tr>
+    </tbody>
+  </table>
+
+  <h3>PartnerVariant — Welche Varianten kann der Partner produzieren?</h3>
+  <p>Granularere Kontrolle: nicht nur "Partner kann dieses Produkt" sondern "Partner kann Poster in A2 und A3 <em>aber nicht A4</em>". Wenn kein PartnerVariant-Eintrag existiert, kann der Partner die Variante nicht produzieren.</p>
+  <pre><code>PartnerVariant:
+  partner       FulfillmentPartner
+  variant       shop.ProductVariant   # z.B. "Poster DIN A2", "T-Shirt XL schwarz"
+  partner_sku   "DRUCK-A2-001"       # interne Bestellnummer des Studios
+  is_available  True/False            # kurzfristig nicht lieferbar?</code></pre>
+
+  <h3>PartnerProduct — Routing-Tabelle</h3>
+  <p>Welcher Partner bekommt welche Produkte — und mit welchen Dateitypen? Verwaltet im Admin. Grundregel: ein Produkt kann mehreren Partnern zugewiesen sein (z.B. Backup-Partner), aber in der Praxis meist 1:1.</p>
+  <pre><code>PartnerProduct:
+  partner      FulfillmentPartner
+  product      shop.Product
+  export_types ['cmyk', 'pod']   # subset von ProductVariant.required_export_types</code></pre>
+
+  <h3>ImageProduct — Bild ↔ Produkt Zuordnung + Mockup</h3>
+  <p>Verbindet ein Galerie-Bild mit einem Produkt. Enthält das vorausberechnete Mockup-Bild (Bild auf Produkt platziert). Wird angelegt wenn ein Studio-Mitarbeiter ein Bild für den Shop freigibt. Löst sofort <code>generate_all_mockups</code> aus.</p>
+  <pre><code>ImageProduct:
+  image          GalleryImage
+  product        shop.Product
+  mockup_file    "shop/mockups/abc123-poster-a2.jpg"  # Printful Mockup API Output
+  mockup_status  pending → generating → ready / failed
+  is_primary     True = Haupt-Produktbild im Shop</code></pre>
+
+  <h3>Kunden-Konfigurator Flow</h3>
+  <p>Kunde sieht Bild in Galerie → klickt "Kaufen als Produkt" → <code>/shop/configure/&lt;slug&gt;/</code> zeigt alle verknüpften Produkte mit fertigen Mockups → Kunde wählt Größe/Farbe → Warenkorb → Stripe Checkout.</p>
+  <ol>
+    <li>Studio-Mitarbeiter selektiert Bild via <code>AssetSelectView</code> (POST)</li>
+    <li>System legt <code>ImageProduct</code>-Einträge für alle passenden Produkte an</li>
+    <li>Celery Task <code>generate_all_mockups</code> ruft Printful Mockup API auf für jede Variante</li>
+    <li><code>ImageProduct.mockup_status</code> wechselt zu <code>ready</code> wenn fertig</li>
+    <li>Galerie-Bild zeigt CTA "Als Produkt bestellen" → Konfigurator-URL</li>
+    <li>Kunde wählt Produkt + Variante → Mockup wird als Produktbild angezeigt</li>
+  </ol>
+
+  <h3>Partner-Dashboard URLs</h3>
+  <table class="tbl">
+    <thead><tr><th>URL</th><th>View</th><th>Funktion</th></tr></thead>
+    <tbody>
+      <tr><td><code>/partner/</code></td><td><code>PartnerDashboard</code></td><td>Offene Aufträge, letzte Lieferungen</td></tr>
+      <tr><td><code>/partner/orders/</code></td><td><code>PartnerOrderListView</code></td><td>Alle Bestellungen dieses Partners</td></tr>
+      <tr><td><code>/partner/order/&lt;uuid&gt;/</code></td><td><code>PartnerOrderDetailView</code></td><td>Bestelldetails + Bundle-Download-Link</td></tr>
+      <tr><td><code>/partner/order/&lt;uuid&gt;/shipped/</code></td><td><code>PartnerMarkShippedView</code> (POST)</td><td>Tracking-Code eintragen, Status → shipped</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Neue Celery Tasks</h3>
+  <table class="tbl">
+    <thead><tr><th>Task</th><th>App</th><th>Trigger</th><th>Aktion</th></tr></thead>
+    <tbody>
+      <tr><td><code>notify_fulfillment_partner</code></td><td>partners</td><td>Order bezahlt</td><td>E-Mail + optionaler Webhook an zugewiesenen Partner</td></tr>
+      <tr><td><code>push_order_to_channel</code></td><td>channels</td><td>Order-Status-Update</td><td>Bestellbestätigung an Channel-Webhook pushen</td></tr>
+      <tr><td><code>generate_all_mockups</code></td><td>postprocess</td><td>Asset-Selektion (Studio)</td><td>Printful Mockup API für alle ImageProduct-Einträge, setzt mockup_status=ready</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Implementierungs-Checkliste Phase 10</h3>
+  <div class="phase-body">
+    <div class="phase-row"><input type="checkbox" class="sp-check" data-key="p10-01"><div class="pr-text"><code>channels/</code> App anlegen, <code>SalesChannel</code>-Modell<small>channel_type als TextChoices, api_key/secret verschlüsselt speichern</small></div><div class="pr-owner"><span class="badge b-a">A</span></div><div class="pr-effort">2h</div></div>
+    <div class="phase-row"><input type="checkbox" class="sp-check" data-key="p10-02"><div class="pr-text"><code>partners/</code> App anlegen, <code>FulfillmentPartner</code> + <code>PartnerProduct</code> + <code>PartnerVariant</code><small>User-OneToOne, export_formats JSONField, PartnerVariant für Größen-Kapazitäten, Admin-Registrierung</small></div><div class="pr-owner"><span class="badge b-a">A</span></div><div class="pr-effort">3h</div></div>
+    <div class="phase-row"><input type="checkbox" class="sp-check" data-key="p10-03"><div class="pr-text"><code>Order</code>-Modell: <code>channel</code> FK + <code>fulfillment_partner</code> FK, <code>ImageProduct</code>-Modell anlegen<small>Migrationen schreiben, generate_all_mockups Task einbinden</small></div><div class="pr-owner"><span class="badge b-a">A</span></div><div class="pr-effort">2h</div></div>
+    <div class="phase-row"><input type="checkbox" class="sp-check" data-key="p10-04"><div class="pr-text">Celery Task <code>notify_fulfillment_partner</code> implementieren<small>E-Mail via Django send_mail + HTTP POST an notify_webhook_url</small></div><div class="pr-owner"><span class="badge b-a">A</span></div><div class="pr-effort">2h</div></div>
+    <div class="phase-row"><input type="checkbox" class="sp-check" data-key="p10-05"><div class="pr-text">Celery Task <code>push_order_to_channel</code> implementieren<small>HTTP POST an SalesChannel.webhook_url bei Order-Status-Änderung</small></div><div class="pr-owner"><span class="badge b-a">A</span></div><div class="pr-effort">2h</div></div>
+    <div class="phase-row"><input type="checkbox" class="sp-check" data-key="p10-06"><div class="pr-text">Partner-Dashboard Views: Dashboard, OrderList, OrderDetail, MarkShipped<small>@login_required + Gruppe print_partners, nur eigene Bestellungen sichtbar</small></div><div class="pr-owner"><span class="badge b-a">A</span></div><div class="pr-effort">4h</div></div>
+    <div class="phase-row"><input type="checkbox" class="sp-check" data-key="p10-07"><div class="pr-text">Admin: Partner anlegen, Produkte zuweisen via PartnerProduct<small>Inline-Admin für PartnerProduct im FulfillmentPartner-Admin</small></div><div class="pr-owner"><span class="badge b-a">A</span></div><div class="pr-effort">1h</div></div>
+  </div>
+  <div class="gate-row"><span class="badge b-gate">GATE</span><span>Partner loggt ein, sieht nur seine Bestellungen. Bundle-Download funktioniert. Tracking-Code einpflegen setzt Status auf shipped. notify_fulfillment_partner sendet E-Mail.</span></div>
+  <div class="milestone">🏁 <strong>Milestone P10:</strong> Erster realer Druckauftrag an externen Partner übermittelt ohne manuelles Eingreifen.</div>
+</div>
+
+<script>
+function showTab(i) {
+  document.querySelectorAll('.section').forEach(function(s, idx) {
+    s.classList.toggle('active', idx === i);
+  });
+  document.querySelectorAll('.tab').forEach(function(t, idx) {
+    t.classList.toggle('active', idx === i);
+  });
+}
+
+// localStorage Checkbox Persistence
+(function() {
+  var PREFIX = 'umsetzungsplan-';
+  document.querySelectorAll('.sp-check').forEach(function(cb) {
+    var key = cb.dataset.key;
+    if (key && localStorage.getItem(PREFIX + key) === '1') {
+      cb.checked = true;
+    }
+    cb.addEventListener('change', function() {
+      localStorage.setItem(PREFIX + key, this.checked ? '1' : '0');
+    });
+  });
+})();
+</script>
+
+</body>
+</html>
