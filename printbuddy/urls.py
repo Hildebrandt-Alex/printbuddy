@@ -20,7 +20,7 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 
-# Custom Admin-URL (niemals /admin/ in Production — ADR Security)
+# Custom Admin-URL aus Settings (niemals /admin/ in Production — ADR Security)
 ADMIN_URL = getattr(settings, 'ADMIN_URL', 'pb-manage/')
 
 urlpatterns = [

@@ -12,7 +12,19 @@ DATABASES = {
     }
 }
 
-# Django Debug Toolbar (optional, nur lokal)
+# Celery lokal — auch Redis auf localhost (oder TASK_ALWAYS_EAGER für Tests ohne Worker)
+CELERY_BROKER_URL = 'redis://127.0.0.1:6379/0'
+CELERY_RESULT_BACKEND = 'redis://127.0.0.1:6379/0'
+CELERY_TASK_ALWAYS_EAGER = False  # True = Tasks synchron ausführen (kein Worker nötig)
+CELERY_TASK_SERIALIZER = 'json'
+
+# NAS-Pfad lokal
+NAS_BASE_PATH = str(BASE_DIR / 'local_nas')
+
+# Admin URL lokal
+ADMIN_URL = 'pb-manage/'
+
+# Email in Konsole ausgeben
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
 # Lokaler NAS-Ersatz (Ordner simuliert NAS-Struktur)
@@ -28,3 +40,4 @@ NAS_DIRS = [
 ]
 for _d in NAS_DIRS:
     os.makedirs(_d, exist_ok=True)
+

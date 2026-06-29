@@ -1,0 +1,24 @@
+[Unit]
+Description=Gunicorn — PrintBuddy (Port 8001)
+After=network.target
+
+[Service]
+Type=notify
+User=www-data
+Group=www-data
+WorkingDirectory=/opt/printbuddy
+Environment="DJANGO_SETTINGS_MODULE=printbuddy.settings.production"
+ExecStart=/opt/printbuddy/venv/bin/gunicorn \
+    --workers 4 \
+    --bind 127.0.0.1:8001 \
+    --timeout 120 \
+    --worker-class sync \
+    --access-logfile /var/log/gunicorn/printbuddy-access.log \
+    --error-logfile /var/log/gunicorn/printbuddy-error.log \
+    printbuddy.wsgi:application
+ExecReload=/bin/kill -s HUP $MAINPID
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

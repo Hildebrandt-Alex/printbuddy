@@ -1,0 +1,130 @@
+PrintBuddy — VPS Setup Anleitung (einmalig)
+===========================================
+Voraussetzung: VPS läuft bereits mit anderen Projekten auf datemyhobby.com
+
+
+SCHRITT 1 — Vorbereitung auf VPS (SSH einloggen)
+-------------------------------------------------
+ssh user@datemyhobby.com
+
+# Python 3.11 prüfen
+python3.11 --version
+# Falls fehlt:
+sudo apt install python3.11 python3.11-venv python3.11-dev
+
+
+SCHRITT 2 — Verzeichnis + Code
+-------------------------------
+sudo mkdir -p /opt/printbuddy
+sudo chown $USER /opt/printbuddy
+git clone https://github.com/Hildebrandt-Alex/printbuddy.git /opt/printbuddy
+cd /opt/printbuddy
+python3.11 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+
+
+SCHRITT 3 — .env anlegen
+-------------------------
+cp /opt/printbuddy/deploy/env.production.example /opt/printbuddy/.env
+nano /opt/printbuddy/.env
+# Alle REPLACE_ME Werte ausfüllen! Besonders SECRET_KEY (mind. 50 Zeichen)
+# SECRET_KEY generieren: python3 -c "import secrets; print(secrets.token_urlsafe(60))"
+
+
+SCHRITT 4 — PostgreSQL DB anlegen
+----------------------------------
+sudo -u postgres psql
+  CREATE DATABASE printbuddy;
+  CREATE USER printbuddy WITH PASSWORD 'SICHERES_PASSWORT';
+  GRANT ALL PRIVILEGES ON DATABASE printbuddy TO printbuddy;
+  \q
+# Passwort dann in .env bei DATABASE_URL eintragen
+
+
+SCHRITT 5 — Django Migrations + Static Files
+---------------------------------------------
+cd /opt/printbuddy
+source venv/bin/activate
+export DJANGO_SETTINGS_MODULE=printbuddy.settings.production
+python manage.py migrate
+python manage.py collectstatic --noinput
+python manage.py createsuperuser
+
+
+SCHRITT 6 — Log-Verzeichnisse anlegen
+--------------------------------------
+sudo mkdir -p /var/log/gunicorn /var/log/celery /var/run/celery
+sudo chown www-data:www-data /var/log/gunicorn /var/log/celery /var/run/celery
+
+
+SCHRITT 7 — systemd Services einrichten
+----------------------------------------
+sudo cp /opt/printbuddy/deploy/gunicorn.printbuddy.service /etc/systemd/system/
+sudo cp /opt/printbuddy/deploy/celery-printbuddy-gpu.service /etc/systemd/system/
+sudo cp /opt/printbuddy/deploy/celery-printbuddy-cpu.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable gunicorn.printbuddy celery-printbuddy-gpu celery-printbuddy-cpu
+sudo systemctl start gunicorn.printbuddy celery-printbuddy-gpu celery-printbuddy-cpu
+
+# Status prüfen:
+sudo systemctl status gunicorn.printbuddy
+sudo systemctl status celery-printbuddy-gpu
+sudo systemctl status celery-printbuddy-cpu
+
+
+SCHRITT 8 — Nginx vhost
+-------------------------
+sudo cp /opt/printbuddy/deploy/nginx-printbuddy.conf /etc/nginx/sites-available/printbuddy
+sudo ln -s /etc/nginx/sites-available/printbuddy /etc/nginx/sites-enabled/printbuddy
+sudo nginx -t
+sudo systemctl reload nginx
+# WICHTIG: Bestehende Nginx-Configs werden nicht verändert!
+
+
+SCHRITT 9 — deploy.sh einrichten
+----------------------------------
+cp /opt/printbuddy/deploy/deploy.sh /opt/printbuddy/deploy.sh
+chmod +x /opt/printbuddy/deploy.sh
+
+# sudo-Rechte für systemctl restart ohne Passwort (nur die PrintBuddy-Services):
+sudo visudo
+# Folgende Zeile hinzufügen (user durch deinen Linux-User ersetzen):
+# user ALL=(ALL) NOPASSWD: /bin/systemctl restart gunicorn.printbuddy, /bin/systemctl restart celery-printbuddy-gpu, /bin/systemctl restart celery-printbuddy-cpu, /usr/sbin/nginx, /bin/systemctl reload nginx
+
+
+SCHRITT 10 — NAS Mount prüfen
+-------------------------------
+ls /mnt/agency_nas/
+# Falls Verzeichnis fehlt:
+sudo mkdir -p /mnt/agency_nas
+# NFS-Eintrag in /etc/fstab prüfen (Tailscale IP der NAS):
+# 100.x.x.x:/volume1/agency /mnt/agency_nas nfs4 defaults,_netdev 0 0
+# NAS-Ordnerstruktur anlegen:
+mkdir -p /mnt/agency_nas/{raw,exports/{pod,offset,preview,vector},gallery,bundles,backups/{db,media}}
+
+
+SCHRITT 11 — Test
+------------------
+# Admin erreichbar?
+curl -I https://datemyhobby.com/pb-manage/
+# Sollte 302 → Login zurückgeben
+
+# Celery Worker online?
+cd /opt/printbuddy && source venv/bin/activate
+celery -A printbuddy inspect ping
+
+
+GATE CHECK — Phase 2 bestanden wenn:
+[ ] deploy.sh läuft: bash /opt/printbuddy/deploy.sh
+[ ] Admin HTTPS: https://datemyhobby.com/pb-manage/ erreichbar
+[ ] ls /mnt/agency_nas/raw/ zeigt Ordner
+[ ] systemctl status celery-printbuddy-gpu → active (running)
+[ ] Andere bestehende Projekte laufen noch fehlerfrei
+
+
+AB HIER: NUR NOCH deploy.sh FÜR UPDATES
+-----------------------------------------
+# Von lokal:
+git push origin main
+ssh user@datemyhobby.com 'bash /opt/printbuddy/deploy.sh'
