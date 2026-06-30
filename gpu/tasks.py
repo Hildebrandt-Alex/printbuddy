@@ -147,17 +147,35 @@ def generate_image(self, job_id: str):
             if not result or "output" not in result:
                 raise ValueError(f"RunPod leere Antwort: {result}")
 
-            # Bild(er) herunterladen und auf NAS speichern
-            import requests
             output_dir = _get_output_dir("raw")
             asset_id = uuid.uuid4()
-
-            image_url = result["output"].get("image_url") or result["output"][0].get("url")
-            response = requests.get(image_url, timeout=60)
-            response.raise_for_status()
-
             output_path = output_dir / f"{asset_id}.png"
-            output_path.write_bytes(response.content)
+
+            # Public API gibt Base64, eigene Endpoints geben URL zurück
+            out = result["output"]
+            if isinstance(out, list):
+                out = out[0]
+
+            if isinstance(out, dict) and out.get("image"):
+                # Base64-kodiertes Bild (Public API Format)
+                import base64
+                image_data = out["image"]
+                if "," in image_data:
+                    image_data = image_data.split(",", 1)[1]
+                output_path.write_bytes(base64.b64decode(image_data))
+            elif isinstance(out, dict) and (out.get("image_url") or out.get("url")):
+                # URL-Format (eigener Endpoint)
+                import requests as req
+                image_url = out.get("image_url") or out.get("url")
+                response = req.get(image_url, timeout=60)
+                response.raise_for_status()
+                output_path.write_bytes(response.content)
+            elif isinstance(out, str):
+                # Manchmal direkt Base64-String
+                import base64
+                output_path.write_bytes(base64.b64decode(out))
+            else:
+                raise ValueError(f"Unbekanntes RunPod Output-Format: {type(out)}: {str(out)[:200]}")
 
             logger.info("[RunPod] Bild gespeichert: %s", output_path)
             _save_step(job_id, "generate", "done", asset_id=asset_id)
