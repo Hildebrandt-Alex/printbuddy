@@ -364,12 +364,12 @@ nginx -t &amp;&amp; systemctl reload nginx     # 7. Nginx config pr&uuml;fen + r
   <div class="check-row" style="opacity:0.5"><input type="checkbox" class="sp-check" data-key="p2-11" checked><span class="cl-text">collectstatic &rarr; 125 Dateien in /opt/printbuddy/staticfiles/</span></div>
   <div class="check-row" style="opacity:0.5"><input type="checkbox" class="sp-check" data-key="p2-12" checked><span class="cl-text">Superuser angelegt &middot; Username: alex</span></div>
   <div class="check-row" style="opacity:0.5"><input type="checkbox" class="sp-check" data-key="p2-13" checked><span class="cl-text">deploy.sh unter /opt/printbuddy/deploy.sh (Symlink) &middot; chmod +x</span></div>
-  <div class="check-row"><input type="checkbox" class="sp-check" data-key="p2-14"><span class="cl-text">Tailscale + NAS-Mount /mnt/agency_nas/ einrichten (ausstehend)<small>Nicht blockierend f&uuml;r Phase 3 &mdash; Media-Dateien lokal bis NAS eingerichtet</small></span></div>
+  <div class="check-row" style="opacity:0.5"><input type="checkbox" class="sp-check" data-key="p2-14" checked><span class="cl-text">Tailscale + NAS-Mount /mnt/agency_nas/ eingerichtet<small>hildeserver (DS925+) &middot; 100.107.63.24 &middot; NFSv4.1 &middot; /volume1/agency &middot; 4.7TB &middot; fstab-Eintrag gesetzt &middot; Ordnerstruktur angelegt</small></span></div>
   <div class="check-row"><input type="checkbox" class="sp-check" data-key="p2-15"><span class="cl-text">GitHub PAT widerrufen! <a href="https://github.com/settings/tokens" target="_blank" style="color:#f87171">github.com/settings/tokens</a><small style="color:#f87171">Tempor&auml;rer PAT wurde zum initialen Clonen auf dem VPS verwendet &mdash; jetzt widerrufen</small></span></div>
 
   <div class="gate-box" style="border-color:#4ade80">
-    <div class="gate-label" style="color:#4ade80">&#10003; GATE-CHECK &mdash; Phase 2 BESTANDEN</div>
-    <p>https://printbuddy.datemyhobby.com/pb-manage/ &rarr; HTTP 302 (Login-Redirect) &middot; Alle 3 Services active &middot; Nginx + SSL aktiv &middot; Bestehende Projekte (datemyhobby.com, mirev, mirevsearch) laufen unver&auml;ndert</p>
+    <div class="gate-label" style="color:#4ade80">&#10003; GATE-CHECK &mdash; Phase 2 VOLLST&Auml;NDIG BESTANDEN</div>
+    <p>https://printbuddy.datemyhobby.com/pb-manage/ &rarr; HTTP 302 &middot; Alle 3 Services active &middot; Nginx + SSL aktiv &middot; NAS gemountet: <strong>4.7TB auf /mnt/agency_nas/</strong> &middot; Ordnerstruktur raw/ exports/ gallery/ bundles/ backups/ angelegt &middot; fstab persistent</p>
   </div>
 </div>
 
