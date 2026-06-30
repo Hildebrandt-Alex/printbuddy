@@ -240,53 +240,136 @@
 
 <!-- TAB 3: PHASE 2 VPS -->
 <div class="section" id="s3">
-  <h2>Phase 2 &mdash; VPS Einrichten</h2>
-  <p>Parallel zu Phase 1 &middot; Ziel: PrintBuddy auf dem bestehenden VPS deployen ohne andere Projekte zu st&ouml;ren.</p>
+  <h2>Phase 2 &mdash; VPS Einrichten <span style="color:#4ade80;font-size:0.85em">&#10003; ABGESCHLOSSEN</span></h2>
+  <p>Abgeschlossen am 30.06.2026 &middot; VPS: <strong>167.86.108.37</strong> (Contabo, Ubuntu 22.04) &middot; App: <a href="https://printbuddy.datemyhobby.com" target="_blank" style="color:#60a5fa">printbuddy.datemyhobby.com</a></p>
 
-  <div class="hint-box">
-    <p><strong>&#9888; VPS besteht bereits mit anderen Projekten auf datemyhobby.com.</strong> Eigenen Port 8001, eigene Service-Namen (<code>gunicorn.printbuddy</code>, <code>celery-printbuddy-gpu</code>, <code>celery-printbuddy-cpu</code>) und eigene PostgreSQL-DB verwenden. Bestehende Nginx-Configs, Services und Datenbanken anderer Projekte niemals anpassen.</p>
+  <div class="hint-box" style="border-color:#4ade80">
+    <p style="color:#4ade80;margin:0 0 8px 0"><strong>&#10003; Phase 2 vollst&auml;ndig deployed &mdash; alle Services aktiv</strong></p>
+    <p style="margin:0">Admin: <a href="https://printbuddy.datemyhobby.com/pb-manage/" target="_blank" style="color:#60a5fa">https://printbuddy.datemyhobby.com/pb-manage/</a> &middot; Login: <strong>alex</strong> / (Passwort beim createsuperuser gesetzt)</p>
   </div>
 
-  <div class="check-row"><input type="checkbox" class="sp-check" data-key="p2-01"><span class="cl-text">Python 3.11 pr&uuml;fen/installieren &middot; <code>python3.11 --version</code><small>Falls fehlt: <code>sudo apt install python3.11 python3.11-venv python3.11-dev</code></small></span></div>
-  <div class="check-row"><input type="checkbox" class="sp-check" data-key="p2-02"><span class="cl-text">/opt/printbuddy/ Verzeichnis anlegen<small><code>sudo mkdir /opt/printbuddy &amp;&amp; sudo chown $USER /opt/printbuddy</code></small></span></div>
-  <div class="check-row"><input type="checkbox" class="sp-check" data-key="p2-03"><span class="cl-text">GitHub Deploy-Key f&uuml;r VPS einrichten<small><code>ssh-keygen -t ed25519 -C "vps-printbuddy"</code> &rarr; Public Key in GitHub Repo &rarr; Settings &rarr; Deploy Keys</small></span></div>
-  <div class="check-row"><input type="checkbox" class="sp-check" data-key="p2-04"><span class="cl-text">git clone &lt;repo&gt; /opt/printbuddy<small><code>git clone git@github.com:user/printbuddy.git /opt/printbuddy</code></small></span></div>
-  <div class="check-row"><input type="checkbox" class="sp-check" data-key="p2-05"><span class="cl-text">python3.11 -m venv /opt/printbuddy/venv &middot; pip install -r requirements.txt<small><code>source /opt/printbuddy/venv/bin/activate &amp;&amp; pip install -r requirements.txt</code></small></span></div>
-  <div class="check-row"><input type="checkbox" class="sp-check" data-key="p2-06"><span class="cl-text">PostgreSQL DB + User anlegen &mdash; eigene DB, kein Konflikt<small><code>sudo -u postgres createdb printbuddy &amp;&amp; sudo -u postgres createuser printbuddy</code> &middot; sicheres Passwort</small></span></div>
-  <div class="check-row"><input type="checkbox" class="sp-check" data-key="p2-07"><span class="cl-text">.env f&uuml;r Production in /opt/printbuddy/ anlegen<small>DATABASE_URL, SECRET_KEY &ge;50 Zeichen, DEBUG=False, ALLOWED_HOSTS=datemyhobby.com</small></span></div>
-  <div class="check-row"><input type="checkbox" class="sp-check" data-key="p2-08"><span class="cl-text">python manage.py migrate --settings=printbuddy.settings.production<small>Erst nach DB + .env konfiguriert. Pr&uuml;fen ob alle Tabellen angelegt wurden.</small></span></div>
-  <div class="check-row"><input type="checkbox" class="sp-check" data-key="p2-09"><span class="cl-text">Nginx vhost f&uuml;r datemyhobby.com anlegen &mdash; upstream 127.0.0.1:8001<small>Port 8001 (eigener Port!) &middot; Bestehende Nginx-Configs nicht ver&auml;ndern</small></span></div>
-  <div class="check-row"><input type="checkbox" class="sp-check" data-key="p2-10"><span class="cl-text">Gunicorn systemd Service: gunicorn.printbuddy.service &middot; bind 127.0.0.1:8001, 4 workers<small>Eindeutiger Service-Name &mdash; kein Konflikt mit anderen Gunicorn-Instanzen</small></span></div>
-  <div class="check-row"><input type="checkbox" class="sp-check" data-key="p2-11"><span class="cl-text">Celery systemd: celery-printbuddy-gpu.service (gpu_queue, concurrency=1) + celery-printbuddy-cpu.service (cpu_queue, concurrency=2)<small>Eindeutige Namen &mdash; kein Konflikt mit anderen Projekten</small></span></div>
-  <div class="check-row"><input type="checkbox" class="sp-check" data-key="p2-12"><span class="cl-text">Tailscale pr&uuml;fen &middot; <code>tailscale status</code> &mdash; NAS erreichbar?<small>NAS muss im Tailscale-Netz sichtbar sein bevor NFS-Mount konfiguriert wird</small></span></div>
-  <div class="check-row"><input type="checkbox" class="sp-check" data-key="p2-13"><span class="cl-text">NFS Mount /mnt/agency_nas/ &middot; /etc/fstab Eintrag via Tailscale VPN<small><code>100.x.x.x:/volume1/agency /mnt/agency_nas nfs4 defaults,_netdev 0 0</code></small></span></div>
-  <div class="check-row"><input type="checkbox" class="sp-check" data-key="p2-14"><span class="cl-text">Ordnerstruktur NAS anlegen<small><code>mkdir -p /mnt/agency_nas/{raw,exports/{pod,offset,preview,vector},gallery,bundles,backups/{db,media}}</code></small></span></div>
-  <div class="check-row"><input type="checkbox" class="sp-check" data-key="p2-15"><span class="cl-text">certbot &mdash; TLS f&uuml;r datemyhobby.com pr&uuml;fen, neuen vhost erg&auml;nzen wenn n&ouml;tig<small><code>certbot renew --dry-run</code> &middot; Bestehendes Zertifikat gilt meist auch f&uuml;r neue vhosts</small></span></div>
-  <div class="check-row"><input type="checkbox" class="sp-check" data-key="p2-16"><span class="cl-text">deploy.sh unter /opt/printbuddy/deploy.sh anlegen + ausf&uuml;hrbar machen<small><code>chmod +x /opt/printbuddy/deploy.sh</code> &middot; Inhalt siehe Code-Block unten</small></span></div>
-  <div class="check-row"><input type="checkbox" class="sp-check" data-key="p2-17"><span class="cl-text">Erster Deploy-Test: <code>ssh user@vps "bash /opt/printbuddy/deploy.sh"</code><small>Muss in &lt;5 Min durchlaufen. Admin HTTPS erreichbar. Celery-Services online in Flower.</small></span></div>
+  <h3 style="color:#94a3b8;margin:20px 0 10px">Was wurde wo konfiguriert</h3>
 
-  <div class="gate-box">
-    <div class="gate-label">&#10003; GATE-CHECK &mdash; Phase 2</div>
-    <p>deploy.sh l&auml;uft ohne Fehler. Admin unter datemyhobby.com/... &uuml;ber HTTPS erreichbar. <code>ls /mnt/agency_nas/raw/</code> zeigt Ordner. Celery-Workers als online in Flower. Andere bestehende Projekte laufen noch fehlerfrei.</p>
+  <div class="info-section" style="margin-bottom:16px">
+    <div class="info-point"><strong>&#128421; System-Pakete (apt &mdash; global, kein venv)</strong>
+    <p style="font-family:monospace;font-size:0.85em;margin:6px 0">
+      apt install python3.11 python3.11-venv python3.11-dev<br>
+      apt install redis-server &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;# l&auml;uft als systemd Service<br>
+      <em style="color:#94a3b8"># postgresql war bereits installiert</em>
+    </p>
+    <p style="color:#94a3b8;margin:0">Kein einziges pip-Paket system-weit installiert. Alle Python-Dependencies sind im venv isoliert.</p>
+    </div>
+
+    <div class="info-point"><strong>&#128230; Python-Pakete (venv &mdash; isoliert in /opt/printbuddy/venv/)</strong>
+    <p style="font-family:monospace;font-size:0.85em;margin:6px 0">
+      /opt/printbuddy/venv/bin/pip install -r requirements.txt<br>
+      /opt/printbuddy/venv/bin/pip install gunicorn==23.0.0 &nbsp;&nbsp;# war in requirements.txt vergessen, nachtr&auml;glich hinzugef&uuml;gt
+    </p>
+    <p style="color:#94a3b8;margin:0">Andere Projekte (datemyhobby Blog, mirev) haben eigene venvs und sind nicht betroffen.</p>
+    </div>
+
+    <div class="info-point"><strong>&#128196; Konfigurationsdateien auf dem VPS</strong>
+    <table style="width:100%;font-size:0.85em;border-collapse:collapse;margin-top:6px">
+      <tr style="border-bottom:1px solid #334155"><td style="padding:4px 8px 4px 0;color:#94a3b8;white-space:nowrap">Was</td><td style="padding:4px 8px;color:#94a3b8">Pfad auf VPS</td><td style="padding:4px 0;color:#94a3b8">Quelle</td></tr>
+      <tr><td style="padding:4px 8px 4px 0;white-space:nowrap">App-Code</td><td style="padding:4px 8px;font-family:monospace">/opt/printbuddy/</td><td>git clone GitHub</td></tr>
+      <tr><td style="padding:4px 8px 4px 0;white-space:nowrap">Secrets / .env</td><td style="padding:4px 8px;font-family:monospace">/opt/printbuddy/.env</td><td>manuell per printf, chmod 600 &mdash; <strong>nicht im Git!</strong></td></tr>
+      <tr><td style="padding:4px 8px 4px 0;white-space:nowrap">Gunicorn Service</td><td style="padding:4px 8px;font-family:monospace">/etc/systemd/system/gunicorn.printbuddy.service</td><td>deploy/gunicorn.printbuddy.service (im Git)</td></tr>
+      <tr><td style="padding:4px 8px 4px 0;white-space:nowrap">Celery GPU Service</td><td style="padding:4px 8px;font-family:monospace">/etc/systemd/system/celery-printbuddy-gpu.service</td><td>deploy/celery-printbuddy-gpu.service (im Git)</td></tr>
+      <tr><td style="padding:4px 8px 4px 0;white-space:nowrap">Celery CPU Service</td><td style="padding:4px 8px;font-family:monospace">/etc/systemd/system/celery-printbuddy-cpu.service</td><td>deploy/celery-printbuddy-cpu.service (im Git)</td></tr>
+      <tr><td style="padding:4px 8px 4px 0;white-space:nowrap">Nginx vhost</td><td style="padding:4px 8px;font-family:monospace">/etc/nginx/sites-available/printbuddy</td><td>manuell via scp + certbot hat HTTPS erg&auml;nzt</td></tr>
+      <tr><td style="padding:4px 8px 4px 0;white-space:nowrap">SSL-Zertifikat</td><td style="padding:4px 8px;font-family:monospace">/etc/letsencrypt/live/printbuddy.datemyhobby.com/</td><td>certbot --nginx -d printbuddy.datemyhobby.com</td></tr>
+      <tr><td style="padding:4px 8px 4px 0;white-space:nowrap">Deploy-Script</td><td style="padding:4px 8px;font-family:monospace">/opt/printbuddy/deploy.sh (Symlink)</td><td>&rarr; deploy/deploy.sh im Git</td></tr>
+      <tr><td style="padding:4px 8px 4px 0;white-space:nowrap">Static Files</td><td style="padding:4px 8px;font-family:monospace">/opt/printbuddy/staticfiles/</td><td>manage.py collectstatic</td></tr>
+      <tr><td style="padding:4px 8px 4px 0;white-space:nowrap">Log-Verzeichnisse</td><td style="padding:4px 8px;font-family:monospace">/var/log/gunicorn/ &nbsp;/var/log/celery/</td><td>mkdir + chown www-data</td></tr>
+    </table>
+    </div>
+
+    <div class="info-point"><strong>&#128203; PostgreSQL</strong>
+    <p style="font-family:monospace;font-size:0.85em;margin:6px 0">
+      DB: printbuddy &nbsp;&nbsp;User: printbuddy &nbsp;&nbsp;Host: localhost<br>
+      Passwort: in /opt/printbuddy/.env (DATABASE_URL)
+    </p>
+    </div>
+
+    <div class="info-point"><strong>&#128203; ALLOWED_HOSTS in .env</strong>
+    <p style="font-family:monospace;font-size:0.85em;margin:6px 0">
+      ALLOWED_HOSTS=datemyhobby.com,www.datemyhobby.com,printbuddy.datemyhobby.com
+    </p>
+    </div>
+
+    <div class="info-point"><strong>&#9888; Besonderheiten / bekannte Fixes</strong>
+    <ul style="margin:6px 0;padding-left:20px;font-size:0.9em">
+      <li><code>gunicorn</code> fehlte in requirements.txt &rarr; manuell nachinstalliert + in requirements.txt erg&auml;nzt (Commit fix)</li>
+      <li><code>printbuddy/celery.py</code> fehlte komplett &rarr; angelegt, <code>printbuddy/__init__.py</code> erg&auml;nzt (Commit fix)</li>
+      <li>Celery Services hatten <code>Type=forking</code> &rarr; auf <code>Type=simple</code> ge&auml;ndert (kein Detach-Mode)</li>
+      <li>/opt/printbuddy geh&ouml;rt <code>www-data</code> (Service-User), git-Befehle als root brauchen <code>git config --global --add safe.directory</code></li>
+      <li>Nginx-Config muss per <code>scp</code> hochgeladen werden &mdash; PowerShell interpoliert <code>$host</code> etc. als PS-Variablen</li>
+      <li>Wildcard-DNS <code>*.datemyhobby.com</code> bereits gesetzt &rarr; kein neuer DNS-Eintrag n&ouml;tig</li>
+    </ul>
+    </div>
   </div>
 
+  <h3 style="color:#94a3b8;margin:20px 0 10px">&#128260; Update-Workflow: Lokal &rarr; GitHub &rarr; VPS</h3>
   <div class="info-section">
-    <h3>&#128214; VPS-Konfiguration erkl&auml;rt</h3>
-    <div class="info-point"><strong>Warum Port 8001?</strong><p>Andere Projekte auf dem VPS belegen m&ouml;glicherweise Port 8000. Nginx routet von au&szlig;en (:443) intern zu den jeweiligen Ports. Ports sind nur auf localhost gebunden, nie direkt von au&szlig;en erreichbar.</p></div>
-    <div class="info-point"><strong>Warum eigene systemd Service-Namen?</strong><p>Service-Namen m&uuml;ssen auf dem System einzigartig sein. <code>celery-printbuddy-gpu</code> stellt sicher, dass kein Namenskonflikt mit anderen Projekten entsteht.</p></div>
-    <div class="info-point"><strong>deploy.sh Inhalt</strong></div>
-<pre>#!/bin/bash
-set -e
-cd /opt/printbuddy
-git pull origin main
-source venv/bin/activate
-pip install -r requirements.txt --quiet
-python manage.py migrate --settings=printbuddy.settings.production --run-syncdb
-python manage.py collectstatic --noinput --clear --settings=printbuddy.settings.production
-sudo systemctl restart gunicorn.printbuddy
-sudo systemctl restart celery-printbuddy-gpu celery-printbuddy-cpu
-echo "Deploy $(git rev-parse --short HEAD) done"</pre>
-    <div class="info-point"><strong>Rollback</strong><p><code>git revert HEAD --no-edit &amp;&amp; git push &amp;&amp; ssh user@vps "bash /opt/printbuddy/deploy.sh"</code></p></div>
+    <div class="info-point"><strong>So l&auml;uft ein Update ab:</strong>
+<pre style="font-size:0.85em"># 1. Lokal entwickeln und testen
+python manage.py check
+python manage.py test  # (wenn Tests vorhanden)
+
+# 2. Committen und pushen
+git add .
+git commit -m "feat: neue Funktion"
+git push origin main
+
+# 3. Auf VPS deployen (ein Befehl)
+ssh -i C:\Users\alex\.ssh\datemyhobby_ssh_key root@167.86.108.37 "bash /opt/printbuddy/deploy.sh"</pre>
+    </div>
+
+    <div class="info-point"><strong>Was deploy.sh macht:</strong>
+<pre style="font-size:0.85em">git pull origin main                   # 1. Neuen Code holen
+chown -R www-data:www-data /opt/printbuddy
+pip install -r requirements.txt        # 2. Neue Pakete (falls ge&auml;ndert)
+python manage.py migrate               # 3. DB-Migrationen
+python manage.py collectstatic         # 4. Static Files
+systemctl restart gunicorn.printbuddy  # 5. Gunicorn neu starten
+systemctl restart celery-printbuddy-*  # 6. Celery Workers neu starten
+nginx -t &amp;&amp; systemctl reload nginx     # 7. Nginx config pr&uuml;fen + reload</pre>
+    </div>
+
+    <div class="info-point"><strong>Was NICHT automatisch updated wird (manuell):</strong>
+    <ul style="margin:6px 0;padding-left:20px;font-size:0.9em">
+      <li><code>/opt/printbuddy/.env</code> &mdash; Secrets nie im Git, direkt auf VPS bearbeiten: <code>nano /opt/printbuddy/.env</code></li>
+      <li>Nginx-Config &mdash; nach &Auml;nderung in <code>deploy/nginx-printbuddy.conf</code> manuell per <code>scp</code> kopieren + <code>nginx -t &amp;&amp; systemctl reload nginx</code></li>
+      <li>systemd Service-Files &mdash; nach &Auml;nderung in <code>deploy/*.service</code> manuell kopieren + <code>systemctl daemon-reload</code></li>
+      <li>SSL-Zertifikat &mdash; erneuert sich automatisch via certbot-Cronjob (l&auml;uft bis 28.09.2026)</li>
+    </ul>
+    </div>
+
+    <div class="info-point"><strong>Rollback:</strong>
+    <p style="font-family:monospace;font-size:0.85em;margin:6px 0">git revert HEAD --no-edit &amp;&amp; git push &amp;&amp; ssh -i C:\Users\alex\.ssh\datemyhobby_ssh_key root@167.86.108.37 "bash /opt/printbuddy/deploy.sh"</p>
+    </div>
+  </div>
+
+  <h3 style="color:#94a3b8;margin:20px 0 10px">Checkliste (Status)</h3>
+  <div class="check-row" style="opacity:0.5"><input type="checkbox" class="sp-check" data-key="p2-01" checked><span class="cl-text">Python 3.11 installiert &middot; <code>python3.11 --version</code> = 3.11.0rc1<small>apt install python3.11 python3.11-venv python3.11-dev</small></span></div>
+  <div class="check-row" style="opacity:0.5"><input type="checkbox" class="sp-check" data-key="p2-02" checked><span class="cl-text">Redis installiert + aktiv<small>apt install redis-server &middot; systemctl enable redis-server</small></span></div>
+  <div class="check-row" style="opacity:0.5"><input type="checkbox" class="sp-check" data-key="p2-03" checked><span class="cl-text">Repo geclont nach /opt/printbuddy/ &middot; venv angelegt &middot; pip install ausgef&uuml;hrt</span></div>
+  <div class="check-row" style="opacity:0.5"><input type="checkbox" class="sp-check" data-key="p2-04" checked><span class="cl-text">PostgreSQL DB + User printbuddy angelegt &middot; Passwort in .env</span></div>
+  <div class="check-row" style="opacity:0.5"><input type="checkbox" class="sp-check" data-key="p2-05" checked><span class="cl-text">.env in /opt/printbuddy/ angelegt &middot; chmod 600 &middot; nicht im Git</span></div>
+  <div class="check-row" style="opacity:0.5"><input type="checkbox" class="sp-check" data-key="p2-06" checked><span class="cl-text">manage.py migrate &rarr; alle 9 Migrationen OK</span></div>
+  <div class="check-row" style="opacity:0.5"><input type="checkbox" class="sp-check" data-key="p2-07" checked><span class="cl-text">Gunicorn Service aktiv &middot; Port 8001 &middot; User www-data<small>/etc/systemd/system/gunicorn.printbuddy.service</small></span></div>
+  <div class="check-row" style="opacity:0.5"><input type="checkbox" class="sp-check" data-key="p2-08" checked><span class="cl-text">Celery GPU + CPU Worker aktiv<small>/etc/systemd/system/celery-printbuddy-{gpu,cpu}.service &middot; Type=simple</small></span></div>
+  <div class="check-row" style="opacity:0.5"><input type="checkbox" class="sp-check" data-key="p2-09" checked><span class="cl-text">Nginx vhost printbuddy.datemyhobby.com &middot; proxy &rarr; 127.0.0.1:8001<small>/etc/nginx/sites-available/printbuddy &rarr; symlink sites-enabled</small></span></div>
+  <div class="check-row" style="opacity:0.5"><input type="checkbox" class="sp-check" data-key="p2-10" checked><span class="cl-text">SSL-Zertifikat via certbot &middot; g&uuml;ltig bis 28.09.2026 &middot; Auto-Renewal aktiv</span></div>
+  <div class="check-row" style="opacity:0.5"><input type="checkbox" class="sp-check" data-key="p2-11" checked><span class="cl-text">collectstatic &rarr; 125 Dateien in /opt/printbuddy/staticfiles/</span></div>
+  <div class="check-row" style="opacity:0.5"><input type="checkbox" class="sp-check" data-key="p2-12" checked><span class="cl-text">Superuser angelegt &middot; Username: alex</span></div>
+  <div class="check-row" style="opacity:0.5"><input type="checkbox" class="sp-check" data-key="p2-13" checked><span class="cl-text">deploy.sh unter /opt/printbuddy/deploy.sh (Symlink) &middot; chmod +x</span></div>
+  <div class="check-row"><input type="checkbox" class="sp-check" data-key="p2-14"><span class="cl-text">Tailscale + NAS-Mount /mnt/agency_nas/ einrichten (ausstehend)<small>Nicht blockierend f&uuml;r Phase 3 &mdash; Media-Dateien lokal bis NAS eingerichtet</small></span></div>
+  <div class="check-row"><input type="checkbox" class="sp-check" data-key="p2-15"><span class="cl-text">GitHub PAT widerrufen! <a href="https://github.com/settings/tokens" target="_blank" style="color:#f87171">github.com/settings/tokens</a><small style="color:#f87171">Tempor&auml;rer PAT wurde zum initialen Clonen auf dem VPS verwendet &mdash; jetzt widerrufen</small></span></div>
+
+  <div class="gate-box" style="border-color:#4ade80">
+    <div class="gate-label" style="color:#4ade80">&#10003; GATE-CHECK &mdash; Phase 2 BESTANDEN</div>
+    <p>https://printbuddy.datemyhobby.com/pb-manage/ &rarr; HTTP 302 (Login-Redirect) &middot; Alle 3 Services active &middot; Nginx + SSL aktiv &middot; Bestehende Projekte (datemyhobby.com, mirev, mirevsearch) laufen unver&auml;ndert</p>
   </div>
 </div>
 
