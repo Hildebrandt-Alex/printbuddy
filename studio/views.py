@@ -69,7 +69,7 @@ def job_list(request):
     return render(request, "studio/job_list.html", {
         "jobs": jobs,
         "status_filter": status_filter,
-        "status_choices": Job.JobStatus.choices,
+        "status_choices": Job.Status.choices,
     })
 
 
@@ -131,7 +131,7 @@ def job_create(request):
             model=model,
             width=int(width) if width else None,
             height=int(height) if height else None,
-            steps=int(steps) if steps else None,
+            num_steps=int(steps) if steps else None,
             guidance=float(guidance) if guidance else None,
             seed=int(seed) if seed else None,
             num_images=num_images,

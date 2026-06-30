@@ -43,6 +43,11 @@
 
       <div class="form-group">
         <label for="id_template">Pipeline Template *</label>
+        {% if not templates %}
+        <p style="color:var(--yellow);font-size:.85rem;padding:.5rem;background:#78350f;border-radius:6px">
+          ⚠️ Noch keine aktiven Pipeline-Templates vorhanden. Im <a href="/pb-manage/" style="color:#fde68a">Admin</a> anlegen.
+        </p>
+        {% else %}
         <select id="id_template" name="pipeline_template" required onchange="updateTemplateInfo(this)">
           <option value="">— Template wählen —</option>
           {% for t in templates %}
@@ -56,6 +61,7 @@
           {% endfor %}
         </select>
         <div id="template-info" class="form-hint" style="margin-top:.5rem"></div>
+        {% endif %}
       </div>
 
       <div class="form-group">

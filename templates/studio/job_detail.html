@@ -38,7 +38,7 @@
         <tr><td style="color:var(--text-muted)">Modell</td><td>{{ job.model|default:job.pipeline_template.default_model }}</td></tr>
         <tr><td style="color:var(--text-muted)">Größe</td>
             <td>{{ job.width|default:job.pipeline_template.default_width }} × {{ job.height|default:job.pipeline_template.default_height }} px</td></tr>
-        <tr><td style="color:var(--text-muted)">Steps</td><td>{{ job.steps|default:job.pipeline_template.default_steps }}</td></tr>
+        <tr><td style="color:var(--text-muted)">Steps</td><td>{{ job.num_steps|default:job.pipeline_template.default_steps }}</td></tr>
         <tr><td style="color:var(--text-muted)">Guidance</td><td>{{ job.guidance|default:job.pipeline_template.default_guidance }}</td></tr>
         <tr><td style="color:var(--text-muted)">Bilder</td><td>{{ job.num_images }}</td></tr>
         {% if job.seed %}<tr><td style="color:var(--text-muted)">Seed</td><td>{{ job.seed }}</td></tr>{% endif %}
