@@ -33,10 +33,47 @@ start_selected_jobs.short_description = "▶ Ausgewählte Jobs starten (Pipeline
 
 @admin.register(PipelineTemplate)
 class PipelineTemplateAdmin(admin.ModelAdmin):
-    list_display  = ('name', 'category', 'default_model', 'is_active', 'created_at')
+    list_display  = ('name', 'category', 'default_model', 'default_steps', 'default_guidance', 'is_active')
     list_filter   = ('category', 'default_model', 'is_active')
     search_fields = ('name',)
     list_editable = ('is_active',)
+
+    fieldsets = (
+        ('1 — Modell wählen', {
+            'description': (
+                'Wähle zuerst das Modell. Die Parameter darunter werden automatisch vorausgefüllt.'
+            ),
+            'fields': ('default_model', 'name', 'description', 'category', 'is_active'),
+        }),
+        ('2 — Generierungsparameter', {
+            'description': (
+                '<strong>FLUX Schnell:</strong> Steps 4, Guidance 0 &nbsp;|&nbsp; '
+                '<strong>SDXL:</strong> Steps 30, Guidance 7.5 &nbsp;|&nbsp; '
+                '<strong>FLUX Dev:</strong> Steps 20, Guidance 3.5'
+            ),
+            'fields': (
+                ('default_width', 'default_height'),
+                ('default_steps', 'default_guidance'),
+                'default_dpi',
+            ),
+        }),
+        ('3 — Pipeline-Schritte', {
+            'description': 'Für den ersten Test: nur Generate + Preview aktiv lassen.',
+            'fields': (
+                'step_generate',
+                'step_upscale',
+                'step_pod_export',
+                'step_preview',
+                'step_vectorize',
+                'step_cmyk',
+                'step_mockup',
+                'step_auto_qa',
+            ),
+        }),
+    )
+
+    class Media:
+        js = ('admin/js/pipeline_template_defaults.js',)
 
 
 @admin.register(Job)
