@@ -152,6 +152,7 @@ EMAIL_USE_TLS = True
 
 # NAS Mount
 NAS_MOUNT = env('NAS_MOUNT', default=str(BASE_DIR / 'local_nas'))
+NAS_BASE_PATH = env('NAS_BASE_PATH', default=str(BASE_DIR / 'local_nas'))
 
 # Logging
 LOGGING = {
