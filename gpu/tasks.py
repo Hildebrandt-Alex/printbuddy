@@ -117,115 +117,116 @@ def generate_image(self, job_id: str):
             logger.info("[MOCK] generate_image fertig: %s", asset_id)
             return str(asset_id)
 
-        # ── RunPod (primary) ─────────────────────────────────────────────────
+        # ── RunPod REST API (primary) ────────────────────────────────────────
+        # Für die Public API muss die HTTP REST API direkt aufgerufen werden.
+        # runpod.run_sync() funktioniert nur für eigene Serverless-Endpoints.
         try:
-            import runpod
-            runpod.api_key = settings.RUNPOD_API_KEY
+            import requests as req
+            import time
+            import base64
 
-            # FLUX Schnell Public API Parameterformat (aus RunPod cURL-Beispiel)
+            api_key     = settings.RUNPOD_API_KEY
+            endpoint_id = settings.RUNPOD_ENDPOINT_ID
+            base_url    = f"https://api.runpod.ai/v2/{endpoint_id}"
+            headers     = {
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json",
+            }
+
             input_payload = {
                 "prompt": prompt,
                 "negative_prompt": negative_prompt,
                 "width": width,
                 "height": height,
                 "num_inference_steps": steps,
-                "guidance": guidance,          # Public API: "guidance", nicht "guidance_scale"
+                "guidance": float(guidance),
                 "image_format": "png",
-                "seed": seed if seed else -1,  # -1 = zufällig
+                "seed": seed if seed else -1,
             }
-            # num_images + model nur mitsenden wenn wir eigene Endpoints nutzen
-            # (Public API ignoriert diese Felder)
 
-            logger.info("[RunPod] Sende Job an Endpoint %s", settings.RUNPOD_ENDPOINT_ID)
-            result = runpod.run_sync(
-                endpoint_id=settings.RUNPOD_ENDPOINT_ID,
-                input=input_payload,
-                timeout=300,
+            # Job starten (async)
+            logger.info("[RunPod] POST %s/run", base_url)
+            run_resp = req.post(
+                f"{base_url}/run",
+                json={"input": input_payload},
+                headers=headers,
+                timeout=30,
             )
+            run_resp.raise_for_status()
+            run_data = run_resp.json()
+            run_id   = run_data.get("id")
+            if not run_id:
+                raise ValueError(f"RunPod: keine Job-ID in Antwort: {run_data}")
 
-            if not result or "output" not in result:
-                raise ValueError(f"RunPod leere Antwort: {result}")
+            logger.info("[RunPod] Job gestartet: %s", run_id)
 
+            # Auf Ergebnis warten (Polling, max 300s)
+            deadline = time.time() + 300
+            result   = None
+            while time.time() < deadline:
+                status_resp = req.get(
+                    f"{base_url}/status/{run_id}",
+                    headers=headers,
+                    timeout=30,
+                )
+                status_resp.raise_for_status()
+                status_data = status_resp.json()
+                job_status  = status_data.get("status", "")
+
+                if job_status == "COMPLETED":
+                    result = status_data.get("output")
+                    break
+                elif job_status in ("FAILED", "CANCELLED", "TIMED_OUT"):
+                    raise ValueError(f"RunPod Job {run_id} Status: {job_status} — {status_data.get('error', '')}")
+                elif job_status in ("IN_QUEUE", "IN_PROGRESS"):
+                    logger.debug("[RunPod] Status: %s — warte 3s", job_status)
+                    time.sleep(3)
+                else:
+                    time.sleep(3)
+
+            if result is None:
+                raise ValueError(f"RunPod Timeout nach 300s (Job {run_id})")
+
+            # Bild dekodieren + speichern
             output_dir = _get_output_dir("raw")
-            asset_id = uuid.uuid4()
+            asset_id   = uuid.uuid4()
             output_path = output_dir / f"{asset_id}.png"
 
-            # Public API gibt Base64, eigene Endpoints geben URL zurück
-            out = result["output"]
-            if isinstance(out, list):
-                out = out[0]
+            # Public API liefert Base64 in result["images"][0] oder result["image"]
+            if isinstance(result, list):
+                out = result[0]
+            else:
+                out = result
 
             if isinstance(out, dict) and out.get("image"):
-                # Base64-kodiertes Bild (Public API Format)
-                import base64
                 image_data = out["image"]
                 if "," in image_data:
                     image_data = image_data.split(",", 1)[1]
                 output_path.write_bytes(base64.b64decode(image_data))
             elif isinstance(out, dict) and (out.get("image_url") or out.get("url")):
-                # URL-Format (eigener Endpoint)
-                import requests as req
                 image_url = out.get("image_url") or out.get("url")
-                response = req.get(image_url, timeout=60)
-                response.raise_for_status()
-                output_path.write_bytes(response.content)
+                img_resp  = req.get(image_url, timeout=60)
+                img_resp.raise_for_status()
+                output_path.write_bytes(img_resp.content)
             elif isinstance(out, str):
-                # Manchmal direkt Base64-String
-                import base64
                 output_path.write_bytes(base64.b64decode(out))
+            elif isinstance(result, dict) and result.get("images"):
+                # Manche Modelle liefern {"images": ["base64..."]}
+                image_data = result["images"][0]
+                if "," in image_data:
+                    image_data = image_data.split(",", 1)[1]
+                output_path.write_bytes(base64.b64decode(image_data))
             else:
-                raise ValueError(f"Unbekanntes RunPod Output-Format: {type(out)}: {str(out)[:200]}")
+                raise ValueError(f"Unbekanntes RunPod Output-Format: {type(out)}: {str(out)[:300]}")
 
             logger.info("[RunPod] Bild gespeichert: %s", output_path)
             _save_step(job_id, "generate", "done", asset_id=asset_id)
             return str(asset_id)
 
         except Exception as runpod_exc:
-            logger.warning("[RunPod] Fehler: %s — versuche Vast.ai Fallback", runpod_exc)
-
-            # ── Vast.ai (fallback) ───────────────────────────────────────────
-            try:
-                import requests
-                vastai_key = settings.VASTAI_API_KEY
-
-                payload = {
-                    "prompt": prompt,
-                    "negative_prompt": negative_prompt,
-                    "width": width,
-                    "height": height,
-                    "steps": steps,
-                    "guidance_scale": guidance,
-                    "model": model,
-                }
-                if seed:
-                    payload["seed"] = seed
-
-                headers = {"Authorization": f"Bearer {vastai_key}"}
-                resp = requests.post(
-                    "https://console.vast.ai/api/v0/generate/",
-                    json=payload,
-                    headers=headers,
-                    timeout=300,
-                )
-                resp.raise_for_status()
-                data = resp.json()
-
-                image_url = data.get("image_url") or data.get("output", {}).get("url")
-                img_resp = requests.get(image_url, timeout=60)
-                img_resp.raise_for_status()
-
-                output_dir = _get_output_dir("raw")
-                asset_id = uuid.uuid4()
-                output_path = output_dir / f"{asset_id}.png"
-                output_path.write_bytes(img_resp.content)
-
-                logger.info("[Vast.ai] Bild gespeichert: %s", output_path)
-                _save_step(job_id, "generate", "done", asset_id=asset_id)
-                return str(asset_id)
-
-            except Exception as vastai_exc:
-                logger.error("[Vast.ai] Fallback fehlgeschlagen: %s", vastai_exc)
-                raise vastai_exc
+            logger.error("[RunPod] Fehler: %s", runpod_exc)
+            # Kein Vast.ai Fallback — direkt als failed melden mit klarer Fehlermeldung
+            raise runpod_exc
 
     except Exception as exc:
         logger.error("[generate_image] Job %s fehlgeschlagen: %s", job_id, exc)
