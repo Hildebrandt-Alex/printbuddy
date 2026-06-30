@@ -1,0 +1,87 @@
+{% extends "studio/base.html" %}
+{% block title %}Neues Bild erstellen{% endblock %}
+
+{% block extra_head %}
+<style>
+  .output-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.25rem; margin-top: 1.5rem; }
+  @media (max-width: 768px) { .output-cards { grid-template-columns: 1fr; } }
+
+  .output-card {
+    background: var(--surface);
+    border: 2px solid var(--border);
+    border-radius: 12px;
+    padding: 2rem 1.5rem;
+    cursor: pointer;
+    transition: border-color .15s, transform .1s, background .15s;
+    text-align: center;
+    position: relative;
+  }
+  .output-card:hover { border-color: var(--accent); background: var(--surface2); transform: translateY(-2px); }
+  .output-card input[type=radio] { position: absolute; opacity: 0; width: 0; height: 0; }
+  .output-card.selected { border-color: var(--accent); background: var(--surface2); }
+  .output-card .icon { font-size: 2.5rem; margin-bottom: .75rem; display: block; }
+  .output-card .card-name { font-size: 1.1rem; font-weight: 700; margin-bottom: .5rem; }
+  .output-card .card-desc { font-size: .85rem; color: var(--text-muted); line-height: 1.5; margin-bottom: 1rem; }
+  .output-card .steps-hint {
+    display: inline-block; font-size: .72rem; background: var(--surface2);
+    border: 1px solid var(--border); border-radius: 4px; padding: .2rem .5rem;
+    color: var(--text-muted); font-family: monospace;
+  }
+  .output-card.selected .steps-hint { background: rgba(108,99,255,.15); border-color: var(--accent); color: var(--accent2); }
+
+  .wizard-steps { display: flex; gap: 0; margin-bottom: 2rem; }
+  .ws { flex: 1; text-align: center; padding: .5rem; font-size: .8rem; color: var(--text-muted); border-bottom: 2px solid var(--border); }
+  .ws.active { color: var(--accent2); border-color: var(--accent); font-weight: 600; }
+  .ws.done { color: var(--green); border-color: var(--green); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>Neues Bild erstellen</h1>
+</div>
+
+<!-- Wizard-Fortschritt -->
+<div class="wizard-steps">
+  <div class="ws active">1 — Was erstellen?</div>
+  <div class="ws">2 — Modell + Prompt</div>
+  <div class="ws">3 — Details</div>
+  <div class="ws">4 — Bestätigen</div>
+</div>
+
+<p style="color:var(--text-muted);margin-bottom:1.5rem">Wähle zuerst was du erstellen möchtest. Der Wizard führt dich durch alle weiteren Schritte.</p>
+
+<form method="post" id="step1-form">
+  {% csrf_token %}
+  <div class="output-cards">
+    {% for key, otype in output_types.items %}
+    <label class="output-card" for="otype_{{ key }}" id="card_{{ key }}">
+      <input type="radio" name="output_type" id="otype_{{ key }}" value="{{ key }}" required>
+      <span class="icon">{{ otype.icon }}</span>
+      <div class="card-name">{{ otype.label }}</div>
+      <div class="card-desc">{{ otype.description }}</div>
+      <span class="steps-hint">{{ otype.steps_hint }}</span>
+    </label>
+    {% endfor %}
+  </div>
+
+  <div style="margin-top:2rem;text-align:right">
+    <button type="submit" class="btn btn-primary" id="next-btn" disabled style="opacity:.4;cursor:not-allowed">
+      Weiter →
+    </button>
+  </div>
+</form>
+
+<script>
+document.querySelectorAll('input[name=output_type]').forEach(function(radio) {
+  radio.addEventListener('change', function() {
+    document.querySelectorAll('.output-card').forEach(c => c.classList.remove('selected'));
+    document.getElementById('card_' + this.value).classList.add('selected');
+    var btn = document.getElementById('next-btn');
+    btn.disabled = false;
+    btn.style.opacity = '1';
+    btn.style.cursor = 'pointer';
+  });
+});
+</script>
+{% endblock %}

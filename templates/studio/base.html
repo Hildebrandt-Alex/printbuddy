@@ -152,7 +152,7 @@
     <a href="{% url 'studio:dashboard' %}" class="brand">🎨 PrintBuddy Studio</a>
     <a href="{% url 'studio:dashboard' %}" {% if request.resolver_match.url_name == 'dashboard' %}class="active"{% endif %}>Dashboard</a>
     <a href="{% url 'studio:job_list' %}" {% if request.resolver_match.url_name in 'job_list,job_detail,job_results' %}class="active"{% endif %}>Jobs</a>
-    <a href="{% url 'studio:job_create' %}" {% if request.resolver_match.url_name == 'job_create' %}class="active"{% endif %}>+ Neuer Job</a>
+    <a href="{% url 'studio:wizard_step1' %}" {% if 'wizard' in request.resolver_match.url_name %}class="active"{% endif %} style="background:var(--accent);color:#fff;padding:.3rem .8rem;border-radius:6px">+ Erstellen</a>
     <a href="{% url 'studio:prompt_library' %}" {% if request.resolver_match.url_name == 'prompt_library' %}class="active"{% endif %}>Prompts</a>
     <span class="spacer"></span>
     <span class="user">{{ request.user.username }}</span>

@@ -102,7 +102,7 @@ def generate_image(self, job_id: str):
 
         width = job.width or t.default_width
         height = job.height or t.default_height
-        steps = job.steps_override if hasattr(job, "steps_override") and job.steps_override else t.default_steps
+        steps = job.num_steps or t.default_steps
         guidance = job.guidance or t.default_guidance
         model = job.model or t.default_model
         prompt = job.prompt
