@@ -375,44 +375,82 @@ nginx -t &amp;&amp; systemctl reload nginx     # 7. Nginx config pr&uuml;fen + r
 
 <!-- TAB 4: PHASE 3 GPU -->
 <div class="section" id="s4">
-  <h2>Phase 3 &mdash; GPU Pipeline</h2>
-  <p>Woche 2 &middot; ~2 Tage &middot; Celery-Tasks f&uuml;r Bildgenerierung und Nachbearbeitung. MOCK_GPU=true f&uuml;r sicheres lokales Testing ohne API-Kosten.</p>
+  <h2>Phase 3 &mdash; GPU Pipeline <span style="color:#4ade80;font-size:0.85em">&#10003; CODE FERTIG &middot; MOCK-TEST BESTANDEN</span></h2>
+  <p>Code deployed auf VPS &middot; Lokaler MOCK-Test: alle 5 Steps done &middot; API-Keys f&uuml;r echte GPU-Generierung noch einzutragen</p>
 
-  <div class="check-row"><input type="checkbox" class="sp-check" data-key="p3-01"><span class="cl-text">RunPod Account + Endpoint anlegen &middot; RTX 4090, EU-Datacenter<small>FLUX Schnell + SDXL f&uuml;r Generierung, Real-ESRGAN f&uuml;r Upscaling &middot; Separate Endpoints f&uuml;r Generate + Upscale</small></span></div>
-  <div class="check-row"><input type="checkbox" class="sp-check" data-key="p3-02"><span class="cl-text">RUNPOD_API_KEY + RUNPOD_ENDPOINT_ID + RUNPOD_UPSCALE_ENDPOINT in .env (lokal + VPS)</span></div>
-  <div class="check-row"><input type="checkbox" class="sp-check" data-key="p3-03"><span class="cl-text">VASTAI_API_KEY in .env &mdash; Vast.ai als automatischer Fallback<small>Wird automatisch aktiviert wenn RunPod eine Exception wirft</small></span></div>
-  <div class="check-row"><input type="checkbox" class="sp-check" data-key="p3-04"><span class="cl-text">gpu/tasks.py &mdash; generate_image Task<small>MOCK_GPU=true &rarr; Placeholder PNG &middot; MOCK_GPU=false &rarr; runpod.run_sync(timeout=300) &middot; Exception &rarr; Vast.ai Fallback</small></span></div>
-  <div class="check-row"><input type="checkbox" class="sp-check" data-key="p3-05"><span class="cl-text">gpu/tasks.py &mdash; upscale_image Task &middot; Real-ESRGAN 4x via RunPod Upscale-Endpoint<small>Ergebnis in /mnt/agency_nas/raw/ speichern &middot; JobStep.output_asset_id setzen</small></span></div>
-  <div class="check-row"><input type="checkbox" class="sp-check" data-key="p3-06"><span class="cl-text">postprocess/tasks.py &mdash; pod_export &middot; PNG 300dpi sRGB &rarr; /exports/pod/<small>Pillow: img.save(path, 'PNG', dpi=(300,300)) &middot; Color mode RGB</small></span></div>
-  <div class="check-row"><input type="checkbox" class="sp-check" data-key="p3-07"><span class="cl-text">postprocess/tasks.py &mdash; preview_export &middot; JPG 72dpi max 1200px &rarr; /exports/preview/ (IMMER ausf&uuml;hren!)<small>thumbnail((1200,1200)) + JPEG quality=85 &middot; Dieser Step l&auml;uft immer, unabh&auml;ngig von Template-Flags</small></span></div>
-  <div class="check-row"><input type="checkbox" class="sp-check" data-key="p3-08"><span class="cl-text">postprocess/tasks.py &mdash; cmyk_export &middot; Pillow &rarr; TIFF + Ghostscript &rarr; PDF/X-4 3mm Bleed<small>Konditionaler Step (step_cmyk=True) &middot; TIFF als Zwischenschritt, dann gs f&uuml;r PDF/X-4</small></span></div>
-  <div class="check-row"><input type="checkbox" class="sp-check" data-key="p3-09"><span class="cl-text">postprocess/tasks.py &mdash; vectorize_image &middot; Inkscape CLI + Potrace &rarr; SVG &rarr; /exports/vector/<small>Konditionaler Step &middot; inkscape --export-type=svg &middot; ADR-10: Inkscape + Potrace Open Source</small></span></div>
-  <div class="check-row"><input type="checkbox" class="sp-check" data-key="p3-10"><span class="cl-text">postprocess/tasks.py &mdash; auto_qa &middot; CLIP-Score + Blur-Check<small>Konditionaler Step &middot; JobStep.error_msg bei Fail &middot; Kein Hard-Stop &mdash; nur markiert als failed</small></span></div>
-  <div class="check-row"><input type="checkbox" class="sp-check" data-key="p3-11"><span class="cl-text">jobs/services.py &mdash; build_pipeline_chain(job_id) &middot; chain(*steps) mit .si()<small>Liest PipelineTemplate.step_* Flags und baut die Celery-Chain dynamisch auf</small></span></div>
-  <div class="check-row"><input type="checkbox" class="sp-check" data-key="p3-12"><span class="cl-text">jobs/tasks.py &mdash; notify_studio &middot; setzt Job.status='done' am Ende der Chain</span></div>
-  <div class="check-row"><input type="checkbox" class="sp-check" data-key="p3-13"><span class="cl-text">Alle Tasks: bind=True, max_retries=3 &middot; JobStep.status='running' beim Start schreiben<small>@app.task(bind=True, max_retries=3) &middot; step.status='running' beim Start, 'done'/'failed' am Ende</small></span></div>
-  <div class="check-row"><input type="checkbox" class="sp-check" data-key="p3-14"><span class="cl-text">Lokaler Test mit MOCK_GPU=true &middot; alle JobSteps done, preview-Datei vorhanden<small>Job via Admin starten &rarr; Celery Worker lokal l&auml;uft &rarr; alle Steps gr&uuml;n &rarr; Preview-Datei im Ordner</small></span></div>
-  <div class="check-row"><input type="checkbox" class="sp-check" data-key="p3-15"><span class="cl-text">VPS Test mit echtem RunPod Key &middot; Bild unter /mnt/agency_nas/exports/preview/ sichtbar<small>MOCK_GPU=false auf VPS setzen f&uuml;r diesen Test</small></span></div>
-
-  <div class="gate-box">
-    <div class="gate-label">&#10003; GATE-CHECK &mdash; Phase 3</div>
-    <p>MOCK_GPU=true: alle JobStep.status=done, Preview-Datei lokal vorhanden. VPS: echtes Bild unter /mnt/agency_nas/exports/preview/. Vast.ai Fallback greift wenn RUNPOD_API_KEY auf invalid gesetzt wird.</p>
+  <div class="hint-box" style="border-color:#60a5fa">
+    <p style="color:#93c5fd;margin:0 0 6px 0"><strong>&#128273; RunPod API-Keys besorgen (2 Endpoints n&ouml;tig)</strong></p>
+    <p style="margin:0;color:#bfdbfe">
+      1. <a href="https://www.runpod.io" target="_blank" style="color:#60a5fa">runpod.io</a> &rarr; Account anlegen &rarr; Settings &rarr; API Keys &rarr; Key kopieren &rarr; <code>RUNPOD_API_KEY</code><br>
+      2. RunPod &rarr; Serverless &rarr; + New Endpoint &rarr; <strong>FLUX Schnell</strong> Template &rarr; EU-West &rarr; RTX 4090 &rarr; Endpoint-ID &rarr; <code>RUNPOD_ENDPOINT_ID</code><br>
+      3. RunPod &rarr; Serverless &rarr; + New Endpoint &rarr; <strong>Real-ESRGAN</strong> Template &rarr; selbe Region &rarr; Endpoint-ID &rarr; <code>RUNPOD_UPSCALE_ENDPOINT</code><br>
+      4. Optional: <a href="https://vast.ai" target="_blank" style="color:#60a5fa">vast.ai</a> &rarr; Account &rarr; API Keys &rarr; <code>VASTAI_API_KEY</code> (nur Fallback &mdash; nicht dringend)
+    </p>
   </div>
 
-  <div class="info-section">
-    <h3>&#128214; GPU Pipeline erkl&auml;rt</h3>
-    <div class="info-point"><strong>Warum .si() (immutable signatures)?</strong><p>Celery-Chain &uuml;bergibt normalerweise den Return-Value als erstes Argument des n&auml;chsten Tasks. .si() ignoriert den Return-Value &mdash; jeder Task l&auml;dt seinen Zustand selbst aus der DB per job_id. Verhindert unerwartete Argument-Fehler.</p></div>
-    <div class="info-point"><strong>Warum nur UUIDs als Task-Argumente?</strong><p>ORM-Objekte sind nicht JSON-serialisierbar f&uuml;r Redis. UUID &rarr; Task l&auml;dt Objekt selbst aus DB. Wenn zwischen Queue und Ausf&uuml;hrung die DB ge&auml;ndert wurde, l&auml;dt der Task immer den aktuellen Stand.</p></div>
-    <div class="info-point"><strong>Lizenz-Regel: flux_dev NICHT f&uuml;r Verkauf!</strong><p>flux_schnell (Apache 2.0) &rarr; &#10003; kommerziell erlaubt &middot; sdxl (CreativeML Rail+M) &rarr; &#10003; erlaubt &middot; flux_dev &rarr; &#10007; VERBOTEN f&uuml;r Verkauf (nur intern/Test) &middot; custom_lora &rarr; &#9888; Basis-Modell pr&uuml;fen!</p></div>
-<pre>Job queued
-  --> generate_image.si(job_id)      [gpu_queue]
-  --> upscale_image.si(job_id)       [gpu_queue]
-  --> cmyk_export.si(job_id)         [cpu_queue]  (step_cmyk=True)
-  --> pod_export.si(job_id)          [cpu_queue]  (step_pod_export=True)
-  --> preview_export.si(job_id)      [cpu_queue]  (IMMER)
-  --> vectorize_image.si(job_id)     [cpu_queue]  (step_vectorize=True)
-  --> auto_qa.si(job_id)             [cpu_queue]  (step_auto_qa=True)
-  --> notify_studio.si(job_id)       [cpu_queue]</pre>
+  <div class="hint-box" style="border-color:#a78bfa;margin-top:8px">
+    <p style="color:#c4b5fd;margin:0 0 4px 0"><strong>&#128200; Kosten &amp; Vast.ai erkl&auml;rt</strong></p>
+    <p style="margin:0;color:#ddd6fe;font-size:0.82em">
+      RunPod On-Demand RTX 4090: ~$0.44/h &middot; 1 Bild (512&times;512, 30 Steps) ~15 Sek &rarr; ca. $0.002 pro Bild &middot; Nach 4x Upscale ~$0.006 pro fertiges Bild<br>
+      <strong>Vast.ai = reiner Fallback</strong> &mdash; wird automatisch aktiviert wenn RunPod eine Exception wirft (Timeout, API-Fehler, Endpoint offline). Kein anderer Anwendungsfall. Kann zun&auml;chst leer bleiben.
+    </p>
+  </div>
+
+  <h3>Was konfigurierbar ist (pro Job im Admin)</h3>
+  <table>
+    <tr><th>Parameter</th><th>Wo setzen</th><th>Effekt</th><th>Default</th></tr>
+    <tr><td>model</td><td>Job &rarr; model Override</td><td>flux_schnell / sdxl / flux_dev (nur Test!)</td><td>Template-Default</td></tr>
+    <tr><td>width / height</td><td>Job &rarr; width/height</td><td>Ausgabe-Aufl&ouml;sung vor Upscale. 1024&times;1024 &rarr; nach 4x: 4096&times;4096</td><td>1024 / 1024</td></tr>
+    <tr><td>steps</td><td>Job &rarr; steps_override</td><td>Diffusions-Schritte. Mehr = besser, langsamer. 20=schnell, 30=standard, 50=max</td><td>30</td></tr>
+    <tr><td>guidance</td><td>Job &rarr; guidance</td><td>Prompt-Treue. 5-12 sinnvoll. Zu hoch = &uuml;berges&auml;ttigt</td><td>7.5</td></tr>
+    <tr><td>seed</td><td>Job &rarr; seed</td><td>Leer = zuf&auml;llig. Gleicher Seed + Prompt = identisches Bild</td><td>zuf&auml;llig</td></tr>
+    <tr><td>num_images</td><td>Job &rarr; num_images</td><td>Anzahl paralleler Variationen</td><td>1</td></tr>
+    <tr><td>Pipeline-Steps</td><td>PipelineTemplate</td><td>Welche Exports erzeugt werden (pod, cmyk, vector, mockup, qa)</td><td>je Template</td></tr>
+  </table>
+
+  <h3>Was wohin ausgegeben wird</h3>
+  <table>
+    <tr><th>Step</th><th>Ausgabe</th><th>Pfad</th><th>Wann</th></tr>
+    <tr><td>generate</td><td>PNG Roh (512&ndash;1024px)</td><td>/mnt/agency_nas/raw/&lt;uuid&gt;.png</td><td>immer</td></tr>
+    <tr><td>upscale</td><td>PNG 4x (2048&ndash;4096px)</td><td>/mnt/agency_nas/raw/&lt;uuid&gt;_4x.png</td><td>step_upscale=&#10003;</td></tr>
+    <tr><td>pod_export</td><td><strong>PNG 300dpi sRGB</strong></td><td>/mnt/agency_nas/exports/pod/&lt;uuid&gt;_pod.png</td><td>step_pod_export=&#10003;</td></tr>
+    <tr><td>cmyk_export</td><td><strong>TIFF + PDF/X-4</strong> 3mm Bleed</td><td>/mnt/agency_nas/exports/offset/&lt;uuid&gt;_cmyk.tiff + _print.pdf</td><td>step_cmyk=&#10003;</td></tr>
+    <tr><td>vectorize</td><td><strong>SVG</strong> (Potrace)</td><td>/mnt/agency_nas/exports/vector/&lt;uuid&gt;_vector.svg</td><td>step_vectorize=&#10003;</td></tr>
+    <tr><td>preview_export</td><td><strong>JPG 72dpi 1200px</strong></td><td>/mnt/agency_nas/exports/preview/&lt;uuid&gt;_preview.jpg</td><td><strong>immer</strong></td></tr>
+    <tr><td>mockup_gen</td><td>Mockup JPG (Phase 7)</td><td>shop/mockups/ (Django media)</td><td>step_mockup=&#10003;</td></tr>
+    <tr><td>auto_qa</td><td>Blur-Score + Contrast in JobStep.params</td><td>DB (kein File)</td><td>step_auto_qa=&#10003;</td></tr>
+  </table>
+
+  <h3>Wann sieht man das Bild in der Galerie?</h3>
+  <div class="hint-box" style="border-color:#4ade80">
+    <p style="color:#bbf7d0;margin:0">
+      1. Job l&auml;uft durch &rarr; status=<strong>done</strong> &rarr; preview_export-Datei in /exports/preview/<br>
+      2. Admin oder Studio-Worker &rarr; <strong>Asset-Select</strong> (/studio/job/&lt;uuid&gt;/select/) &rarr; legt GalleryImage-Eintrag an<br>
+      3. Admin &rarr; Gallery Image &rarr; <strong>is_public = &#10003;</strong> setzen + cta_type w&auml;hlen<br>
+      4. Bild erscheint auf <strong>/gallery/</strong> &mdash; &ouml;ffentlich sichtbar
+    </p>
+  </div>
+
+  <h3>Code-Status (implementiert)</h3>
+  <div class="check-row" style="opacity:0.5"><input type="checkbox" class="sp-check" data-key="p3-04" checked><span class="cl-text">gpu/tasks.py &mdash; generate_image (MOCK + RunPod + Vast.ai Fallback)<small>local_nas/raw/ &middot; MOCK_GPU=true liefert Placeholder-PNG</small></span></div>
+  <div class="check-row" style="opacity:0.5"><input type="checkbox" class="sp-check" data-key="p3-05" checked><span class="cl-text">gpu/tasks.py &mdash; upscale_image (Real-ESRGAN 4x)</span></div>
+  <div class="check-row" style="opacity:0.5"><input type="checkbox" class="sp-check" data-key="p3-06" checked><span class="cl-text">postprocess/tasks.py &mdash; pod_export PNG 300dpi &rarr; exports/pod/</span></div>
+  <div class="check-row" style="opacity:0.5"><input type="checkbox" class="sp-check" data-key="p3-07" checked><span class="cl-text">postprocess/tasks.py &mdash; preview_export JPG 72dpi &rarr; exports/preview/</span></div>
+  <div class="check-row" style="opacity:0.5"><input type="checkbox" class="sp-check" data-key="p3-08" checked><span class="cl-text">postprocess/tasks.py &mdash; cmyk_export TIFF+PDF/X-4 &rarr; exports/offset/</span></div>
+  <div class="check-row" style="opacity:0.5"><input type="checkbox" class="sp-check" data-key="p3-09" checked><span class="cl-text">postprocess/tasks.py &mdash; vectorize_image SVG &rarr; exports/vector/</span></div>
+  <div class="check-row" style="opacity:0.5"><input type="checkbox" class="sp-check" data-key="p3-10" checked><span class="cl-text">postprocess/tasks.py &mdash; auto_qa Blur+Contrast Check</span></div>
+  <div class="check-row" style="opacity:0.5"><input type="checkbox" class="sp-check" data-key="p3-11" checked><span class="cl-text">jobs/services.py &mdash; build_pipeline_chain() + start_job()</span></div>
+  <div class="check-row" style="opacity:0.5"><input type="checkbox" class="sp-check" data-key="p3-12" checked><span class="cl-text">jobs/tasks.py &mdash; notify_studio &rarr; Job.status=done</span></div>
+  <div class="check-row" style="opacity:0.5"><input type="checkbox" class="sp-check" data-key="p3-13" checked><span class="cl-text">Admin-Action start_selected_jobs ruft start_job() aus services auf</span></div>
+  <div class="check-row" style="opacity:0.5"><input type="checkbox" class="sp-check" data-key="p3-14" checked><span class="cl-text">MOCK-Test bestanden &middot; alle 5 Steps done &middot; preview-JPG in local_nas/exports/preview/ &middot; deployed auf VPS</span></div>
+  <div class="check-row"><input type="checkbox" class="sp-check" data-key="p3-01"><span class="cl-text">RunPod Account + 2 Endpoints anlegen (Generate + Upscale)<small><a href="https://www.runpod.io" target="_blank" style="color:#60a5fa">runpod.io</a> &rarr; Serverless &rarr; New Endpoint &rarr; FLUX Schnell Template (EU-West) &rarr; RUNPOD_ENDPOINT_ID</small></span></div>
+  <div class="check-row"><input type="checkbox" class="sp-check" data-key="p3-02"><span class="cl-text">RUNPOD_API_KEY + RUNPOD_ENDPOINT_ID + RUNPOD_UPSCALE_ENDPOINT in VPS .env eintragen<small>ssh root@167.86.108.37 &rarr; nano /opt/printbuddy/.env &rarr; MOCK_GPU=False setzen &rarr; systemctl restart celery-printbuddy-gpu</small></span></div>
+  <div class="check-row"><input type="checkbox" class="sp-check" data-key="p3-03"><span class="cl-text">VASTAI_API_KEY optional &mdash; nur f&uuml;r Fallback<small>vast.ai &rarr; Account &rarr; API Keys &middot; Kann zun&auml;chst leer bleiben</small></span></div>
+  <div class="check-row"><input type="checkbox" class="sp-check" data-key="p3-15"><span class="cl-text">Echten RunPod-Test durchf&uuml;hren &middot; Bild unter /mnt/agency_nas/exports/preview/ pr&uuml;fen</span></div>
+
+  <div class="gate-box" style="border-color:#f59e0b">
+    <div class="gate-label">&#9888; GATE-CHECK &mdash; Phase 3 TEILWEISE BESTANDEN</div>
+    <p>MOCK_GPU=true: alle 5 JobSteps done &#10003; &middot; preview-JPG erzeugt &#10003; &middot; VPS deployed &#10003; &mdash; Offen: RunPod API-Keys eintragen + echter GPU-Test mit MOCK_GPU=false</p>
   </div>
 </div>
 
