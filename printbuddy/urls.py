@@ -27,6 +27,9 @@ ADMIN_URL = getattr(settings, 'ADMIN_URL', 'pb-manage/')
 urlpatterns = [
     path(ADMIN_URL, admin.site.urls),
 
+    # Öffentliche Galerie
+    path('gallery/', include('gallery.urls', namespace='gallery')),
+
     # Studio App (Login-geschützt, Gruppe studio_workers)
     path('studio/login/',  auth_views.LoginView.as_view(template_name='registration/login.html'), name='login'),
     path('studio/logout/', auth_views.LogoutView.as_view(next_page='/studio/login/'),             name='logout'),

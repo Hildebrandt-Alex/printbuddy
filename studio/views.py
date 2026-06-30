@@ -223,10 +223,19 @@ def asset_select(request, job_id):
 
     preview_dir = Path(getattr(settings, "NAS_BASE_PATH", "local_nas")) / "exports" / "preview"
     preview_filename = f"{asset_id}_preview.jpg"
+    preview_src = preview_dir / preview_filename
 
-    if not (preview_dir / preview_filename).exists():
+    if not preview_src.exists():
         messages.error(request, f"Preview-Datei nicht gefunden: {preview_filename}")
         return redirect("studio:job_results", job_id=job.id)
+
+    # Bild in gallery/full/ kopieren damit Nginx /media/gallery/full/ es direkt servieren kann
+    gallery_full_dir = Path(getattr(settings, "NAS_BASE_PATH", "local_nas")) / "gallery" / "full"
+    gallery_full_dir.mkdir(parents=True, exist_ok=True)
+    gallery_dest = gallery_full_dir / preview_filename
+    if not gallery_dest.exists():
+        import shutil
+        shutil.copy2(preview_src, gallery_dest)
 
     # Eindeutigen Slug erzeugen
     slug_base = slugify(title)[:100]

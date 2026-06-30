@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ image.title }} — PrintBuddy</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:      #0f1117;
+      --surface: #1a1d27;
+      --border:  #2e3150;
+      --accent:  #6c63ff;
+      --accent2: #a78bfa;
+      --text:    #e2e8f0;
+      --muted:   #8892aa;
+      --green:   #22c55e;
+      --orange:  #f59e0b;
+    }
+
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    nav {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0 2rem;
+      display: flex;
+      align-items: center;
+      gap: 2rem;
+      height: 60px;
+    }
+    .brand { font-weight: 700; font-size: 1.15rem; color: var(--accent2); text-decoration: none; }
+    nav a { color: var(--muted); text-decoration: none; font-size: .9rem; }
+    nav a:hover { color: var(--text); }
+    .spacer { flex: 1; }
+
+    /* BACK LINK */
+    .back {
+      display: inline-flex;
+      align-items: center;
+      gap: .4rem;
+      color: var(--muted);
+      text-decoration: none;
+      font-size: .85rem;
+      padding: 1.25rem 2rem .5rem;
+    }
+    .back:hover { color: var(--text); }
+
+    /* LAYOUT */
+    .detail-wrap {
+      display: grid;
+      grid-template-columns: 1fr 380px;
+      gap: 2.5rem;
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 1.5rem 2rem 4rem;
+    }
+    @media (max-width: 768px) {
+      .detail-wrap { grid-template-columns: 1fr; }
+    }
+
+    /* IMAGE */
+    .image-wrap {
+      border-radius: 12px;
+      overflow: hidden;
+      background: #11141e;
+      border: 1px solid var(--border);
+    }
+    .image-wrap img {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+
+    /* SIDEBAR */
+    .sidebar {}
+
+    .sidebar h1 {
+      font-size: 1.6rem;
+      font-weight: 700;
+      line-height: 1.25;
+      margin-bottom: .75rem;
+    }
+
+    .meta {
+      display: flex;
+      gap: .5rem;
+      flex-wrap: wrap;
+      margin-bottom: 1.5rem;
+    }
+    .badge {
+      padding: .2rem .65rem;
+      border-radius: 20px;
+      font-size: .75rem;
+      font-weight: 600;
+      background: #1e2030;
+      border: 1px solid var(--border);
+      color: var(--accent2);
+    }
+    .tag {
+      padding: .2rem .6rem;
+      border-radius: 20px;
+      font-size: .73rem;
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--muted);
+    }
+
+    .description {
+      color: var(--muted);
+      font-size: .9rem;
+      line-height: 1.7;
+      margin-bottom: 2rem;
+    }
+
+    /* CTA BUTTON */
+    .cta-btn {
+      display: block;
+      width: 100%;
+      padding: 1rem 1.5rem;
+      border-radius: 10px;
+      font-size: 1rem;
+      font-weight: 600;
+      text-align: center;
+      text-decoration: none;
+      cursor: pointer;
+      border: none;
+      transition: opacity .15s, transform .1s;
+      margin-bottom: .75rem;
+    }
+    .cta-btn:hover { opacity: .9; transform: translateY(-1px); }
+    .cta-btn:active { transform: translateY(0); }
+
+    .btn-etsy    { background: #f1641e; color: #fff; }
+    .btn-shop    { background: var(--accent); color: #fff; }
+    .btn-contact {
+      background: transparent;
+      border: 2px solid var(--green);
+      color: var(--green);
+    }
+
+    .divider {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 1.5rem 0;
+    }
+
+    .info-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: .82rem;
+      padding: .3rem 0;
+    }
+    .info-row .label { color: var(--muted); }
+    .info-row .value { color: var(--text); font-weight: 500; }
+
+    /* QUALITY BADGES */
+    .quality-list {
+      display: flex;
+      flex-direction: column;
+      gap: .4rem;
+      margin-top: 1rem;
+    }
+    .quality-item {
+      display: flex;
+      align-items: center;
+      gap: .6rem;
+      font-size: .82rem;
+      color: var(--muted);
+    }
+    .quality-item::before {
+      content: "✓";
+      color: var(--green);
+      font-weight: 700;
+    }
+  </style>
+</head>
+<body>
+
+<nav>
+  <a href="{% url 'gallery:list' %}" class="brand">PrintBuddy</a>
+  <a href="{% url 'gallery:list' %}">Galerie</a>
+  <span class="spacer"></span>
+</nav>
+
+<a href="{% url 'gallery:list' %}" class="back">← Zurück zur Galerie</a>
+
+<div class="detail-wrap">
+
+  <!-- Bild -->
+  <div>
+    <div class="image-wrap">
+      {% if image.file_path %}
+      <img src="{{ image.file_path.url }}" alt="{{ image.title }}">
+      {% else %}
+      <div style="aspect-ratio:1;display:flex;align-items:center;justify-content:center;color:#555">Kein Bild verfügbar</div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <h1>{{ image.title }}</h1>
+
+    <div class="meta">
+      <span class="badge">{{ image.get_category_display }}</span>
+      {% if image.tags %}
+        {% for tag in image.tags.split %}
+        <span class="tag">{{ tag|cut:"," }}</span>
+        {% endfor %}
+      {% endif %}
+    </div>
+
+    {% if image.description %}
+    <p class="description">{{ image.description }}</p>
+    {% endif %}
+
+    <!-- CTA -->
+    {% if image.cta_type == "etsy" and image.cta_url %}
+    <a href="{{ image.cta_url }}" target="_blank" rel="noopener" class="cta-btn btn-etsy">
+      Auf Etsy kaufen →
+    </a>
+    {% elif image.cta_type == "shop" and image.cta_url %}
+    <a href="{{ image.cta_url }}" class="cta-btn btn-shop">
+      Im Shop kaufen →
+    </a>
+    {% elif image.cta_type == "shop" %}
+    <a href="/shop/" class="cta-btn btn-shop">
+      Im Shop kaufen →
+    </a>
+    {% else %}
+    <a href="mailto:hallo@datemyhobby.com?subject=Anfrage: {{ image.title }}" class="cta-btn btn-contact">
+      Anfrage stellen
+    </a>
+    {% endif %}
+
+    <hr class="divider">
+
+    <!-- Info -->
+    <div class="info-row">
+      <span class="label">Kategorie</span>
+      <span class="value">{{ image.get_category_display }}</span>
+    </div>
+    <div class="info-row">
+      <span class="label">Format</span>
+      <span class="value">Digitaldruck, 300 dpi</span>
+    </div>
+
+    <div class="quality-list">
+      <div class="quality-item">KI-generiert mit FLUX Schnell (Apache 2.0)</div>
+      <div class="quality-item">Druckfertig in 300 dpi sRGB</div>
+      <div class="quality-item">Einzigartiges, nicht wiederholtes Motiv</div>
+      <div class="quality-item">Premium Papier auf Anfrage</div>
+    </div>
+
+  </div>
+</div>
+
+</body>
+</html>

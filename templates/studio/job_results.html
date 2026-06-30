@@ -6,7 +6,7 @@
   <div>
     <h1>Ergebnisse: {{ job.title }}</h1>
     <p style="color:var(--text-muted);font-size:.85rem;margin-top:.25rem">
-      {{ assets|length }} Bild{{ assets|length|pluralize:"","er" }} generiert
+      {{ assets|length }} Bild{{ assets|length|pluralize:",er" }} generiert
     </p>
   </div>
   <a href="{% url 'studio:job_detail' job.id %}" class="btn btn-secondary">← Job-Details</a>
