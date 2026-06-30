@@ -122,25 +122,24 @@ def generate_image(self, job_id: str):
             import runpod
             runpod.api_key = settings.RUNPOD_API_KEY
 
-            payload = {
-                "input": {
-                    "prompt": prompt,
-                    "negative_prompt": negative_prompt,
-                    "width": width,
-                    "height": height,
-                    "num_inference_steps": steps,
-                    "guidance_scale": guidance,
-                    "num_images": num_images,
-                    "model": model,
-                }
+            # FLUX Schnell Public API Parameterformat (aus RunPod cURL-Beispiel)
+            input_payload = {
+                "prompt": prompt,
+                "negative_prompt": negative_prompt,
+                "width": width,
+                "height": height,
+                "num_inference_steps": steps,
+                "guidance": guidance,          # Public API: "guidance", nicht "guidance_scale"
+                "image_format": "png",
+                "seed": seed if seed else -1,  # -1 = zufällig
             }
-            if seed:
-                payload["input"]["seed"] = seed
+            # num_images + model nur mitsenden wenn wir eigene Endpoints nutzen
+            # (Public API ignoriert diese Felder)
 
             logger.info("[RunPod] Sende Job an Endpoint %s", settings.RUNPOD_ENDPOINT_ID)
             result = runpod.run_sync(
                 endpoint_id=settings.RUNPOD_ENDPOINT_ID,
-                input=payload["input"],
+                input=input_payload,
                 timeout=300,
             )
 
