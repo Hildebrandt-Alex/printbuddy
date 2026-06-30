@@ -203,11 +203,17 @@ def generate_image(self, job_id: str):
                 if "," in image_data:
                     image_data = image_data.split(",", 1)[1]
                 output_path.write_bytes(base64.b64decode(image_data))
-            elif isinstance(out, dict) and (out.get("image_url") or out.get("url")):
-                image_url = out.get("image_url") or out.get("url")
+            elif isinstance(out, dict) and (out.get("image_url") or out.get("url") or out.get("result")):
+                image_url = out.get("image_url") or out.get("url") or out.get("result")
                 img_resp  = req.get(image_url, timeout=60)
                 img_resp.raise_for_status()
-                output_path.write_bytes(img_resp.content)
+                # JPEG von RunPod als PNG-Datei speichern (Pillow konvertiert)
+                from PIL import Image as PilImage
+                import io
+                pil_img = PilImage.open(io.BytesIO(img_resp.content)).convert("RGB")
+                output_path = output_path.with_suffix(".png")
+                pil_img.save(output_path, "PNG")
+            
             elif isinstance(out, str):
                 output_path.write_bytes(base64.b64decode(out))
             elif isinstance(result, dict) and result.get("images"):
