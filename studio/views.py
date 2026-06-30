@@ -229,14 +229,6 @@ def asset_select(request, job_id):
         messages.error(request, f"Preview-Datei nicht gefunden: {preview_filename}")
         return redirect("studio:job_results", job_id=job.id)
 
-    # Bild in gallery/full/ kopieren damit Nginx /media/gallery/full/ es direkt servieren kann
-    gallery_full_dir = Path(getattr(settings, "NAS_BASE_PATH", "local_nas")) / "gallery" / "full"
-    gallery_full_dir.mkdir(parents=True, exist_ok=True)
-    gallery_dest = gallery_full_dir / preview_filename
-    if not gallery_dest.exists():
-        import shutil
-        shutil.copy2(preview_src, gallery_dest)
-
     # Eindeutigen Slug erzeugen
     slug_base = slugify(title)[:100]
     slug, counter = slug_base, 1
@@ -249,7 +241,7 @@ def asset_select(request, job_id):
         slug=slug,
         category=category,
         cta_type=cta_type,
-        file_path=f"gallery/full/{preview_filename}",
+        file_path=f"exports/preview/{preview_filename}",
         is_public=False,  # Admin gibt explizit frei
         source_job_id=job.id,
     )
