@@ -16,6 +16,7 @@ Including another URLconf
 """
 
 from django.contrib import admin
+from django.contrib.auth import views as auth_views
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
@@ -25,6 +26,11 @@ ADMIN_URL = getattr(settings, 'ADMIN_URL', 'pb-manage/')
 
 urlpatterns = [
     path(ADMIN_URL, admin.site.urls),
+
+    # Studio App (Login-geschützt, Gruppe studio_workers)
+    path('studio/login/',  auth_views.LoginView.as_view(template_name='registration/login.html'), name='login'),
+    path('studio/logout/', auth_views.LogoutView.as_view(next_page='/studio/login/'),             name='logout'),
+    path('studio/',        include('studio.urls', namespace='studio')),
 ]
 
 if settings.DEBUG:

@@ -1,0 +1,67 @@
+{% extends "studio/base.html" %}
+{% block title %}{{ job.title }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1>{{ job.title }}</h1>
+    <p style="color:var(--text-muted);font-size:.85rem;margin-top:.25rem">
+      {{ job.pipeline_template.name }} &nbsp;·&nbsp;
+      Erstellt {{ job.created_at|date:"d.m.Y H:i" }}
+    </p>
+  </div>
+  <div style="display:flex;gap:.5rem">
+    <a href="{% url 'studio:job_list' %}" class="btn btn-secondary">← Jobs</a>
+    {% if job.status == "done" %}
+    <a href="{% url 'studio:job_results' job.id %}" class="btn btn-primary">Ergebnisse →</a>
+    {% endif %}
+  </div>
+</div>
+
+<div class="grid-2" style="align-items:start;gap:1.5rem">
+
+  <!-- Job-Details -->
+  <div>
+    <div class="card" style="margin-bottom:1rem">
+      <div class="card-title">Prompt</div>
+      <p style="font-size:.9rem;line-height:1.6">{{ job.prompt }}</p>
+      {% if job.negative_prompt %}
+      <p style="font-size:.8rem;color:var(--text-muted);margin-top:.75rem">
+        <strong>Negativ:</strong> {{ job.negative_prompt }}
+      </p>
+      {% endif %}
+    </div>
+
+    <div class="card" style="margin-bottom:1rem">
+      <div class="card-title">Parameter</div>
+      <table>
+        <tr><td style="color:var(--text-muted)">Modell</td><td>{{ job.model|default:job.pipeline_template.default_model }}</td></tr>
+        <tr><td style="color:var(--text-muted)">Größe</td>
+            <td>{{ job.width|default:job.pipeline_template.default_width }} × {{ job.height|default:job.pipeline_template.default_height }} px</td></tr>
+        <tr><td style="color:var(--text-muted)">Steps</td><td>{{ job.steps|default:job.pipeline_template.default_steps }}</td></tr>
+        <tr><td style="color:var(--text-muted)">Guidance</td><td>{{ job.guidance|default:job.pipeline_template.default_guidance }}</td></tr>
+        <tr><td style="color:var(--text-muted)">Bilder</td><td>{{ job.num_images }}</td></tr>
+        {% if job.seed %}<tr><td style="color:var(--text-muted)">Seed</td><td>{{ job.seed }}</td></tr>{% endif %}
+      </table>
+    </div>
+
+    {% if job.notes %}
+    <div class="card">
+      <div class="card-title">Notizen</div>
+      <p style="font-size:.85rem;color:var(--text-muted)">{{ job.notes }}</p>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Live-Status (HTMX Polling) -->
+  <div
+    id="status-block"
+    hx-get="{% url 'studio:job_status' job.id %}"
+    hx-trigger="{% if job.status in 'queued,running' %}every 3s{% else %}none{% endif %}"
+    hx-swap="outerHTML"
+  >
+    {% include "studio/partials/job_status.html" %}
+  </div>
+
+</div>
+{% endblock %}

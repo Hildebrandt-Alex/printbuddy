@@ -1,0 +1,68 @@
+<!-- HTMX-Partial: Kein Layout. Wird in job_detail.html via hx-swap="outerHTML" ersetzt. -->
+<div
+  id="status-block"
+  hx-get="{% url 'studio:job_status' job.id %}"
+  hx-trigger="{% if job.status in 'queued,running' %}every 3s{% else %}none{% endif %}"
+  hx-swap="outerHTML"
+>
+
+  <div class="card">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
+      <div class="card-title" style="margin-bottom:0">Status</div>
+      <div style="display:flex;align-items:center;gap:.6rem">
+        <span class="badge badge-{{ job.status }}">{{ job.get_status_display }}</span>
+        {% if job.status in "queued,running" %}
+        <span class="spinner"></span>
+        {% endif %}
+      </div>
+    </div>
+
+    {% if steps %}
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Schritt</th>
+          <th>Status</th>
+          <th>Dauer</th>
+          <th>Fehler</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for step in steps %}
+        <tr>
+          <td style="color:var(--text-muted)">{{ step.order }}</td>
+          <td>{{ step.get_step_type_display }}</td>
+          <td><span class="badge badge-{{ step.status }}">{{ step.get_status_display }}</span></td>
+          <td style="color:var(--text-muted)">
+            {% if step.started_at and step.completed_at %}
+              {{ step.started_at|timesince:step.completed_at }}
+            {% elif step.started_at %}
+              läuft…
+            {% else %}
+              —
+            {% endif %}
+          </td>
+          <td style="color:var(--red);font-size:.78rem">{{ step.error_msg|truncatechars:60 }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p style="color:var(--text-muted);font-size:.85rem">
+      {% if job.status == "draft" %}
+        Job wartet auf Admin-Freigabe.
+      {% else %}
+        Keine Schritte vorhanden.
+      {% endif %}
+    </p>
+    {% endif %}
+
+    {% if job.status == "done" %}
+    <div style="margin-top:1rem;text-align:right">
+      <a href="{% url 'studio:job_results' job.id %}" class="btn btn-primary">Ergebnisse ansehen →</a>
+    </div>
+    {% endif %}
+  </div>
+
+</div>

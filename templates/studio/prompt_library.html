@@ -1,0 +1,60 @@
+{% extends "studio/base.html" %}
+{% block title %}Prompt-Bibliothek{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>Prompt-Bibliothek</h1>
+</div>
+
+<!-- Kategorie-Filter -->
+{% if categories %}
+<div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:1.5rem">
+  <a href="{% url 'studio:prompt_library' %}" class="btn btn-secondary btn-sm"
+     style="{% if not category_filter %}background:var(--accent);color:#fff{% endif %}">Alle</a>
+  {% for cat in categories %}
+  <a href="?cat={{ cat }}" class="btn btn-secondary btn-sm"
+     style="{% if category_filter == cat %}background:var(--accent);color:#fff{% endif %}">{{ cat }}</a>
+  {% endfor %}
+</div>
+{% endif %}
+
+{% if prompts %}
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:1rem">
+  {% for pt in prompts %}
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:.5rem">
+      <div>
+        <div style="font-size:.7rem;color:var(--text-muted);text-transform:uppercase;margin-bottom:.2rem">{{ pt.category }}</div>
+        <div style="font-weight:600">{{ pt.title }}</div>
+      </div>
+      <button onclick="copyPrompt(this, {{ pt.base_text|escapejs|default:'' }})"
+              class="btn btn-secondary btn-sm">Kopieren</button>
+    </div>
+    <p style="font-size:.82rem;color:var(--text-muted);line-height:1.5;margin-bottom:.75rem">
+      {{ pt.base_text|truncatechars:200 }}
+    </p>
+    <a href="{% url 'studio:job_create' %}?prompt={{ pt.base_text|urlencode }}"
+       class="btn btn-secondary btn-sm" style="width:100%;text-align:center;display:block">
+      → Als Basis verwenden
+    </a>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="card" style="text-align:center;padding:3rem">
+  <p style="color:var(--text-muted)">Noch keine Prompt-Templates vorhanden.<br>
+  Im Admin unter <strong>Jobs → PromptTemplates</strong> anlegen.</p>
+</div>
+{% endif %}
+
+<script>
+function copyPrompt(btn, text) {
+  navigator.clipboard.writeText(text).then(() => {
+    const orig = btn.textContent;
+    btn.textContent = 'Kopiert!';
+    btn.style.color = 'var(--green)';
+    setTimeout(() => { btn.textContent = orig; btn.style.color = ''; }, 2000);
+  });
+}
+</script>
+{% endblock %}

@@ -154,6 +154,11 @@ EMAIL_USE_TLS = True
 NAS_MOUNT = env('NAS_MOUNT', default=str(BASE_DIR / 'local_nas'))
 NAS_BASE_PATH = env('NAS_BASE_PATH', default=str(BASE_DIR / 'local_nas'))
 
+# Auth
+LOGIN_URL = '/studio/login/'
+LOGIN_REDIRECT_URL = '/studio/'
+LOGOUT_REDIRECT_URL = '/studio/login/'
+
 # Logging
 LOGGING = {
     'version': 1,

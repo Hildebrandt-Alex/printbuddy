@@ -1,0 +1,12 @@
+{% extends "studio/base.html" %}
+{% block title %}Zugriff verweigert{% endblock %}
+{% block content %}
+<div style="text-align:center;padding:4rem">
+  <h1 style="font-size:3rem;color:var(--red)">403</h1>
+  <p style="color:var(--text-muted);margin:.75rem 0 1.5rem">
+    Du hast keinen Zugriff auf das Studio.<br>
+    Wende dich an den Admin, um der Gruppe <strong>studio_workers</strong> hinzugefügt zu werden.
+  </p>
+  <a href="/" class="btn btn-secondary">← Startseite</a>
+</div>
+{% endblock %}

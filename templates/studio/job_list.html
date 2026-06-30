@@ -1,0 +1,57 @@
+{% extends "studio/base.html" %}
+{% block title %}Jobs{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>Meine Jobs</h1>
+  <a href="{% url 'studio:job_create' %}" class="btn btn-primary">+ Neuer Job</a>
+</div>
+
+<!-- Filter -->
+<div style="display:flex;gap:.5rem;margin-bottom:1.25rem">
+  <a href="{% url 'studio:job_list' %}" class="btn btn-secondary btn-sm {% if not status_filter %}active{% endif %}" style="{% if not status_filter %}background:var(--accent);color:#fff{% endif %}">Alle</a>
+  {% for val, label in status_choices %}
+  <a href="?status={{ val }}" class="btn btn-secondary btn-sm" style="{% if status_filter == val %}background:var(--accent);color:#fff{% endif %}">{{ label }}</a>
+  {% endfor %}
+</div>
+
+<div class="card">
+  {% if jobs %}
+  <table>
+    <thead>
+      <tr>
+        <th>Titel</th>
+        <th>Template</th>
+        <th>Bilder</th>
+        <th>Status</th>
+        <th>Erstellt</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for job in jobs %}
+      <tr>
+        <td>{{ job.title }}</td>
+        <td style="color:var(--text-muted)">{{ job.pipeline_template.name }}</td>
+        <td style="color:var(--text-muted)">{{ job.num_images }}</td>
+        <td><span class="badge badge-{{ job.status }}">{{ job.get_status_display }}</span></td>
+        <td style="color:var(--text-muted)">{{ job.created_at|date:"d.m.Y H:i" }}</td>
+        <td>
+          {% if job.status == "done" %}
+            <a href="{% url 'studio:job_results' job.id %}" class="btn btn-secondary btn-sm">Ergebnisse</a>
+          {% else %}
+            <a href="{% url 'studio:job_detail' job.id %}" class="btn btn-secondary btn-sm">Details</a>
+          {% endif %}
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p style="color:var(--text-muted);text-align:center;padding:2rem">
+    Keine Jobs gefunden.
+    {% if not status_filter %}<a href="{% url 'studio:job_create' %}" style="color:var(--accent2)">Ersten Job anlegen →</a>{% endif %}
+  </p>
+  {% endif %}
+</div>
+{% endblock %}

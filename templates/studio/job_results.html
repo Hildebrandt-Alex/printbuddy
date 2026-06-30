@@ -1,0 +1,80 @@
+{% extends "studio/base.html" %}
+{% block title %}Ergebnisse — {{ job.title }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1>Ergebnisse: {{ job.title }}</h1>
+    <p style="color:var(--text-muted);font-size:.85rem;margin-top:.25rem">
+      {{ assets|length }} Bild{{ assets|length|pluralize:"","er" }} generiert
+    </p>
+  </div>
+  <a href="{% url 'studio:job_detail' job.id %}" class="btn btn-secondary">← Job-Details</a>
+</div>
+
+{% if assets %}
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1rem">
+  {% for asset in assets %}
+  <div class="card" style="padding:0;overflow:hidden">
+    <!-- Preview-Bild -->
+    <div style="background:var(--surface2);aspect-ratio:1;display:flex;align-items:center;justify-content:center">
+      {% if asset.exists %}
+      <img src="/media/preview/{{ asset.filename }}" alt="{{ asset.asset_id }}"
+           style="width:100%;height:100%;object-fit:cover">
+      {% else %}
+      <span style="color:var(--text-muted);font-size:.8rem">Datei nicht gefunden</span>
+      {% endif %}
+    </div>
+
+    <!-- Selektion -->
+    <div style="padding:1rem">
+      <p style="font-size:.75rem;color:var(--text-muted);margin-bottom:.75rem;word-break:break-all">
+        {{ asset.asset_id }}
+      </p>
+
+      {% if asset.exists %}
+      <form method="post" action="{% url 'studio:asset_select' job.id %}">
+        {% csrf_token %}
+        <input type="hidden" name="asset_id" value="{{ asset.asset_id }}">
+
+        <div class="form-group">
+          <label>Titel für Galerie</label>
+          <input type="text" name="title" value="{{ job.title }}" required>
+        </div>
+        <div class="grid-2">
+          <div class="form-group">
+            <label>Kategorie</label>
+            <select name="category">
+              <option value="art">Art</option>
+              <option value="poster">Poster</option>
+              <option value="shirt">Shirt</option>
+              <option value="card">Card</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>CTA-Typ</label>
+            <select name="cta_type">
+              <option value="contact">Anfrage</option>
+              <option value="etsy">Etsy</option>
+              <option value="shop">Shop</option>
+            </select>
+          </div>
+        </div>
+        <button type="submit" class="btn btn-primary btn-sm" style="width:100%">
+          Für Galerie vormerken
+        </button>
+      </form>
+      {% else %}
+      <p style="color:var(--red);font-size:.8rem">Preview-Datei nicht gefunden</p>
+      {% endif %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+{% else %}
+<div class="card" style="text-align:center;padding:3rem">
+  <p style="color:var(--text-muted)">Keine Preview-Assets gefunden.</p>
+</div>
+{% endif %}
+{% endblock %}

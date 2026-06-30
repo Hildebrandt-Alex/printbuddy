@@ -1,0 +1,68 @@
+{% extends "studio/base.html" %}
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>Dashboard</h1>
+  <a href="{% url 'studio:job_create' %}" class="btn btn-primary">+ Neuer Job</a>
+</div>
+
+<!-- Stats -->
+<div class="grid-4" style="margin-bottom:2rem">
+  <div class="stat-box">
+    <div class="value">{{ stats.draft }}</div>
+    <div class="label">Entwürfe</div>
+  </div>
+  <div class="stat-box">
+    <div class="value" style="color:var(--accent2)">{{ stats.running }}</div>
+    <div class="label">In Bearbeitung</div>
+  </div>
+  <div class="stat-box">
+    <div class="value" style="color:var(--green)">{{ stats.done }}</div>
+    <div class="label">Abgeschlossen</div>
+  </div>
+  <div class="stat-box">
+    <div class="value" style="color:var(--red)">{{ stats.failed }}</div>
+    <div class="label">Fehlgeschlagen</div>
+  </div>
+</div>
+
+<!-- Letzte Jobs -->
+<div class="card">
+  <div class="card-title">Letzte Jobs</div>
+  {% if recent_jobs %}
+  <table>
+    <thead>
+      <tr>
+        <th>Titel</th>
+        <th>Template</th>
+        <th>Status</th>
+        <th>Erstellt</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for job in recent_jobs %}
+      <tr>
+        <td>{{ job.title }}</td>
+        <td style="color:var(--text-muted)">{{ job.pipeline_template.name }}</td>
+        <td><span class="badge badge-{{ job.status }}">{{ job.get_status_display }}</span></td>
+        <td style="color:var(--text-muted)">{{ job.created_at|date:"d.m.Y H:i" }}</td>
+        <td>
+          {% if job.status == "done" %}
+            <a href="{% url 'studio:job_results' job.id %}" class="btn btn-secondary btn-sm">Ergebnisse</a>
+          {% else %}
+            <a href="{% url 'studio:job_detail' job.id %}" class="btn btn-secondary btn-sm">Details</a>
+          {% endif %}
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p style="color:var(--text-muted);text-align:center;padding:2rem">
+    Noch keine Jobs. <a href="{% url 'studio:job_create' %}" style="color:var(--accent2)">Ersten Job anlegen →</a>
+  </p>
+  {% endif %}
+</div>
+{% endblock %}
