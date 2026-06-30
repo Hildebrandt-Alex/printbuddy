@@ -3,19 +3,17 @@ Description=Celery CPU Worker — PrintBuddy (cpu_queue, concurrency=2)
 After=network.target redis.service
 
 [Service]
-Type=forking
+Type=simple
 User=www-data
 Group=www-data
 WorkingDirectory=/opt/printbuddy
 Environment="DJANGO_SETTINGS_MODULE=printbuddy.settings.production"
-PIDFile=/var/run/celery/printbuddy-cpu.pid
 ExecStart=/opt/printbuddy/venv/bin/celery \
     -A printbuddy worker \
     --queues=cpu_queue \
     --concurrency=2 \
     --loglevel=info \
     --logfile=/var/log/celery/printbuddy-cpu.log \
-    --pidfile=/var/run/celery/printbuddy-cpu.pid \
     --hostname=cpu@%%h
 ExecStop=/bin/kill -s TERM $MAINPID
 Restart=on-failure

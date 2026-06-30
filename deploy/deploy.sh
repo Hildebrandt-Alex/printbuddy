@@ -11,7 +11,9 @@ cd /opt/printbuddy
 echo "=== PrintBuddy Deploy $(date) ==="
 
 # 1. Code holen
+git config --global --add safe.directory /opt/printbuddy 2>/dev/null || true
 git pull origin main
+chown -R www-data:www-data /opt/printbuddy
 
 # 2. Dependencies
 source venv/bin/activate
