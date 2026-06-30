@@ -188,10 +188,15 @@ def job_results(request, job_id):
     assets = []
     for step in preview_steps:
         filename = f"{step.output_asset_id}_preview.jpg"
+        filepath = preview_dir / filename
+        try:
+            file_exists = filepath.exists()
+        except (PermissionError, OSError):
+            file_exists = True  # NAS nicht lesbar für www-data — trotzdem anzeigen, Nginx serviert es
         assets.append({
             "asset_id": str(step.output_asset_id),
             "filename": filename,
-            "exists": (preview_dir / filename).exists(),
+            "exists": file_exists,
         })
 
     return render(request, "studio/job_results.html", {"job": job, "assets": assets})
@@ -225,7 +230,12 @@ def asset_select(request, job_id):
     preview_filename = f"{asset_id}_preview.jpg"
     preview_src = preview_dir / preview_filename
 
-    if not preview_src.exists():
+    try:
+        file_missing = not preview_src.exists()
+    except (PermissionError, OSError):
+        file_missing = False  # NAS nicht lesbar für www-data — Step existiert laut DB, weiter
+
+    if file_missing:
         messages.error(request, f"Preview-Datei nicht gefunden: {preview_filename}")
         return redirect("studio:job_results", job_id=job.id)
 
