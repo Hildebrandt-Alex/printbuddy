@@ -1,0 +1,852 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PrintBuddy &mdash; How-To &amp; Workflows</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #0b0f1a; color: #c9d1e0; font-family: 'Segoe UI', system-ui, sans-serif; font-size: 14px; line-height: 1.6; }
+    header { background: linear-gradient(135deg, #131929 0%, #1a1f35 100%); border-bottom: 2px solid #7a5cff; padding: 16px 28px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
+    header h1 { color: #fff; font-size: 1.3rem; }
+    header p { color: #5a6a7e; font-size: 0.78rem; margin-top: 2px; }
+    .ref-links { display: flex; gap: 8px; flex-wrap: wrap; }
+    .ref-link { color: #7a5cff; text-decoration: none; font-size: 0.8rem; border: 1px solid #7a5cff44; padding: 5px 12px; border-radius: 4px; white-space: nowrap; }
+    .ref-link:hover { background: #7a5cff22; }
+    .tabs { display: flex; flex-wrap: wrap; background: #0f1424; border-bottom: 1px solid #1e2540; padding: 0 16px; gap: 2px; position: sticky; top: 0; z-index: 200; }
+    .tab { padding: 10px 15px; cursor: pointer; color: #8896aa; font-size: 0.79rem; border-bottom: 2px solid transparent; transition: all 0.2s; white-space: nowrap; }
+    .tab:hover { color: #c9d1e0; background: #7a5cff11; }
+    .tab.active { color: #7a5cff; border-bottom-color: #7a5cff; background: #7a5cff11; }
+    .section { display: none; padding: 28px 32px; max-width: 1100px; }
+    .section.active { display: block; }
+    h2 { color: #fff; font-size: 1.25rem; margin-bottom: 6px; }
+    h3 { color: #a78bfa; font-size: 0.95rem; margin: 26px 0 8px; border-bottom: 1px solid #1e2540; padding-bottom: 5px; }
+    h4 { color: #7a5cff; font-size: 0.83rem; margin: 16px 0 6px; }
+    p { color: #8896aa; margin-bottom: 10px; font-size: 0.85rem; }
+    a { color: #60a5fa; }
+    table { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 0.82rem; }
+    th { background: #1a1f35; color: #7a5cff; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.5px; padding: 8px 12px; text-align: left; border: 1px solid #1e2540; }
+    td { padding: 8px 12px; border: 1px solid #1e2540; color: #c9d1e0; vertical-align: top; }
+    td.dim { color: #5a6a7e; }
+    tr:hover td { background: #131929; }
+    pre { background: #080c16; border: 1px solid #1e2540; border-radius: 6px; padding: 14px 16px; overflow-x: auto; font-size: 0.75rem; line-height: 1.85; color: #a8d8a8; margin: 10px 0 16px; font-family: 'Consolas', 'Monaco', monospace; white-space: pre; }
+    .comment { color: #5a7a5a; }
+    code { color: #a78bfa; font-family: monospace; font-size: 0.85em; background: #131929; padding: 1px 5px; border-radius: 3px; }
+    .step-list { list-style: none; padding: 0; counter-reset: steps; }
+    .step-list li { counter-increment: steps; display: flex; gap: 14px; margin-bottom: 14px; }
+    .step-list li::before { content: counter(steps); background: #7a5cff; color: #fff; font-size: 0.72rem; font-weight: 700; border-radius: 50%; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 2px; }
+    .step-body { flex: 1; }
+    .step-body strong { color: #c9d1e0; font-size: 0.88rem; }
+    .step-body p { margin: 3px 0 0; }
+    .step-body pre { margin-top: 8px; }
+    .card { background: #131929; border: 1px solid #1e2540; border-radius: 8px; padding: 16px 20px; margin-bottom: 16px; }
+    .card.green { border-left: 3px solid #4ade80; }
+    .card.yellow { border-left: 3px solid #f59e0b; }
+    .card.red { border-left: 3px solid #f87171; }
+    .card.purple { border-left: 3px solid #7a5cff; }
+    .card.blue { border-left: 3px solid #60a5fa; }
+    .card h4 { margin-top: 0; }
+    .tag { display: inline-block; font-size: 0.68rem; font-family: monospace; padding: 2px 7px; border-radius: 3px; margin: 1px 2px; }
+    .tag.pod { background: #1a3a1a; color: #4ade80; }
+    .tag.cmyk { background: #3a2a1a; color: #f59e0b; }
+    .tag.vector { background: #1a2a3a; color: #60a5fa; }
+    .tag.preview { background: #2a1a3a; color: #a78bfa; }
+    .badge { display: inline-block; font-size: 0.68rem; padding: 2px 8px; border-radius: 10px; font-weight: 600; }
+    .badge.green { background: #14532d; color: #4ade80; }
+    .badge.yellow { background: #78350f; color: #fcd34d; }
+    .badge.red { background: #7f1d1d; color: #f87171; }
+    .badge.blue { background: #1e3a5f; color: #60a5fa; }
+    .badge.gray { background: #1e2540; color: #8896aa; }
+    .flow { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin: 12px 0; }
+    .flow-step { background: #131929; border: 1px solid #1e2540; border-radius: 6px; padding: 6px 14px; font-size: 0.78rem; color: #c9d1e0; }
+    .flow-step.active { border-color: #7a5cff; color: #a78bfa; background: #1a1535; }
+    .flow-arrow { color: #3a4a5e; font-size: 1rem; }
+    .warn { background: #78350f22; border: 1px solid #f59e0b55; border-radius: 6px; padding: 10px 14px; margin: 10px 0; color: #fde68a; font-size: 0.82rem; }
+    .tip { background: #14532d22; border: 1px solid #4ade8044; border-radius: 6px; padding: 10px 14px; margin: 10px 0; color: #bbf7d0; font-size: 0.82rem; }
+    .field-table td:first-child { color: #a78bfa; font-family: monospace; font-size: 0.8rem; white-space: nowrap; }
+    .field-table td:nth-child(2) { color: #60a5fa; font-size: 0.78rem; }
+    .field-table td:nth-child(3) { color: #8896aa; font-size: 0.82rem; }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #0b0f1a; }
+    ::-webkit-scrollbar-thumb { background: #2d3748; border-radius: 3px; }
+    .cols2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    @media (max-width: 700px) { .cols2 { grid-template-columns: 1fr; } .section { padding: 16px; } }
+  </style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>PrintBuddy &mdash; How-To &amp; Workflows</h1>
+    <p>Praxisanleitungen: Bild generieren &middot; Partner anlegen &middot; Produkte entwerfen &middot; Mockups &middot; Pipeline</p>
+  </div>
+  <div class="ref-links">
+    <a class="ref-link" href="copilot-instructions.md" target="_blank">&rarr; Architektur</a>
+    <a class="ref-link" href="mvp_tracker.html" target="_blank">&rarr; MVP Tracker</a>
+    <a class="ref-link" href="https://printbuddy.datemyhobby.com/pb-manage/" target="_blank">&rarr; Admin</a>
+  </div>
+</header>
+
+<div class="tabs">
+  <div class="tab active" onclick="showTab('s1', this)">&#9654; Überblick</div>
+  <div class="tab" onclick="showTab('s2', this)">1 Bild generieren</div>
+  <div class="tab" onclick="showTab('s3', this)">2 Partner einpflegen</div>
+  <div class="tab" onclick="showTab('s4', this)">3 Produkt entwerfen</div>
+  <div class="tab" onclick="showTab('s5', this)">4 Mockup-Workflow</div>
+  <div class="tab" onclick="showTab('s6', this)">5 Pipeline &amp; Formate</div>
+  <div class="tab" onclick="showTab('s7', this)">6 End-to-End Flow</div>
+</div>
+
+<!-- ─────────────────────────────────────────────────────
+     TAB 1: ÜBERBLICK
+     ───────────────────────────────────────────────────── -->
+<div class="section active" id="s1">
+  <h2>Überblick — Wie hängt alles zusammen?</h2>
+  <p>PrintBuddy hat drei Hauptflows. Die Tabs führen dich durch jeden Schritt.</p>
+
+  <div class="flow" style="margin:20px 0">
+    <div class="flow-step active">Prompt</div><div class="flow-arrow">→</div>
+    <div class="flow-step">PipelineTemplate</div><div class="flow-arrow">→</div>
+    <div class="flow-step">Job (GPU)</div><div class="flow-arrow">→</div>
+    <div class="flow-step">Bild-Assets</div><div class="flow-arrow">→</div>
+    <div class="flow-step">GalleryImage</div><div class="flow-arrow">→</div>
+    <div class="flow-step active">Galerie-Frontend</div>
+  </div>
+
+  <div class="flow" style="margin:8px 0">
+    <div class="flow-step active">GalleryImage</div><div class="flow-arrow">→</div>
+    <div class="flow-step">ImageProduct</div><div class="flow-arrow">→</div>
+    <div class="flow-step">Mockup generieren</div><div class="flow-arrow">→</div>
+    <div class="flow-step">ProductVariant</div><div class="flow-arrow">→</div>
+    <div class="flow-step active">Shop / Etsy</div>
+  </div>
+
+  <div class="flow" style="margin:8px 0">
+    <div class="flow-step active">Order (bezahlt)</div><div class="flow-arrow">→</div>
+    <div class="flow-step">Pipeline-Export</div><div class="flow-arrow">→</div>
+    <div class="flow-step">PrintBundle (ZIP)</div><div class="flow-arrow">→</div>
+    <div class="flow-step">FulfillmentPartner</div><div class="flow-arrow">→</div>
+    <div class="flow-step active">Gedruckt</div>
+  </div>
+
+  <h3>Die drei Rollen im System</h3>
+  <div class="cols2">
+    <div class="card purple">
+      <h4>Admin (du)</h4>
+      <p>Legt alles an. Startet Jobs. Kontrolliert den gesamten Ablauf. Zugang: <code>/pb-manage/</code></p>
+    </div>
+    <div class="card blue">
+      <h4>Studio Worker</h4>
+      <p>Erstellt Jobs (Draft), sichtet Ergebnisse, selektiert Bilder, freigibt f&uuml;r Shop/Galerie. Kein Job-Start.</p>
+    </div>
+    <div class="card green">
+      <h4>FulfillmentPartner</h4>
+      <p>Druckstudio. Sieht offene Auftr&auml;ge, l&auml;dt Bundle herunter, tr&auml;gt Tracking-Code ein.</p>
+    </div>
+  </div>
+
+  <h3>Schnell-Referenz: Wo liegt was?</h3>
+  <table>
+    <tr><th>Was du suchst</th><th>Wo</th><th>Direkt-Link</th></tr>
+    <tr><td>Jobs anlegen/starten</td><td>Admin → Jobs → Jobs</td><td><code>/pb-manage/jobs/job/</code></td></tr>
+    <tr><td>PipelineTemplates verwalten</td><td>Admin → Jobs → Pipeline Templates</td><td><code>/pb-manage/jobs/pipelinetemplate/</code></td></tr>
+    <tr><td>Bilder in Galerie freigeben</td><td>Admin → Gallery → Gallery Images → is_public = ✓</td><td><code>/pb-manage/gallery/galleryimage/</code></td></tr>
+    <tr><td>Produkte anlegen</td><td>Admin → Shop → Products</td><td><code>/pb-manage/shop/product/</code></td></tr>
+    <tr><td>Varianten anlegen</td><td>Admin → Shop → Product Variants</td><td><code>/pb-manage/shop/productvariant/</code></td></tr>
+    <tr><td>Bild-Produkt-Verknüpfung</td><td>Admin → Shop → Image Products</td><td><code>/pb-manage/shop/imageproduct/</code></td></tr>
+    <tr><td>Partner anlegen</td><td>Admin → Partners → Fulfillment Partners</td><td><code>/pb-manage/partners/fulfillmentpartner/</code></td></tr>
+    <tr><td>Vertriebskanal anlegen</td><td>Admin → Channels → Sales Channels</td><td><code>/pb-manage/channels/saleschannel/</code></td></tr>
+    <tr><td>Bestellungen</td><td>Admin → Shop → Orders</td><td><code>/pb-manage/shop/order/</code></td></tr>
+    <tr><td>Öffentliche Galerie</td><td>Browser</td><td><code>/gallery/</code></td></tr>
+  </table>
+</div>
+
+<!-- ─────────────────────────────────────────────────────
+     TAB 2: BILD GENERIEREN
+     ───────────────────────────────────────────────────── -->
+<div class="section" id="s2">
+  <h2>1 — Bild generieren: Vom Prompt zum Galerie-Bild</h2>
+
+  <h3>Schritt 1: PipelineTemplate anlegen oder auswählen</h3>
+  <p>Das Template bestimmt <em>welche Schritte</em> die Pipeline durchläuft. Du brauchst mindestens ein aktives Template.</p>
+
+  <div class="card purple">
+    <h4>Empfohlenes Start-Template für Poster/Prints</h4>
+    <table class="field-table">
+      <tr><th>Feld</th><th>Wert</th><th>Warum</th></tr>
+      <tr><td>name</td><td>Poster Production</td><td>Beschreibender Name</td></tr>
+      <tr><td>category</td><td>poster_offset</td><td>Passende Kategorie</td></tr>
+      <tr><td>step_generate</td><td>✓</td><td>immer an</td></tr>
+      <tr><td>step_upscale</td><td>✓</td><td>4x Real-ESRGAN → hochauflösend</td></tr>
+      <tr><td>step_pod_export</td><td>✓</td><td>PNG 300dpi → Printful-ready</td></tr>
+      <tr><td>step_preview</td><td>✓</td><td>JPG 72dpi → Galerie/Web — immer aktiv</td></tr>
+      <tr><td>step_cmyk</td><td>✗ (später)</td><td>nur wenn Offset-Druck gewünscht</td></tr>
+      <tr><td>step_vectorize</td><td>✗</td><td>nur für Logo-/Vektor-Jobs</td></tr>
+      <tr><td>step_mockup</td><td>✗ (später)</td><td>aktivieren wenn Printful-Mockup-API fertig</td></tr>
+      <tr><td>default_model</td><td>flux_schnell</td><td><strong>Pflicht für Verkauf</strong> — Apache 2.0</td></tr>
+      <tr><td>default_width / height</td><td>1024 / 1024</td><td>wird nach Upscale 4096x4096</td></tr>
+      <tr><td>default_steps</td><td>30</td><td>gute Balance Qualität/Zeit</td></tr>
+      <tr><td>default_guidance</td><td>7.5</td><td>Standard</td></tr>
+    </table>
+  </div>
+
+  <div class="warn">&#9888; <strong>flux_dev</strong> darf NICHT für Bilder verwendet werden die verkauft werden — nicht kommerziell lizenziert. Nur <code>flux_schnell</code> (Apache 2.0) oder <code>sdxl</code> für Produktion.</div>
+
+  <h3>Schritt 2: Job anlegen</h3>
+  <p>Admin → Jobs → Jobs → + Job hinzufügen</p>
+
+  <ol class="step-list">
+    <li>
+      <div class="step-body">
+        <strong>Titel</strong>
+        <p>Interner Name, z.B. "Poster Herbstwald 01" — erscheint nicht öffentlich</p>
+      </div>
+    </li>
+    <li>
+      <div class="step-body">
+        <strong>Pipeline Template wählen</strong>
+        <p>Aus Dropdown: "Poster Production" (oder was du in Schritt 1 angelegt hast)</p>
+      </div>
+    </li>
+    <li>
+      <div class="step-body">
+        <strong>Prompt schreiben</strong>
+        <p>Was beschreibt das Bild präzise? Stil, Motiv, Farben, Lichtstimmung — je konkreter desto besser.</p>
+        <pre>A misty autumn forest at golden hour, warm orange and yellow foliage,
+rays of light through tall pine trees, photorealistic, 8K, cinematic lighting,
+shallow depth of field, highly detailed, nature photography style</pre>
+      </div>
+    </li>
+    <li>
+      <div class="step-body">
+        <strong>Negative Prompt</strong>
+        <p>Was soll das Modell vermeiden.</p>
+        <pre>blurry, oversaturated, cartoon, anime, low quality, watermark, text,
+people, buildings, artifacts, noise, distorted</pre>
+      </div>
+    </li>
+    <li>
+      <div class="step-body">
+        <strong>Parameter-Overrides (optional)</strong>
+        <p>Leer lassen → Template-Defaults werden verwendet. Nur überschreiben wenn nötig:</p>
+      </div>
+    </li>
+  </ol>
+
+  <h3>Parameter-Referenz — Was ändert was?</h3>
+  <table class="field-table">
+    <tr><th>Parameter</th><th>Typ</th><th>Effekt</th><th>Typische Werte</th></tr>
+    <tr><td>steps</td><td>int</td><td>Anzahl Diffusions-Schritte. Mehr = schärfer, mehr Details, aber langsamer. Ab ~40 kaum noch Unterschied.</td><td>20 (schnell) · 30 (standard) · 50 (max)</td></tr>
+    <tr><td>guidance</td><td>float</td><td>Wie stark der Prompt befolgt wird. Zu hoch = übergesättigte Farben, steife Komposition. Zu niedrig = Prompt wird ignoriert.</td><td>5.0–12.0 · Standard: 7.5</td></tr>
+    <tr><td>seed</td><td>int</td><td>Zufallszahl. Gleicher Seed + gleicher Prompt = identisches Bild. Für Varianten: Seed leicht ändern.</td><td>leer = zufällig · z.B. 42 für Reproduzierbarkeit</td></tr>
+    <tr><td>width / height</td><td>int</td><td>Ausgabe-Auflösung vor Upscaling. 1024×1024 → nach Upscale 4096×4096 (~13MP).</td><td>1024×1024 (quadrat) · 768×1152 (Hochformat)</td></tr>
+    <tr><td>num_images</td><td>int</td><td>Wie viele Variationen parallel generiert werden. Jede zählt als ein Job-Output.</td><td>1–4 (abhängig von RunPod-Budget)</td></tr>
+    <tr><td>model</td><td>choice</td><td>Das KI-Modell. <code>flux_schnell</code> ist schnell + kommerziell. <code>sdxl</code> für anderen Stil. <code>flux_dev</code> NUR intern.</td><td>flux_schnell (Prod) · sdxl · flux_dev (Test)</td></tr>
+  </table>
+
+  <h3>Schritt 3: Job starten (Admin-Aktion)</h3>
+  <p>Studio-Worker können Jobs erstellen aber <em>nicht starten</em> (ADR-11). Nur Admins können Jobs starten.</p>
+  <ol class="step-list">
+    <li><div class="step-body"><strong>Job-Liste öffnen</strong><p>Admin → Jobs → Jobs</p></div></li>
+    <li><div class="step-body"><strong>Job(s) auswählen</strong><p>Checkbox links anklicken</p></div></li>
+    <li><div class="step-body"><strong>Aktion ausführen</strong><p>Dropdown "Aktion" → <strong>"Start selected jobs"</strong> → Ausführen</p><p>Status wechselt von <span class="badge yellow">draft</span> zu <span class="badge blue">queued</span>, dann <span class="badge blue">running</span></p></div></li>
+    <li><div class="step-body"><strong>Fortschritt verfolgen</strong><p>Admin → Jobs → Job Steps (oder Studio-View /studio/job/&lt;uuid&gt;/ — HTMX-Polling alle 3s)</p></div></li>
+  </ol>
+
+  <h3>Schritt 4: Bild in der Datenbank finden</h3>
+  <p>Nach Abschluss der Pipeline (status=<span class="badge green">done</span>) liegt das Bild als JobStep-Output und als Datei vor.</p>
+
+  <div class="card">
+    <h4>Über Admin</h4>
+    <p>Admin → Jobs → Job Steps → Filter: step_type=preview_export, status=done → output_asset_id notieren</p>
+    <p>Oder: Admin → Gallery → Gallery Images (wenn Studio-Worker das Bild bereits selektiert hat)</p>
+  </div>
+
+  <div class="card">
+    <h4>Django Shell (für Debugging)</h4>
+<pre><span class="comment"># VPS: ssh root@167.86.108.37</span>
+<span class="comment"># cd /opt/printbuddy && venv/bin/python manage.py shell</span>
+
+from jobs.models import Job, JobStep
+
+<span class="comment"># Letzten abgeschlossenen Job finden</span>
+job = Job.objects.filter(status='done').latest('completed_at')
+print(job.id, job.title)
+
+<span class="comment"># Alle Steps eines Jobs ansehen</span>
+for step in job.steps.all().order_by('order'):
+    print(f"{step.step_type:20} {step.status:8} {step.output_asset_id}")
+
+<span class="comment"># Preview-Datei-Pfad</span>
+preview = job.steps.get(step_type='preview_export', status='done')
+print(preview.output_asset_id)  <span class="comment"># UUID des Bildes</span></pre>
+  </div>
+
+  <h3>Schritt 5: Bild im Frontend sehen (Galerie)</h3>
+  <ol class="step-list">
+    <li>
+      <div class="step-body">
+        <strong>GalleryImage anlegen oder war schon angelegt</strong>
+        <p>Nach AssetSelectView im Studio wird automatisch ein GalleryImage-Eintrag erstellt. Manuell: Admin → Gallery → Gallery Images → + hinzufügen</p>
+      </div>
+    </li>
+    <li>
+      <div class="step-body">
+        <strong>is_public = True setzen</strong>
+        <p>Solange <code>is_public=False</code> ist das Bild unsichtbar. Admin → Gallery Image → Checkbox anklicken → Speichern</p>
+      </div>
+    </li>
+    <li>
+      <div class="step-body">
+        <strong>Kategorie + CTA-Typ wählen</strong>
+        <table class="field-table" style="margin-top:8px">
+          <tr><th>cta_type</th><th>Bedeutung</th><th>cta_url Beispiel</th></tr>
+          <tr><td>etsy</td><td>Button → Etsy Listing</td><td>https://etsy.com/listing/123456</td></tr>
+          <tr><td>shop</td><td>Button → eigener Shop</td><td>/shop/product/herbstwald-poster/</td></tr>
+          <tr><td>contact</td><td>Button → Kontakt/Anfrage</td><td>/kontakt/</td></tr>
+        </table>
+      </div>
+    </li>
+    <li>
+      <div class="step-body">
+        <strong>Galerie aufrufen</strong>
+        <p><a href="https://printbuddy.datemyhobby.com/gallery/" target="_blank">https://printbuddy.datemyhobby.com/gallery/</a> — Bild erscheint im Grid</p>
+      </div>
+    </li>
+  </ol>
+
+  <div class="tip">&#128161; <strong>Tipp:</strong> Mehrere Bilder schnell freigeben: Admin → Gallery Images → alle auswählen → Aktion "make public" (noch zu implementieren, manuell: einzeln is_public setzen).</div>
+
+  <h3>Debugging: Job bleibt hängen</h3>
+  <table>
+    <tr><th>Status</th><th>Was zu prüfen</th><th>Befehl</th></tr>
+    <tr><td><span class="badge yellow">queued</span> bleibt</td><td>Celery GPU-Worker läuft nicht</td><td><code>systemctl status celery-printbuddy-gpu</code></td></tr>
+    <tr><td><span class="badge blue">running</span> bleibt</td><td>RunPod API-Fehler / Timeout</td><td><code>tail -f /var/log/celery/printbuddy-gpu.log</code></td></tr>
+    <tr><td><span class="badge red">failed</span></td><td>Step-Fehlermeldung lesen</td><td>Admin → Job Steps → error_msg-Feld</td></tr>
+    <tr><td>Lokal testen</td><td>MOCK_GPU=true in .env</td><td><code>python manage.py shell</code> → Placeholder-PNG statt RunPod</td></tr>
+  </table>
+</div>
+
+<!-- ─────────────────────────────────────────────────────
+     TAB 3: PARTNER EINPFLEGEN
+     ───────────────────────────────────────────────────── -->
+<div class="section" id="s3">
+  <h2>2 — Partner einpflegen: Vertrieb &amp; Druck</h2>
+  <p>Es gibt zwei getrennte Konzepte: <strong>SalesChannel</strong> (wo wird verkauft) und <strong>FulfillmentPartner</strong> (wer druckt).</p>
+
+  <div class="cols2">
+    <div class="card blue">
+      <h4>SalesChannel — Vertriebskanal</h4>
+      <p>Wo eine Bestellung herkommt oder hin gemeldet wird. Beispiele: eigener Shop, Etsy, WooCommerce-Shop eines Wiederverkäufers.</p>
+    </div>
+    <div class="card green">
+      <h4>FulfillmentPartner — Druckstudio</h4>
+      <p>Wer die Bestellung physisch produziert und versendet. Bekommt einen eigenen Login und sieht seine Aufträge im Partner-Dashboard.</p>
+    </div>
+  </div>
+
+  <h3>A) SalesChannel anlegen</h3>
+  <p>Admin → Channels → Sales Channels → + Hinzufügen</p>
+
+  <table class="field-table">
+    <tr><th>Feld</th><th>Beispiel</th><th>Erklärung</th></tr>
+    <tr><td>name</td><td>Eigener Shop</td><td>Lesbare Bezeichnung, nur intern</td></tr>
+    <tr><td>channel_type</td><td>own_shop</td><td>own_shop · etsy · woocommerce · shopify · manual</td></tr>
+    <tr><td>is_active</td><td>✓</td><td>Inaktive Kanäle werden ignoriert</td></tr>
+    <tr><td>webhook_url</td><td>leer lassen</td><td>Wohin Bestellbestätigungen gepusht werden (optional)</td></tr>
+    <tr><td>api_key / api_secret</td><td>leer für own_shop</td><td>Für externe Kanäle (Etsy, WooCommerce API-Schlüssel)</td></tr>
+    <tr><td>base_url</td><td>leer</td><td>Nur für WooCommerce / Shopify: Shop-URL</td></tr>
+  </table>
+
+  <div class="card yellow">
+    <h4>Typische SalesChannels anlegen (Empfehlung)</h4>
+    <table>
+      <tr><th>Name</th><th>channel_type</th><th>Wann nutzen</th></tr>
+      <tr><td>Eigener Shop</td><td>own_shop</td><td>Käufe über /shop/checkout/</td></tr>
+      <tr><td>Etsy Shop</td><td>etsy</td><td>Etsy Bestellungen (nach Phase 8)</td></tr>
+      <tr><td>Manuell / Messe</td><td>manual</td><td>Aufträge die du manuell erfasst</td></tr>
+    </table>
+  </div>
+
+  <h3>B) FulfillmentPartner anlegen — Schritt für Schritt</h3>
+  <p>Reihenfolge ist wichtig: erst Django-User, dann FulfillmentPartner-Objekt, dann Produkt-Zuordnungen.</p>
+
+  <ol class="step-list">
+    <li>
+      <div class="step-body">
+        <strong>Django-User für den Partner anlegen</strong>
+        <p>Admin → Authentifizierung → Benutzer → + Hinzufügen</p>
+        <table style="margin-top:8px" class="field-table">
+          <tr><td>username</td><td>z.B. <code>druckstudio_muenchen</code></td><td>Login-Name des Partners</td></tr>
+          <tr><td>password</td><td>sicheres Passwort</td><td>Partner erhält dieses per E-Mail</td></tr>
+          <tr><td>Gruppen</td><td><code>print_partners</code></td><td>Gibt Zugang zu /partner/ — KEIN Admin-Zugang!</td></tr>
+          <tr><td>is_staff</td><td>✗ nicht ankreuzen</td><td>Partner soll keinen Admin sehen</td></tr>
+        </table>
+      </div>
+    </li>
+    <li>
+      <div class="step-body">
+        <strong>Gruppe "print_partners" anlegen (einmalig, falls noch nicht vorhanden)</strong>
+        <p>Admin → Authentifizierung → Gruppen → + Hinzufügen → Name: <code>print_partners</code> → Rechte: keine Admin-Rechte nötig</p>
+      </div>
+    </li>
+    <li>
+      <div class="step-body">
+        <strong>FulfillmentPartner-Objekt anlegen</strong>
+        <p>Admin → Partners → Fulfillment Partners → + Hinzufügen</p>
+        <table style="margin-top:8px" class="field-table">
+          <tr><td>name</td><td>Druckstudio München</td><td>Interne Bezeichnung</td></tr>
+          <tr><td>user</td><td>druckstudio_muenchen</td><td>Der gerade angelegte Django-User</td></tr>
+          <tr><td>email</td><td>info@druckstudio.de</td><td>Für E-Mail-Benachrichtigungen</td></tr>
+          <tr><td>contact_name</td><td>Max Müller</td><td>Ansprechpartner-Name</td></tr>
+          <tr><td>export_formats</td><td>["pod","cmyk"]</td><td>Was dieser Partner drucken kann — JSON-Array</td></tr>
+          <tr><td>notify_email</td><td>✓</td><td>E-Mail bei neuer Bestellung</td></tr>
+          <tr><td>notify_webhook_url</td><td>leer</td><td>Optional: Partner-System-Webhook</td></tr>
+          <tr><td>is_active</td><td>✓</td><td></td></tr>
+        </table>
+      </div>
+    </li>
+    <li>
+      <div class="step-body">
+        <strong>PartnerProduct anlegen — welche Produkte kann dieser Partner produzieren?</strong>
+        <p>Admin → Partners → Partner Products → + Hinzufügen</p>
+        <table style="margin-top:8px" class="field-table">
+          <tr><td>partner</td><td>Druckstudio München</td><td>Dropdown</td></tr>
+          <tr><td>product</td><td>Herbstwald Poster</td><td>Dropdown</td></tr>
+          <tr><td>export_types</td><td>["cmyk","pod"]</td><td>Subset von ProductVariant.required_export_types</td></tr>
+        </table>
+      </div>
+    </li>
+    <li>
+      <div class="step-body">
+        <strong>PartnerVariant anlegen — welche Varianten kann er produzieren?</strong>
+        <p>Admin → Partners → Partner Variants → + Hinzufügen</p>
+        <table style="margin-top:8px" class="field-table">
+          <tr><td>partner</td><td>Druckstudio München</td><td></td></tr>
+          <tr><td>variant</td><td>Poster A2 · Weiß</td><td>Spezifische Variante</td></tr>
+          <tr><td>partner_sku</td><td>DSM-POSTER-A2-W</td><td>Interne SKU des Druckstudios</td></tr>
+          <tr><td>is_available</td><td>✓</td><td>Auf False setzen wenn nicht lieferbar</td></tr>
+        </table>
+        <div class="tip" style="margin-top:8px">Kein PartnerVariant-Eintrag = Partner kann diese Variante nicht produzieren. System wählt automatisch den richtigen Partner nach Verfügbarkeit.</div>
+      </div>
+    </li>
+  </ol>
+
+  <h3>Beispiel: export_formats richtig befüllen</h3>
+  <table>
+    <tr><th>export_formats Wert</th><th>Was der Partner braucht</th><th>Was die Pipeline liefert</th></tr>
+    <tr><td><code>["pod"]</code></td><td>Print-on-Demand (Printful etc.)</td><td>PNG 300dpi sRGB, /exports/pod/</td></tr>
+    <tr><td><code>["cmyk"]</code></td><td>Offset-/Digitaldruck Profi</td><td>TIFF + PDF/X-4, 3mm Bleed, /exports/offset/</td></tr>
+    <tr><td><code>["pod","cmyk"]</code></td><td>Kann beides</td><td>Beide Formate im ZIP-Bundle</td></tr>
+    <tr><td><code>["pod","cmyk","vector"]</code></td><td>Vollausgestattetes Druckstudio</td><td>+ SVG aus /exports/vector/</td></tr>
+  </table>
+
+  <h3>Partner-Dashboard testen</h3>
+  <p>Nach dem Anlegen: in neuem Browser-Tab / Inkognito-Fenster:</p>
+  <pre>https://printbuddy.datemyhobby.com/partner/
+<span class="comment"># Login: druckstudio_muenchen / (passwort)
+# Soll zeigen: offene Aufträge des Partners
+# Kein Zugang zu /pb-manage/ — 403 erwartet</span></pre>
+</div>
+
+<!-- ─────────────────────────────────────────────────────
+     TAB 4: PRODUKT ENTWERFEN
+     ───────────────────────────────────────────────────── -->
+<div class="section" id="s4">
+  <h2>3 — Produkt entwerfen: Vom Bild zum kaufbaren Produkt</h2>
+
+  <div class="flow" style="margin:16px 0">
+    <div class="flow-step active">GalleryImage</div><div class="flow-arrow">→</div>
+    <div class="flow-step">Product anlegen</div><div class="flow-arrow">→</div>
+    <div class="flow-step">ProductVariants</div><div class="flow-arrow">→</div>
+    <div class="flow-step">ImageProduct verknüpfen</div><div class="flow-arrow">→</div>
+    <div class="flow-step active">Mockup + Shop</div>
+  </div>
+
+  <h3>Schritt 1: Product anlegen</h3>
+  <p>Admin → Shop → Products → + Hinzufügen</p>
+
+  <table class="field-table">
+    <tr><th>Feld</th><th>Beispiel</th><th>Erklärung</th></tr>
+    <tr><td>name</td><td>Herbstwald Poster</td><td>Öffentlicher Produktname im Shop</td></tr>
+    <tr><td>slug</td><td>herbstwald-poster</td><td>URL: /shop/product/herbstwald-poster/ — wird auto-generiert</td></tr>
+    <tr><td>description</td><td>Stimmungsvoller Herbstwald...</td><td>Shop-Beschreibung</td></tr>
+    <tr><td>category</td><td>poster</td><td>Frei wählbar: poster · shirt · card · art</td></tr>
+    <tr><td>base_image</td><td>preview.jpg hochladen</td><td>Haupt-Produktbild (vor Mockup-Generierung)</td></tr>
+    <tr><td>is_active</td><td>✓</td><td>Inaktiv = nicht im Shop sichtbar</td></tr>
+  </table>
+
+  <h3>Schritt 2: ProductVariants anlegen</h3>
+  <p>Jede Variante = eine kaufbare Kombination aus Größe + Format. Direkt nach dem Speichern des Products:</p>
+  <p>Admin → Shop → Product Variants → + Hinzufügen (oder Inline im Product-Detail)</p>
+
+  <div class="card">
+    <h4>Beispiel: Poster in 3 Größen</h4>
+    <table class="field-table">
+      <tr><th>Feld</th><th>Variante 1</th><th>Variante 2</th><th>Variante 3</th></tr>
+      <tr><td>product</td><td>Herbstwald Poster</td><td>Herbstwald Poster</td><td>Herbstwald Poster</td></tr>
+      <tr><td>size</td><td>A4</td><td>A3</td><td>A2</td></tr>
+      <tr><td>color</td><td>Weiß</td><td>Weiß</td><td>Weiß</td></tr>
+      <tr><td>printful_variant_id</td><td>sieh unten</td><td>sieh unten</td><td>sieh unten</td></tr>
+      <tr><td>price_eur</td><td>19.90</td><td>29.90</td><td>49.90</td></tr>
+      <tr><td>cost_eur</td><td>8.50</td><td>12.00</td><td>18.00</td></tr>
+      <tr><td>required_export_types</td><td>["pod","preview"]</td><td>["pod","preview"]</td><td>["pod","cmyk","preview"]</td></tr>
+      <tr><td>is_active</td><td>✓</td><td>✓</td><td>✓</td></tr>
+    </table>
+  </div>
+
+  <h4>Printful Variant ID herausfinden</h4>
+  <p>Für Printful-Fulfillment brauchst du die interne Variant-ID von Printful. Methoden:</p>
+  <pre><span class="comment"># Option 1: Printful Dashboard → Produkt suchen → URL zeigt Produkt-ID</span>
+<span class="comment"># Option 2: Printful API</span>
+curl -H "Authorization: Bearer PRINTFUL_API_KEY" \
+  https://api.printful.com/products
+
+<span class="comment"># Für ein Printful-Produkt alle Varianten holen:</span>
+curl -H "Authorization: Bearer PRINTFUL_API_KEY" \
+  https://api.printful.com/products/1  <span class="comment"># 1 = Printful Produkt-ID (z.B. Poster)</span>
+
+<span class="comment"># Poster (Printful Produkt-ID 1 = Open Edition Prints)
+# A4 = variant_id 1234, A3 = 1235, A2 = 1236 (Beispielwerte — echte aus API holen)</span></pre>
+
+  <div class="warn">&#9888; Die Printful Variant IDs sind <em>Printful-intern</em>. Nie raten — immer über API oder Printful Dashboard nachschlagen. Falsche IDs führen zu Fehler-Bestellungen.</div>
+
+  <h4>required_export_types richtig setzen</h4>
+  <table>
+    <tr><th>Variante</th><th>required_export_types</th><th>Begründung</th></tr>
+    <tr><td>Printful POD (Standard)</td><td><code>["pod","preview"]</code></td><td>PNG 300dpi für Printful + Vorschau für Shop</td></tr>
+    <tr><td>Offset-Druck Profi</td><td><code>["cmyk","preview"]</code></td><td>TIFF/PDF-X4 für Druckstudio</td></tr>
+    <tr><td>Siebdruck / Vektor</td><td><code>["vector","preview"]</code></td><td>SVG für Siebdruck/Plotter</td></tr>
+    <tr><td>Alles</td><td><code>["pod","cmyk","vector","preview"]</code></td><td>Bundle enthält alle Formate</td></tr>
+  </table>
+
+  <h3>Schritt 3: ImageProduct verknüpfen</h3>
+  <p>Verbindet ein <em>spezifisches Bild</em> (GalleryImage) mit einem <em>spezifischen Produkt</em>. Mehrere Bilder können dasselbe Produkt verwenden (z.B. 3 Variationen desselben Motivs).</p>
+  <p>Admin → Shop → Image Products → + Hinzufügen</p>
+
+  <table class="field-table">
+    <tr><th>Feld</th><th>Wert</th><th>Erklärung</th></tr>
+    <tr><td>image</td><td>GalleryImage: Herbstwald</td><td>Das generierte Bild</td></tr>
+    <tr><td>product</td><td>Herbstwald Poster</td><td>Das Produkt</td></tr>
+    <tr><td>is_primary</td><td>✓</td><td>Dieses Bild ist das Haupt-Produktbild in der Galerie</td></tr>
+    <tr><td>mockup_file</td><td>leer lassen</td><td>Wird automatisch von generate_all_mockups befüllt</td></tr>
+    <tr><td>mockup_status</td><td>pending</td><td>Wechselt auf ready wenn Mockup fertig ist</td></tr>
+  </table>
+
+  <div class="tip">&#128161; Sobald ein ImageProduct-Eintrag gespeichert wird, wird automatisch der <code>generate_all_mockups</code> Celery-Task ausgelöst (implementiert in Phase 6/7). Bis dahin: Mockup manuell hochladen in <code>mockup_file</code>.</div>
+</div>
+
+<!-- ─────────────────────────────────────────────────────
+     TAB 5: MOCKUP WORKFLOW
+     ───────────────────────────────────────────────────── -->
+<div class="section" id="s5">
+  <h2>4 — Mockup-Workflow</h2>
+  <p>Mockups sind die "Lifestyle"-Bilder: dein Bild auf einem Poster-Rahmen, einem T-Shirt, etc. Sie kommen aus der Printful Mockup API oder werden manuell erstellt.</p>
+
+  <h3>Option A: Printful Mockup API (automatisch)</h3>
+  <p>Printful bietet für jedes ihrer Produkte eine Mockup-Generierung. Das System nutzt die API um für jedes ImageProduct ein Mockup zu erzeugen.</p>
+
+  <div class="flow" style="margin:12px 0">
+    <div class="flow-step">ImageProduct angelegt</div><div class="flow-arrow">→</div>
+    <div class="flow-step active">generate_all_mockups Task</div><div class="flow-arrow">→</div>
+    <div class="flow-step">Printful API</div><div class="flow-arrow">→</div>
+    <div class="flow-step">Mockup-Bild URL</div><div class="flow-arrow">→</div>
+    <div class="flow-step active">ImageProduct.mockup_file = ready</div>
+  </div>
+
+  <div class="card">
+    <h4>Printful Mockup API — wie sie funktioniert</h4>
+    <pre><span class="comment"># Schritt 1: Mockup-Task erstellen</span>
+POST https://api.printful.com/mockup-generator/create-task/{product_id}
+{
+  "variant_ids": [4011],           <span class="comment"># Printful Variant ID</span>
+  "format": "jpg",
+  "files": [{
+    "placement": "default",
+    "image_url": "https://printbuddy.datemyhobby.com/media/gallery/full/herbstwald.jpg",
+    "position": {
+      "area_width": 1800,
+      "area_height": 2400,
+      "width": 1800,
+      "height": 2400,
+      "top": 0,
+      "left": 0
+    }
+  }]
+}
+<span class="comment"># Response: {"task_key": "gt_abc123", "status": "pending"}</span>
+
+<span class="comment"># Schritt 2: Ergebnis pollen bis status=completed</span>
+GET https://api.printful.com/mockup-generator/task?task_key=gt_abc123
+<span class="comment"># Response bei Erfolg: {"status": "completed", "mockups": [{"mockup_url": "https://..."}]}</span>
+
+<span class="comment"># Schritt 3: Mockup-Bild herunterladen + in ImageProduct.mockup_file speichern</span></pre>
+  </div>
+
+  <h4>mockup_status — Lifecycle</h4>
+  <table>
+    <tr><th>Status</th><th>Bedeutung</th><th>Was passiert</th></tr>
+    <tr><td><span class="badge gray">pending</span></td><td>Noch kein Mockup-Task gestartet</td><td>Warten auf generate_all_mockups Task</td></tr>
+    <tr><td><span class="badge blue">generating</span></td><td>Printful API wird abgefragt</td><td>Task läuft, pollen bis completed</td></tr>
+    <tr><td><span class="badge green">ready</span></td><td>Mockup fertig</td><td>mockup_file zeigt auf gespeichertes Bild</td></tr>
+    <tr><td><span class="badge red">failed</span></td><td>API-Fehler</td><td>error in Logs, manuell neu triggern</td></tr>
+  </table>
+
+  <h3>Option B: Eigenes Mockup manuell hochladen</h3>
+  <p>Für den MVP oder wenn kein Printful-Produkt passt: Mockup in Canva, Photoshop oder einem anderen Tool erstellen und direkt hochladen.</p>
+  <ol class="step-list">
+    <li><div class="step-body"><strong>Mockup erstellen</strong><p>Tool: Canva, Photoshop, Smartmockups.com — dein Bild auf einen Rahmen/Wand/Tisch platzieren</p></div></li>
+    <li><div class="step-body"><strong>Hochladen</strong><p>Admin → Shop → Image Products → Eintrag öffnen → mockup_file → Datei wählen → mockup_status auf <span class="badge green">ready</span> setzen</p></div></li>
+    <li><div class="step-body"><strong>Im Shop</strong><p>Der ProductDetailView zeigt mockup_file wenn mockup_status=ready, sonst base_image als Fallback</p></div></li>
+  </ol>
+
+  <h3>Option C: Mehrere Mockups pro Bild</h3>
+  <p>Pro GalleryImage können mehrere ImageProduct-Einträge existieren — eines pro Produkttyp (Poster A4, Poster A3, Shirt). Jeder bekommt sein eigenes Mockup.</p>
+
+  <div class="card purple">
+    <h4>Empfohlene Mockup-Strategie für den Start</h4>
+    <table>
+      <tr><th>Phase</th><th>Ansatz</th></tr>
+      <tr><td>MVP jetzt</td><td>Manuell: 1 Mockup pro Produkt via Smartmockups.com oder Canva hochladen</td></tr>
+      <tr><td>Phase 7</td><td>generate_all_mockups Task implementieren → Printful API automatisch</td></tr>
+      <tr><td>Skalierung</td><td>Batch-Script: für alle pending ImageProducts Mockups generieren</td></tr>
+    </table>
+  </div>
+
+  <h3>Printful Produkt-IDs für Mockups herausfinden</h3>
+  <pre><span class="comment"># Alle Printful-Produkte mit Mockup-Support auflisten</span>
+curl -H "Authorization: Bearer $PRINTFUL_API_KEY" \
+  https://api.printful.com/mockup-generator/printfiles
+
+<span class="comment"># Häufig verwendete Printful Produkt-IDs (Beispiele — verifizieren via API):</span>
+<span class="comment"># 1   = Open Edition Prints (Standard Poster)</span>
+<span class="comment"># 2   = Framed Poster</span>
+<span class="comment"># 71  = Classic Unisex T-Shirt</span>
+<span class="comment"># 19  = Canvas (Leinwand)</span>
+<span class="comment"># 43  = Greeting Card</span></pre>
+</div>
+
+<!-- ─────────────────────────────────────────────────────
+     TAB 6: PIPELINE & FORMATE
+     ───────────────────────────────────────────────────── -->
+<div class="section" id="s6">
+  <h2>5 — Pipeline &amp; Druckformate: Was der Drucker braucht</h2>
+
+  <h3>Die Pipeline-Schritte erklärt</h3>
+  <table>
+    <tr><th>Step</th><th>Aktiviert durch</th><th>Output</th><th>Speicherort</th><th>Für wen</th></tr>
+    <tr><td><code>generate</code></td><td>immer</td><td>PNG 1024×1024 (Roh)</td><td>/raw/</td><td>interner Input</td></tr>
+    <tr><td><code>upscale</code></td><td>step_upscale=✓</td><td>PNG 4096×4096 (4x)</td><td>/raw/</td><td>interner Input für Exports</td></tr>
+    <tr><td><code>pod_export</code></td><td>step_pod_export=✓</td><td><span class="tag pod">PNG 300dpi sRGB</span></td><td>/exports/pod/</td><td>Printful, einfache Partner</td></tr>
+    <tr><td><code>cmyk_export</code></td><td>step_cmyk=✓</td><td><span class="tag cmyk">TIFF + PDF/X-4</span> + 3mm Bleed</td><td>/exports/offset/</td><td>Offset-Druck, Profi-Partner</td></tr>
+    <tr><td><code>vectorize</code></td><td>step_vectorize=✓</td><td><span class="tag vector">SVG</span> (Inkscape+Potrace)</td><td>/exports/vector/</td><td>Siebdruck, Plotter, Laser</td></tr>
+    <tr><td><code>preview_export</code></td><td>immer</td><td><span class="tag preview">JPG 72dpi 1200px</span></td><td>/exports/preview/</td><td>Galerie, Shop, Web</td></tr>
+    <tr><td><code>mockup_gen</code></td><td>step_mockup=✓</td><td>JPG Mockup</td><td>shop/mockups/</td><td>Shop-Produktbild</td></tr>
+    <tr><td><code>auto_qa</code></td><td>step_auto_qa=✓</td><td>CLIP-Score + Blur-Check</td><td>JobStep.params</td><td>interne Qualitätsprüfung</td></tr>
+  </table>
+
+  <h3>PipelineTemplates für verschiedene Anwendungsfälle</h3>
+
+  <div class="cols2">
+    <div class="card green">
+      <h4>Template: Printful POD (Standard)</h4>
+      <table class="field-table" style="margin-top:8px">
+        <tr><td>step_generate</td><td>✓</td></tr>
+        <tr><td>step_upscale</td><td>✓</td></tr>
+        <tr><td>step_pod_export</td><td>✓</td></tr>
+        <tr><td>step_preview</td><td>✓</td></tr>
+        <tr><td>step_cmyk</td><td>✗</td></tr>
+        <tr><td>step_vectorize</td><td>✗</td></tr>
+        <tr><td>default_model</td><td>flux_schnell</td></tr>
+      </table>
+      <p style="margin-top:8px">Für: Poster, Druck über Printful oder einfache Partner. Schnellste Pipeline.</p>
+    </div>
+    <div class="card yellow">
+      <h4>Template: Offset / Profi-Druck</h4>
+      <table class="field-table" style="margin-top:8px">
+        <tr><td>step_generate</td><td>✓</td></tr>
+        <tr><td>step_upscale</td><td>✓</td></tr>
+        <tr><td>step_pod_export</td><td>✓</td></tr>
+        <tr><td>step_cmyk</td><td>✓</td></tr>
+        <tr><td>step_preview</td><td>✓</td></tr>
+        <tr><td>step_auto_qa</td><td>✓</td></tr>
+        <tr><td>default_model</td><td>flux_schnell</td></tr>
+      </table>
+      <p style="margin-top:8px">Für: Druckstudios die CMYK-TIFF + PDF/X-4 brauchen (Zeitungen, Flyer, hochwertige Poster).</p>
+    </div>
+  </div>
+
+  <div class="card blue">
+    <h4>Template: Vektor / Shirt-Druck</h4>
+    <table class="field-table" style="margin-top:8px">
+      <tr><td>step_generate</td><td>✓</td></tr>
+      <tr><td>step_upscale</td><td>✓</td></tr>
+      <tr><td>step_vectorize</td><td>✓ (Inkscape + Potrace → SVG)</td></tr>
+      <tr><td>step_pod_export</td><td>✓</td></tr>
+      <tr><td>step_preview</td><td>✓</td></tr>
+      <tr><td>default_model</td><td>sdxl (für klare Grafiken besser)</td></tr>
+    </table>
+    <p style="margin-top:8px">Für: Siebdruck, Plotter-Schnitt, DTF, Laser-Gravur.</p>
+    <div class="warn" style="margin-top:8px">&#9888; Vektorisierung funktioniert gut bei <strong>Grafiken mit klaren Kanten</strong>. Fotografisch-realistische Bilder ergeben schlechte SVGs — lieber pod_export nutzen.</div>
+  </div>
+
+  <h3>Wie das Bundle für den Partner gebaut wird</h3>
+  <p>Nach einer bezahlten Bestellung läuft der <code>create_print_bundle</code> Task:</p>
+
+  <ol class="step-list">
+    <li><div class="step-body"><strong>OrderLines durchgehen</strong><p>Für jede OrderLine: ProductVariant.required_export_types bestimmen</p></div></li>
+    <li><div class="step-body"><strong>Asset-Dateien sammeln</strong><p>Die passenden Exporte für die required_export_types aus den JobSteps holen</p></div></li>
+    <li><div class="step-body"><strong>ZIP erstellen</strong><p>Alle Dateien in /mnt/agency_nas/bundles/&lt;order_id&gt;.zip packen</p>
+<pre>bundle.zip/
+  herbstwald_poster_a2_pod.png     <span class="comment"># PNG 300dpi sRGB</span>
+  herbstwald_poster_a2_cmyk.tiff   <span class="comment"># CMYK TIFF</span>
+  herbstwald_poster_a2_print.pdf   <span class="comment"># PDF/X-4 mit Bleed</span>
+  herbstwald_poster_a2_preview.jpg <span class="comment"># Vorschau</span>
+  order_info.json                  <span class="comment"># Bestelldetails, Adresse, Tracking-Info</span></pre>
+    </div></li>
+    <li><div class="step-body"><strong>Partner benachrichtigen</strong><p><code>notify_fulfillment_partner</code> Task: E-Mail mit Bundle-Download-Link + optional Webhook an Partner-System</p></div></li>
+    <li><div class="step-body"><strong>Partner-Dashboard</strong><p>Partner loggt sich in /partner/ ein → sieht offene Aufträge → lädt Bundle herunter → trägt Tracking-Code ein</p></div></li>
+  </ol>
+
+  <h3>Required Export Types — wie sie gematched werden</h3>
+  <table>
+    <tr><th>ProductVariant.required_export_types</th><th>FulfillmentPartner.export_formats</th><th>Match?</th></tr>
+    <tr><td><code>["pod","preview"]</code></td><td><code>["pod","cmyk"]</code></td><td>✓ Ja — pod vorhanden</td></tr>
+    <tr><td><code>["cmyk","preview"]</code></td><td><code>["pod"]</code></td><td>✗ Nein — cmyk fehlt beim Partner</td></tr>
+    <tr><td><code>["pod","cmyk","vector"]</code></td><td><code>["pod","cmyk","vector"]</code></td><td>✓ Ja — alle vorhanden</td></tr>
+  </table>
+  <p>Das System wählt den Partner der <em>alle required_export_types</em> liefern kann. Wenn kein passender Partner → Fallback auf Printful (für pod) oder manuell (für cmyk/vector).</p>
+
+  <h3>Formate im Detail</h3>
+  <div class="cols2">
+    <div class="card">
+      <h4><span class="tag pod">POD Export</span> — PNG 300dpi sRGB</h4>
+      <ul style="color:#8896aa;font-size:0.83rem;padding-left:18px;margin-top:6px">
+        <li>Format: PNG (verlustfrei)</li>
+        <li>Farbraum: sRGB (wichtig für Printful)</li>
+        <li>Auflösung: 300dpi</li>
+        <li>Größe: typisch 3600×3600px bei A4 300dpi</li>
+        <li>Kein Beschnitt nötig</li>
+        <li>Direkt an Printful API übergeben</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h4><span class="tag cmyk">CMYK Export</span> — TIFF + PDF/X-4</h4>
+      <ul style="color:#8896aa;font-size:0.83rem;padding-left:18px;margin-top:6px">
+        <li>Farbraum: CMYK (ISO Coated v2)</li>
+        <li>Format: TIFF (Rohdaten) + PDF/X-4 (druckfertig)</li>
+        <li>3mm Beschnitt (Bleed) an allen Seiten</li>
+        <li>Auflösung: 300dpi</li>
+        <li>Ghostscript für PDF/X-4 Konvertierung</li>
+        <li>Für Offset-, Digital- und Großformatdruck</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h4><span class="tag vector">Vector Export</span> — SVG</h4>
+      <ul style="color:#8896aa;font-size:0.83rem;padding-left:18px;margin-top:6px">
+        <li>Inkscape CLI + Potrace</li>
+        <li>Skalierbar (Vektordaten)</li>
+        <li>Ideal für Grafiken, Logos, Icons</li>
+        <li>Nicht für fotografisch-realistische Bilder</li>
+        <li>Für Siebdruck, Plotter, Lasergravur</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h4><span class="tag preview">Preview Export</span> — JPG 72dpi</h4>
+      <ul style="color:#8896aa;font-size:0.83rem;padding-left:18px;margin-top:6px">
+        <li>JPG, maximal 1200px Breite</li>
+        <li>72dpi (Web-Optimiert)</li>
+        <li>Kleine Dateigröße, schnelles Laden</li>
+        <li>Für Galerie, Shop, Social Media</li>
+        <li>Immer generiert, unabhängig vom Template</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- ─────────────────────────────────────────────────────
+     TAB 7: END-TO-END FLOW
+     ───────────────────────────────────────────────────── -->
+<div class="section" id="s7">
+  <h2>6 — Kompletter End-to-End Flow</h2>
+  <p>Dieser Tab zeigt den gesamten Ablauf von der ersten Idee bis zum gedruckten Produkt beim Kunden.</p>
+
+  <h3>Phase A: Setup (einmalig)</h3>
+  <ol class="step-list">
+    <li><div class="step-body"><strong>PipelineTemplates anlegen</strong><p>Admin → Jobs → 2–3 Templates anlegen (POD Standard, Offset, evtl. Vektor)</p></div></li>
+    <li><div class="step-body"><strong>FulfillmentPartner anlegen</strong><p>User anlegen → Gruppe print_partners → FulfillmentPartner-Objekt mit export_formats</p></div></li>
+    <li><div class="step-body"><strong>SalesChannel anlegen</strong><p>Eigener Shop + ggf. Etsy-Kanal in Channels</p></div></li>
+    <li><div class="step-body"><strong>Produkt-Grundstruktur</strong><p>Products + Variants anlegen (ohne Bilder, noch kein Mockup)</p></div></li>
+  </ol>
+
+  <h3>Phase B: Bild-Produktion (pro Produkt)</h3>
+  <ol class="step-list">
+    <li><div class="step-body"><strong>Job erstellen</strong><p>Admin (oder Studio Worker) → Jobs → + Hinzufügen → Prompt + Template wählen → Speichern (status=draft)</p></div></li>
+    <li><div class="step-body"><strong>Job starten</strong><p>Admin → Jobs-Liste → Job auswählen → "Start selected jobs" → status=queued → running</p></div></li>
+    <li><div class="step-body"><strong>Pipeline läuft automatisch</strong>
+<pre>generate_image       <span class="comment"># RunPod generiert 1024×1024</span>
+  ↓
+upscale_image        <span class="comment"># Real-ESRGAN → 4096×4096</span>
+  ↓
+pod_export           <span class="comment"># PNG 300dpi → /exports/pod/</span>
+  ↓ (optional)
+cmyk_export          <span class="comment"># TIFF + PDF/X-4 → /exports/offset/</span>
+  ↓
+preview_export       <span class="comment"># JPG 72dpi → /exports/preview/</span>
+  ↓
+notify_studio        <span class="comment"># Job.status = done</span></pre>
+    </div></li>
+    <li><div class="step-body"><strong>Ergebnis sichten</strong><p>Studio Worker → /studio/job/&lt;uuid&gt;/results/ → Bilder ansehen → Beste auswählen</p></div></li>
+    <li><div class="step-body"><strong>Bild freigeben (Asset Select)</strong><p>Studio → "Dieses Bild freigeben" POST → legt GalleryImage + ImageProduct an → startet generate_all_mockups</p></div></li>
+    <li><div class="step-body"><strong>GalleryImage bearbeiten</strong><p>Admin → Gallery Images → Titel, Kategorie, cta_type, is_public=✓ setzen</p></div></li>
+  </ol>
+
+  <h3>Phase C: Produkt-Setup (pro Bild)</h3>
+  <ol class="step-list">
+    <li><div class="step-body"><strong>Mockup abwarten oder manuell hochladen</strong><p>Wenn generate_all_mockups läuft: mockup_status wird → ready. Manuell: Admin → Image Products → mockup_file hochladen</p></div></li>
+    <li><div class="step-body"><strong>Produkt aktivieren</strong><p>Admin → Shop → Products → is_active = ✓ → Produkt erscheint in /shop/</p></div></li>
+    <li><div class="step-body"><strong>Etsy Listing erstellen (optional, Phase 8)</strong><p>Studio → Asset selektieren → "Als Etsy Listing erstellen" → etsy/listing.py erstellt Draft-Listing</p></div></li>
+  </ol>
+
+  <h3>Phase D: Bestellung &amp; Fulfillment (pro Bestellung)</h3>
+  <ol class="step-list">
+    <li><div class="step-body"><strong>Kunde kauft</strong><p>/shop/checkout/ → Stripe Hosted Checkout → Zahlung erfolgt</p></div></li>
+    <li><div class="step-body"><strong>Stripe Webhook</strong><p>POST /shop/webhook/stripe/ → construct_event() Signatur-Prüfung → Order.status = paid</p></div></li>
+    <li><div class="step-body"><strong>Automatische Tasks starten</strong>
+<pre>create_print_bundle      <span class="comment"># ZIP mit Druckdateien → /mnt/agency_nas/bundles/</span>
+create_printful_order    <span class="comment"># (wenn Printful-Variante) → Printful API</span>
+notify_fulfillment_partner <span class="comment"># E-Mail + Webhook an Partner</span>
+push_order_to_channel    <span class="comment"># Bestellbestätigung an SalesChannel</span></pre>
+    </div></li>
+    <li><div class="step-body"><strong>Partner produziert</strong><p>/partner/orders/ → Bundle herunterladen → drucken → /partner/order/&lt;uuid&gt;/shipped/ → Tracking-Code eintragen</p></div></li>
+    <li><div class="step-body"><strong>Kunde informiert</strong><p>Order.status = shipped → E-Mail mit Tracking an Kunden (via notify-Task)</p></div></li>
+  </ol>
+
+  <h3>Checkliste: Neues Produkt live bringen</h3>
+  <table>
+    <tr><th>#</th><th>Schritt</th><th>Wo</th><th>Status</th></tr>
+    <tr><td>1</td><td>PipelineTemplate vorhanden und aktiv</td><td>Admin → Jobs → Templates</td><td><span class="badge gray">prüfen</span></td></tr>
+    <tr><td>2</td><td>FulfillmentPartner angelegt + export_formats korrekt</td><td>Admin → Partners</td><td><span class="badge gray">prüfen</span></td></tr>
+    <tr><td>3</td><td>Product + Variants angelegt (Printful Variant IDs korrekt)</td><td>Admin → Shop</td><td><span class="badge gray">prüfen</span></td></tr>
+    <tr><td>4</td><td>Job generiert, status=done</td><td>Admin → Jobs</td><td><span class="badge gray">prüfen</span></td></tr>
+    <tr><td>5</td><td>GalleryImage: is_public=✓, cta_type + cta_url gesetzt</td><td>Admin → Gallery</td><td><span class="badge gray">prüfen</span></td></tr>
+    <tr><td>6</td><td>ImageProduct: mockup_status=ready</td><td>Admin → Shop → Image Products</td><td><span class="badge gray">prüfen</span></td></tr>
+    <tr><td>7</td><td>Product: is_active=✓</td><td>Admin → Shop → Products</td><td><span class="badge gray">prüfen</span></td></tr>
+    <tr><td>8</td><td>Stripe Checkout testen (Testmodus)</td><td>/shop/product/&lt;slug&gt;/</td><td><span class="badge gray">prüfen</span></td></tr>
+    <tr><td>9</td><td>Bundle ZIP erstellt und Partner benachrichtigt</td><td>Admin → Bundles</td><td><span class="badge gray">prüfen</span></td></tr>
+  </table>
+
+  <div class="tip" style="margin-top:20px">&#128161; <strong>Kurzform für das erste Live-Produkt:</strong> Template anlegen → Job starten → Bild genehmigen → Product + 1 Variant anlegen → ImageProduct verknüpfen → Mockup hochladen → is_public + is_active → Stripe-Testbestellung machen → fertig.</div>
+</div>
+
+<script>
+  function showTab(id, el) {
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    el.classList.add('active');
+    window.scrollTo(0, 0);
+  }
+</script>
+</body>
+</html>
