@@ -122,13 +122,23 @@ def generate_image(self, job_id: str):
         is_img2img  = bool(job.reference_image)
 
         if is_sdxl:
-            endpoint_id = getattr(settings, "RUNPOD_SDXL_ENDPOINT_ID", "") or getattr(settings, "RUNPOD_ENDPOINT_ID", "")
+            endpoint_id = getattr(settings, "RUNPOD_SDXL_ENDPOINT_ID", "")
+            if not endpoint_id:
+                raise ValueError(
+                    "SDXL Job benötigt RUNPOD_SDXL_ENDPOINT_ID in .env!\n"
+                    "Bitte setzen: RUNPOD_SDXL_ENDPOINT_ID=vdjnfxf6h8q0ra"
+                )
+            logger.info(f"[SDXL] Verwende Endpoint: {endpoint_id}")
         else:
             endpoint_id = getattr(settings, "RUNPOD_ENDPOINT_ID", "")
+            if not endpoint_id:
+                raise ValueError(
+                    "FLUX Job benötigt RUNPOD_ENDPOINT_ID in .env!\n"
+                    "Bitte setzen: RUNPOD_ENDPOINT_ID=black-forest-labs-flux-1-schnell"
+                )
+            logger.info(f"[FLUX] Verwende Endpoint: {endpoint_id}")
 
-        if not endpoint_id:
-            raise ValueError(f"Kein RunPod-Endpoint konfiguriert für Modell '{model}'. "
-                             f"Bitte RUNPOD_ENDPOINT_ID (FLUX) oder RUNPOD_SDXL_ENDPOINT_ID (SDXL) in .env setzen.")
+        logger.info(f"Job {job_id}: model={model}, is_sdxl={is_sdxl}, is_img2img={is_img2img}, endpoint={endpoint_id}")
 
         # ── RunPod REST API (primary) ────────────────────────────────────────
         try:
@@ -181,12 +191,17 @@ def generate_image(self, job_id: str):
                 }
             else:
                 # FLUX Worker API-Contract
+                # FLUX Schnell: max. 8 Steps (optimiert für 1-4)
+                flux_steps = min(steps, 8)
+                if steps > 8:
+                    logger.warning(f"FLUX Schnell Steps limitiert: {steps} → 8 (RunPod Constraint)")
+                
                 input_payload = {
                     "prompt": prompt,
                     "negative_prompt": negative_prompt,
                     "width": width,
                     "height": height,
-                    "num_inference_steps": steps,
+                    "num_inference_steps": flux_steps,
                     "guidance_scale": float(guidance),
                     "image_format": "png",
                     "seed": seed if seed else -1,
