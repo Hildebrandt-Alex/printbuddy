@@ -231,14 +231,31 @@ def generate_image(self, job_id: str):
 
                     # Referenzbild als Base64 laden (für beide Modelle)
                     from django.core.files.storage import default_storage
+                    from PIL import Image
+                    import io
+                    
+                    # Bild laden und ggf. auf max 768x768 resizen (Worker-Performance)
                     with default_storage.open(job.reference_image.name) as f:
-                        ref_b64 = base64.b64encode(f.read()).decode()
+                        img = Image.open(f)
+                        img = img.convert('RGB')  # SDXL braucht RGB
+                        
+                        # Resize wenn zu groß (aspect ratio beibehalten)
+                        max_size = 768
+                        if img.width > max_size or img.height > max_size:
+                            img.thumbnail((max_size, max_size), Image.Resampling.LANCZOS)
+                            logger.info(f"[Img2Img] Resized to {img.width}x{img.height}")
+                        
+                        # Als PNG in Memory speichern
+                        buffer = io.BytesIO()
+                        img.save(buffer, format='PNG')
+                        img_bytes = buffer.getvalue()
+                        ref_b64 = base64.b64encode(img_bytes).decode()
                     
                     if is_sdxl:
-                        # SDXL Worker: Verwendet "init_image" (nicht "image"!) + "strength"
-                        input_payload["init_image"] = ref_b64
+                        # SDXL Worker: "image_url" mit data URI (laut offizieller Doku!)
+                        input_payload["image_url"] = f"data:image/png;base64,{ref_b64}"
                         input_payload["strength"] = img2img_strength
-                        logger.info("[RunPod/SDXL] Img2Img Modus aktiv (init_image base64), Stärke: %s", img2img_strength)
+                        logger.info("[RunPod/SDXL] Img2Img Modus aktiv (image_url data URI), Stärke: %s", img2img_strength)
                     else:
                         # FLUX Worker: base64-Bild übergeben
                         input_payload["image"] = ref_b64
@@ -299,6 +316,14 @@ def generate_image(self, job_id: str):
                         else:
                             # Letzter Versuch: gesamtes status_data als result
                             result = status_data
+                    else:
+                        # SDXL Worker 2.1.1: {"output": {"images": ["data:image/png;base64,..."], "seed": 42}}
+                        if isinstance(result, dict):
+                            if "images" in result and result["images"]:
+                                result = result["images"]  # Liste von Base64-Strings
+                                logger.info(f"[RunPod] Output.images[] enthält {len(result)} Bild(er)")
+                            elif "image_url" in result:
+                                result = [result["image_url"]]
                     logger.info(f"[RunPod] ✅ COMPLETED nach {elapsed}s")
                     break
                 elif job_status in ("FAILED", "CANCELLED", "TIMED_OUT"):
@@ -344,14 +369,19 @@ def generate_image(self, job_id: str):
             asset_id   = uuid.uuid4()
             output_path = output_dir / f"{asset_id}.png"
 
-            # Public API liefert Base64 in result["images"][0] oder result["image"]
+            # SDXL Worker 2.1.1 liefert Liste: ["data:image/png;base64,..."]
             if isinstance(result, list):
                 out = result[0]
+            elif isinstance(result, dict) and "images" in result:
+                out = result["images"][0]
+            elif isinstance(result, dict) and "image_url" in result:
+                out = result["image_url"]
             else:
                 out = result
 
             if isinstance(out, dict) and out.get("image"):
                 image_data = out["image"]
+                # Strip data URI prefix: "data:image/png;base64,..."
                 if "," in image_data:
                     image_data = image_data.split(",", 1)[1]
                 output_path.write_bytes(base64.b64decode(image_data))
@@ -367,7 +397,13 @@ def generate_image(self, job_id: str):
                 pil_img.save(output_path, "PNG")
             
             elif isinstance(out, str):
-                output_path.write_bytes(base64.b64decode(out))
+                # SDXL Worker: "data:image/png;base64,iVBORw0KG..." -> strip prefix
+                image_data = out
+                if image_data.startswith("data:"):
+                    # Strip "data:image/png;base64," prefix
+                    if "," in image_data:
+                        image_data = image_data.split(",", 1)[1]
+                output_path.write_bytes(base64.b64decode(image_data))
             elif isinstance(result, dict) and result.get("images"):
                 # Manche Modelle liefern {"images": ["base64..."]}
                 image_data = result["images"][0]
