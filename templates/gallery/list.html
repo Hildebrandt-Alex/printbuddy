@@ -210,9 +210,17 @@
   <a href="{% url 'gallery:detail' img.slug %}" class="card">
     <div class="card-img">
       {% if img.thumb_path %}
-      <img src="{{ img.thumb_path.url }}" alt="{{ img.title }}" loading="lazy">
+        {% if 'exports/' in img.thumb_path.name %}
+        <img src="/nas/{{ img.thumb_path.name }}" alt="{{ img.title }}" loading="lazy">
+        {% else %}
+        <img src="{{ img.thumb_path.url }}" alt="{{ img.title }}" loading="lazy">
+        {% endif %}
       {% elif img.file_path %}
-      <img src="{{ img.file_path.url }}" alt="{{ img.title }}" loading="lazy">
+        {% if 'exports/' in img.file_path.name %}
+        <img src="/nas/{{ img.file_path.name }}" alt="{{ img.title }}" loading="lazy">
+        {% else %}
+        <img src="{{ img.file_path.url }}" alt="{{ img.title }}" loading="lazy">
+        {% endif %}
       {% else %}
       <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#555">Kein Bild</div>
       {% endif %}

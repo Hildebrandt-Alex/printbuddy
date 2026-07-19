@@ -198,7 +198,11 @@
   <div>
     <div class="image-wrap">
       {% if image.file_path %}
-      <img src="{{ image.file_path.url }}" alt="{{ image.title }}">
+        {% if 'exports/' in image.file_path.name %}
+        <img src="/nas/{{ image.file_path.name }}" alt="{{ image.title }}">
+        {% else %}
+        <img src="{{ image.file_path.url }}" alt="{{ image.title }}">
+        {% endif %}
       {% else %}
       <div style="aspect-ratio:1;display:flex;align-items:center;justify-content:center;color:#555">Kein Bild verfügbar</div>
       {% endif %}
