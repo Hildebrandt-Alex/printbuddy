@@ -468,6 +468,22 @@ fix/<thema>       -> Bugfixes, lokal testen -> PR -> main
 adr/<nummer>      -> ADR-Commits dokumentieren
 ```
 
+### SSH-Konfiguration (Windows Dev Machine)
+
+**Wichtig:** VPS ist **NUR via SSH-Config-Alias** erreichbar, **nicht** via direkter IP-Adresse.
+
+**Datei:** `C:\Users\alex\.ssh\config`
+
+```
+Host datemyhobby
+  HostName datemyhobby.com
+  User root
+  IdentityFile C:\Users\alex\.ssh\datemyhobby_ssh_key
+  IdentitiesOnly yes
+```
+
+**Verbindung testen:** `ssh datemyhobby 'echo OK'`
+
 ### deploy.sh (auf VPS unter /opt/printbuddy/deploy.sh)
 
 ```bash
@@ -484,8 +500,10 @@ sudo systemctl restart celery-gpu celery-cpu
 echo "Deploy $(git rev-parse --short HEAD) abgeschlossen"
 ```
 
-**Aufruf:** `ssh user@vps 'bash /opt/printbuddy/deploy.sh'` — läuft in < 5 Minuten.
-**Rollback:** `git revert HEAD --no-edit && git push && ssh user@vps 'bash deploy.sh'`
+**Aufruf:** `ssh datemyhobby 'bash /opt/printbuddy/deploy.sh'` — läuft in < 5 Minuten.
+**Rollback:** `git revert HEAD --no-edit && git push && ssh datemyhobby 'bash /opt/printbuddy/deploy.sh'`
+
+**NIEMALS verwenden:** `ssh root@67.86.108.37` (IP nicht erreichbar, Firewall/Tailscale-only)
 
 ### Environment-Variablen (.env.example)
 
@@ -751,11 +769,154 @@ refactor: Umstrukturierung ohne Funktionsänderung
 - [x] Mobile-responsive
 
 **Nächste Phase 6.5 Steps (noch offen):**
-- [ ] Priority 1: Projekt-System (Model + UI + Asset-Management)
-- [ ] Priority 3: Fotografie-Features (Img2Img, Compositing, Inpainting)
-- [ ] Priority 4: Quick Adjustments (Color sliders, Background removal)
-- [ ] Priority 5: Vertrieb (Printful Tiefen-Integration, Etsy-Recherche)
-- [ ] Priority 6: Backend-Dokumentation (Admin help texts)
+
+#### Priority 1: Projekt-System (2-3 Tage) 🎯 IN ARBEIT
+
+**Ziel:** Jobs und Assets in Projekten organisieren, Team-Kollaboration ermöglichen.
+
+**Implementation:**
+1. **Model:** `Project` in `jobs/models.py`
+   ```python
+   id:            UUIDField(primary_key=True)
+   title:         CharField(max_length=120)
+   slug:          SlugField(unique=True)
+   description:   TextField(blank=True)
+   created_by:    ForeignKey(User, on_delete=PROTECT)
+   team_members:  ManyToManyField(User, related_name='projects', blank=True)
+   is_active:     BooleanField(default=True)
+   created_at:    DateTimeField(auto_now_add=True)
+   updated_at:    DateTimeField(auto_now=True)
+   ```
+
+2. **Model-Erweiterungen:**
+   - `Job.project`: ForeignKey(Project, null=True, blank=True, on_delete=SET_NULL)
+   - `GalleryImage.project`: ForeignKey(Project, null=True, blank=True, on_delete=SET_NULL)
+
+3. **Migrations:**
+   - `makemigrations --name add_project_system`
+   - Data Migration: Default-Projekt "Uncategorized" erstellen, alle bestehenden Jobs/Images zuweisen
+
+4. **Studio UI:**
+   - `ProjectListView` (`/studio/projects/`)
+   - `ProjectDetailView` (`/studio/project/<slug>/`) — Jobs + Assets eines Projekts
+   - `ProjectCreateView` — Neues Projekt anlegen
+   - `JobListView` erweitern: Projekt-Filter-Dropdown
+   - `JobCreateView` erweitern: Projekt-Auswahl-Field
+   - `AssetSelectView` erweitern: Projekt-Zuordnung bei Freigabe
+
+5. **Test-Gate:**
+   - [ ] Jobs nach Projekt filterbar
+   - [ ] Projekt-Detail zeigt alle zugehörigen Jobs + Assets
+   - [ ] Team-Members können Projekt sehen aber nicht editieren (später: Permissions)
+   - [ ] Asset-Move zwischen Projekten funktioniert
+
+#### Priority 2: Batch-Operationen (1-2 Tage)
+
+**Ziel:** Bulk-Actions für Jobs & Assets — effizienteres Arbeiten bei großen Mengen.
+
+**Implementation:**
+1. **Studio UI:**
+   - Checkbox-Spalte in `JobListView` + `JobResultsView`
+   - "Alle auswählen" / "Auswahl aufheben" Buttons
+   - Action-Dropdown: ["In Projekt verschieben", "Löschen", "Status ändern", "Batch-Export"]
+
+2. **Backend:**
+   - `studio/views.py`: `bulk_move_to_project(request)` (POST)
+   - `studio/views.py`: `bulk_delete_jobs(request)` (POST, soft-delete via `is_deleted` Flag)
+   - `studio/views.py`: `bulk_export_assets(request)` → ZIP-Download (Celery Task)
+
+3. **Test-Gate:**
+   - [ ] 10 Jobs gleichzeitig in anderes Projekt verschieben < 2s
+   - [ ] Bulk-Delete fordert Bestätigung, setzt `is_deleted=True`
+   - [ ] Batch-Export erstellt ZIP mit allen Selected Assets
+
+#### Priority 3: Fotografie-Features (3-4 Tage)
+
+**Ziel:** Img2Img Reference-Upload, Multi-Image Compositing, Inpainting.
+
+**Implementation:**
+
+**3.1 Image-to-Image Reference Upload:**
+1. `JobCreateView` Template erweitern:
+   - File-Upload-Field für `reference_image`
+   - Strength-Slider (0.0–1.0, default 0.5)
+   - Preview des hochgeladenen Bildes
+
+2. `gpu/tasks.py::generate_image` erweitern:
+   - Wenn `Job.reference_image` vorhanden: Base64-encode + an RunPod senden
+   - RunPod Endpoint muss Img2Img unterstützen (neuer Endpoint oder Parameter)
+
+3. Test-Gate:
+   - [ ] Reference-Image hochladen → in `/mnt/agency_nas/raw/` gespeichert
+   - [ ] Img2Img GPU-Job läuft mit korrektem Strength-Parameter
+   - [ ] Output zeigt erkennbare Ähnlichkeit zum Input
+
+**3.2 Multi-Image Compositing:**
+1. `JobCreateView`: Mehrere Reference-Images hochladen (max 3)
+2. `Job.reference_images`: JSONField mit Liste von Pfaden
+3. Compositing-Pipeline als neue PipelineTemplate (`category='multi_img_composite'`)
+4. RunPod Endpoint: Bilder kombinieren via ControlNet OpenPose + Depth
+
+**3.3 Inpainting mit Mask-Editor (🔴 Complex — später):**
+1. Canvas-basierter Mask-Editor (HTML5 Canvas + JavaScript)
+2. Mask als PNG speichern, zusammen mit Original an RunPod
+3. RunPod Endpoint: Inpainting Model (SD 1.5 Inpainting oder SDXL Inpaint)
+
+#### Priority 4: Quick Adjustments (2-3 Tage)
+
+**Ziel:** Kleine Anpassungen ohne GPU-Rechnung — schnell, CPU-basiert.
+
+**Implementation:**
+
+**4.1 Color-Slider (Pillow CPU-basiert):**
+1. `JobResultsView` erweitern: "Quick Adjust" Button je Asset
+2. Modal mit Slidern:
+   - Brightness (-100 bis +100)
+   - Contrast (-100 bis +100)
+   - Saturation (-100 bis +100)
+   - Sharpness (0 bis 200)
+3. `postprocess/tasks.py::quick_color_adjust(asset_id, params)`
+4. Preview in Real-Time (JavaScript + Pillow Server-Side)
+
+**4.2 Background Removal:**
+1. `rembg` Bibliothek installieren (U2-Net Model, CPU-fähig)
+2. Alternative: SAM2 Model via RunPod (GPU-beschleunigt)
+3. Button "Remove Background" → Task → Output mit transparentem Hintergrund (PNG)
+
+**4.3 Crop-Tool:**
+1. JavaScript Canvas Crop-UI (ähnlich Instagram)
+2. Koordinaten an Backend senden
+3. Pillow `Image.crop()` → neues Asset erstellen
+
+**Test-Gate:**
+- [ ] Color-Adjustments unter 3s Response-Zeit (CPU-Queue)
+- [ ] Background-Removal < 10s für 1024x1024 Bild
+- [ ] Crop speichert neues Asset, Original bleibt erhalten
+
+#### Priority 5: Vertrieb-Integration (1-2 Tage)
+
+**Ziel:** Printful Mock-API testen, Etsy-Backend checken, weitere Kanäle recherchieren.
+
+**Implementation:**
+1. Printful Mocking: `MOCK_PRINTFUL=true` in `.env`, `postprocess/tasks.py` Mock-Responses
+2. Etsy API v3: Token-Refresh-Mechanismus testen (TTL 90 Tage)
+3. WooCommerce/Shopify: API-Capabilities recherchieren, `SalesChannel` erweitern
+
+#### Priority 6: Backend-Dokumentation (1 Tag)
+
+**Ziel:** Admin-Interface mit `help_text` für alle wichtigen Felder, bessere UX für nicht-technische Admins.
+
+**Implementation:**
+1. Alle Models durchgehen: `help_text` hinzufügen
+   - `PipelineTemplate.default_model`: "FLUX Schnell (Apache 2.0, kommerziell OK) empfohlen. FLUX Dev nur für Tests!"
+   - `Job.status`: "draft = erstellt, queued = wartet auf GPU, running = läuft, done = fertig"
+   - `Product.required_export_types`: '["pod", "cmyk"] — welche Dateiformate für Produktion nötig'
+2. `JobAdmin`: Custom Action "Start Selected Jobs" mit Bestätigungs-Prompt
+3. `OrderAdmin`: Inline für `OrderLine`, `readonly_fields` für Stripe-IDs
+
+**Test-Gate:**
+- [ ] Admin-User (nicht Superuser) versteht alle Felder ohne externe Dokumentation
+- [ ] Help-Texts erscheinen als Tooltip
 
 ### Phase 7 — Merch-Shop (Woche 6–7)
 
