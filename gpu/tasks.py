@@ -143,36 +143,68 @@ def generate_image(self, job_id: str):
                 "Content-Type": "application/json",
             }
 
-            input_payload = {
-                "prompt": prompt,
-                "negative_prompt": negative_prompt,
-                "width": width,
-                "height": height,
-                "num_inference_steps": steps,
-                "guidance_scale": float(guidance),
-                "image_format": "png",
-                "seed": seed if seed else -1,
-                "num_images": num_images,
-            }
+            input_payload: dict
 
-            # Img2Img: Referenzfoto als base64 übergeben
+            if is_sdxl:
+                # SDXL Worker 2.1.1 API-Contract (runpod-workers/worker-sdxl)
+                # Endpoint: vdjnfxf6h8q0ra
+                input_payload = {
+                    "prompt": prompt,
+                    "negative_prompt": negative_prompt,
+                    "width": width,
+                    "height": height,
+                    "num_inference_steps": steps,          # 25 Standard
+                    "refiner_inference_steps": 50,         # SDXL Refiner
+                    "guidance_scale": float(guidance),     # 7.5 Standard
+                    "high_noise_frac": 0.8,
+                    "scheduler": "K_EULER",
+                    "seed": seed if seed else 1337,
+                    "num_images": num_images,
+                    "image_url": None,                     # Img2Img: URL wird unten gesetzt
+                }
+            else:
+                # FLUX Worker API-Contract
+                input_payload = {
+                    "prompt": prompt,
+                    "negative_prompt": negative_prompt,
+                    "width": width,
+                    "height": height,
+                    "num_inference_steps": steps,
+                    "guidance_scale": float(guidance),
+                    "image_format": "png",
+                    "seed": seed if seed else -1,
+                    "num_images": num_images,
+                }
+
+            # Img2Img: Stärke + Referenzbild eintragen
             if is_img2img and job.reference_image:
                 try:
-                    from django.core.files.storage import default_storage
-                    with default_storage.open(job.reference_image.name) as f:
-                        ref_b64 = base64.b64encode(f.read()).decode()
-                    input_payload["image"] = ref_b64
-                    # Strength aus Job-Notes extrahieren (gespeichert als "Img2Img Stärke: 0.75")
-                    strength = 0.75
+                    # Strength aus Job-Notes extrahieren
+                    img2img_strength = 0.75
                     for line in (job.notes or "").splitlines():
                         if "Img2Img" in line and ":" in line:
                             try:
-                                strength = float(line.split(":")[-1].strip())
+                                img2img_strength = float(line.split(":")[-1].strip())
                             except ValueError:
                                 pass
-                    input_payload["strength"] = strength
-                    input_payload["mode"] = "img2img"
-                    logger.info("[RunPod] Img2Img Modus aktiv, Stärke: %s", strength)
+
+                    if is_sdxl:
+                        # SDXL erwartet image_url — Bild als Media-URL übergeben
+                        from django.conf import settings as djsettings
+                        media_base = getattr(djsettings, "MEDIA_URL_EXTERNAL", "").rstrip("/")
+                        ref_url = f"{media_base}/{job.reference_image.name}"
+                        input_payload["image_url"] = ref_url
+                        input_payload["strength"] = img2img_strength
+                        logger.info("[RunPod/SDXL] Img2Img Modus aktiv, URL: %s, Stärke: %s", ref_url, img2img_strength)
+                    else:
+                        # FLUX: base64-Bild übergeben
+                        from django.core.files.storage import default_storage
+                        with default_storage.open(job.reference_image.name) as f:
+                            ref_b64 = base64.b64encode(f.read()).decode()
+                        input_payload["image"] = ref_b64
+                        input_payload["strength"] = img2img_strength
+                        input_payload["mode"] = "img2img"
+                        logger.info("[RunPod/FLUX] Img2Img Modus aktiv, Stärke: %s", img2img_strength)
                 except Exception as ref_exc:
                     logger.warning("[RunPod] Referenzfoto konnte nicht gelesen werden: %s — fahre als Text2Img fort", ref_exc)
 
