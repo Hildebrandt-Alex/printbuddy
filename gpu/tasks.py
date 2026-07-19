@@ -254,13 +254,18 @@ def generate_image(self, job_id: str):
                 raise ValueError(f"RunPod: keine Job-ID in Antwort: {run_data}")
 
             logger.info("[RunPod] Job gestartet: %s", run_id)
+            logger.info("[RunPod] Console: https://www.runpod.io/console/serverless/user/jobs")
 
             # Auf Ergebnis warten (Polling)
             # SDXL + Refiner braucht länger als FLUX
             timeout_seconds = 900 if is_sdxl else 300  # 15min für SDXL, 5min für FLUX
             deadline = time.time() + timeout_seconds
             result   = None
+            last_status = None
+            elapsed_start = time.time()
+            
             while time.time() < deadline:
+                elapsed = int(time.time() - elapsed_start)
                 status_resp = req.get(
                     f"{base_url}/status/{run_id}",
                     headers=headers,
@@ -269,20 +274,34 @@ def generate_image(self, job_id: str):
                 status_resp.raise_for_status()
                 status_data = status_resp.json()
                 job_status  = status_data.get("status", "")
+                last_status = job_status
 
                 if job_status == "COMPLETED":
                     result = status_data.get("output")
+                    logger.info(f"[RunPod] ✅ COMPLETED nach {elapsed}s")
                     break
                 elif job_status in ("FAILED", "CANCELLED", "TIMED_OUT"):
-                    raise ValueError(f"RunPod Job {run_id} Status: {job_status} — {status_data.get('error', '')}")
-                elif job_status in ("IN_QUEUE", "IN_PROGRESS"):
-                    logger.debug("[RunPod] Status: %s — warte 3s", job_status)
+                    error_detail = status_data.get("error", status_data)
+                    logger.error(f"[RunPod] ❌ {job_status} nach {elapsed}s — Details: {error_detail}")
+                    raise ValueError(f"RunPod Job {run_id} Status: {job_status} — {error_detail}")
+                elif job_status == "IN_QUEUE":
+                    logger.info(f"[RunPod] ⏳ IN_QUEUE ({elapsed}s) — wartet auf freien Worker...")
+                    time.sleep(5)  # Länger warten wenn in Queue
+                elif job_status == "IN_PROGRESS":
+                    logger.info(f"[RunPod] 🔄 IN_PROGRESS ({elapsed}s) — generiert Bild...")
                     time.sleep(3)
                 else:
+                    logger.warning(f"[RunPod] ❓ Unbekannter Status: {job_status} ({elapsed}s)")
                     time.sleep(3)
 
             if result is None:
-                raise ValueError(f"RunPod Timeout nach {timeout_seconds}s (Job {run_id})")
+                logger.error(f"[RunPod] ⏱️ Timeout nach {timeout_seconds}s — Letzter Status: {last_status}")
+                raise ValueError(
+                    f"RunPod Timeout nach {timeout_seconds}s (Job {run_id})\n"
+                    f"Letzter Status: {last_status}\n"
+                    f"Prüfe: https://www.runpod.io/console/serverless/user/jobs\n"
+                    f"Mögliche Ursachen: Worker überlastet, Cold Start, oder Job hängt"
+                )
 
             # Bild dekodieren + speichern
             output_dir = _get_output_dir("raw")
