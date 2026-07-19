@@ -229,36 +229,36 @@ def generate_image(self, job_id: str):
                             except ValueError:
                                 pass
 
-                    # Referenzbild als Base64 laden (für beide Modelle)
-                    from django.core.files.storage import default_storage
-                    from PIL import Image
-                    import io
-                    
-                    # Bild laden und ggf. auf max 768x768 resizen (Worker-Performance)
-                    with default_storage.open(job.reference_image.name) as f:
-                        img = Image.open(f)
-                        img = img.convert('RGB')  # SDXL braucht RGB
-                        
-                        # Resize wenn zu groß (aspect ratio beibehalten)
-                        max_size = 768
-                        if img.width > max_size or img.height > max_size:
-                            img.thumbnail((max_size, max_size), Image.Resampling.LANCZOS)
-                            logger.info(f"[Img2Img] Resized to {img.width}x{img.height}")
-                        
-                        # Als JPEG in Memory speichern (kleiner als PNG, besser für data URIs)
-                        buffer = io.BytesIO()
-                        img.save(buffer, format='JPEG', quality=95)
-                        img_bytes = buffer.getvalue()
-                        ref_b64 = base64.b64encode(img_bytes).decode('ascii').strip()
-                        logger.info(f"[Img2Img] Base64 Länge: {len(ref_b64)} Zeichen")
-                    
                     if is_sdxl:
-                        # SDXL Worker: "image_url" mit data URI (laut offizieller Doku!)
-                        input_payload["image_url"] = f"data:image/jpeg;base64,{ref_b64}"
+                        # SDXL Worker benötigt echte HTTP URL (keine Data URI!)
+                        from django.conf import settings
+                        
+                        # Öffentliche URL zum Referenzbild konstruieren
+                        # reference_image.name ist z.B. "jobs/refs/abc123.png"
+                        image_url = f"{settings.MEDIA_URL_EXTERNAL}/{job.reference_image.name}"
+                        input_payload["image_url"] = image_url
                         input_payload["strength"] = img2img_strength
-                        logger.info("[RunPod/SDXL] Img2Img Modus aktiv (image_url data URI), Stärke: %s", img2img_strength)
+                        logger.info("[RunPod/SDXL] Img2Img Modus aktiv (HTTP URL), Stärke: %s", img2img_strength)
+                        logger.info("[RunPod/SDXL] Image URL: %s", image_url)
                     else:
                         # FLUX Worker: base64-Bild übergeben
+                        from django.core.files.storage import default_storage
+                        from PIL import Image
+                        import io
+                        
+                        with default_storage.open(job.reference_image.name) as f:
+                            img = Image.open(f)
+                            img = img.convert('RGB')
+                            
+                            # Resize wenn zu groß
+                            max_size = 768
+                            if img.width > max_size or img.height > max_size:
+                                img.thumbnail((max_size, max_size), Image.Resampling.LANCZOS)
+                            
+                            buffer = io.BytesIO()
+                            img.save(buffer, format='JPEG', quality=95)
+                            ref_b64 = base64.b64encode(buffer.getvalue()).decode('ascii').strip()
+                        
                         input_payload["image"] = ref_b64
                         input_payload["strength"] = img2img_strength
                         input_payload["mode"] = "img2img"
