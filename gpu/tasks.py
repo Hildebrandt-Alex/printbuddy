@@ -278,6 +278,18 @@ def generate_image(self, job_id: str):
 
                 if job_status == "COMPLETED":
                     result = status_data.get("output")
+                    if result is None:
+                        # Output kann auch direkt im status_data liegen oder unter anderem Key
+                        logger.warning(f"[RunPod] ⚠️ COMPLETED aber 'output' ist None — status_data Keys: {list(status_data.keys())}")
+                        logger.warning(f"[RunPod] Full response: {status_data}")
+                        # Versuche alternative Keys
+                        if "result" in status_data:
+                            result = status_data["result"]
+                        elif "images" in status_data:
+                            result = status_data["images"]
+                        else:
+                            # Letzter Versuch: gesamtes status_data als result
+                            result = status_data
                     logger.info(f"[RunPod] ✅ COMPLETED nach {elapsed}s")
                     break
                 elif job_status in ("FAILED", "CANCELLED", "TIMED_OUT"):
@@ -295,15 +307,16 @@ def generate_image(self, job_id: str):
                     time.sleep(3)
 
             if result is None:
-                logger.error(f"[RunPod] ⏱️ Timeout nach {timeout_seconds}s — Letzter Status: {last_status}")
+                logger.error(f"[RunPod] ⏱️ Result ist None nach {timeout_seconds}s — Letzter Status: {last_status}")
+                logger.error(f"[RunPod] Status-Data bei COMPLETED war: {status_data if last_status == 'COMPLETED' else 'N/A'}")
                 raise ValueError(
-                    f"RunPod Timeout nach {timeout_seconds}s (Job {run_id})\n"
-                    f"Letzter Status: {last_status}\n"
+                    f"RunPod Job {run_id} — Output ist None trotz Status: {last_status}\n"
                     f"Prüfe: https://www.runpod.io/console/serverless/user/jobs\n"
-                    f"Mögliche Ursachen: Worker überlastet, Cold Start, oder Job hängt"
+                    f"Status-Response möglicherweise in falschem Format"
                 )
 
             # Bild dekodieren + speichern
+            logger.info(f"[RunPod] Dekodiere Output — Type: {type(result)}, Keys: {list(result.keys()) if isinstance(result, dict) else 'N/A'}")
             output_dir = _get_output_dir("raw")
             asset_id   = uuid.uuid4()
             output_path = output_dir / f"{asset_id}.png"
