@@ -187,7 +187,7 @@ def generate_image(self, job_id: str):
                     "scheduler": scheduler,
                     "seed": seed if seed else 1337,
                     "num_images": num_images,
-                    "image_url": None,                     # Img2Img: URL wird unten gesetzt
+                    # Img2Img: "image" wird unten als base64 hinzugefügt (nicht image_url)
                 }
             else:
                 # FLUX Worker API-Contract
@@ -220,23 +220,22 @@ def generate_image(self, job_id: str):
                             except ValueError:
                                 pass
 
+                    # Referenzbild als Base64 laden (für beide Modelle)
+                    from django.core.files.storage import default_storage
+                    with default_storage.open(job.reference_image.name) as f:
+                        ref_b64 = base64.b64encode(f.read()).decode()
+                    
                     if is_sdxl:
-                        # SDXL erwartet image_url — Bild als Media-URL übergeben
-                        from django.conf import settings as djsettings
-                        media_base = getattr(djsettings, "MEDIA_URL_EXTERNAL", "").rstrip("/")
-                        ref_url = f"{media_base}/{job.reference_image.name}"
-                        input_payload["image_url"] = ref_url
+                        # SDXL Worker: base64-encoded image in "image" field
+                        input_payload["image"] = ref_b64
                         input_payload["strength"] = img2img_strength
-                        logger.info("[RunPod/SDXL] Img2Img Modus aktiv, URL: %s, Stärke: %s", ref_url, img2img_strength)
+                        logger.info("[RunPod/SDXL] Img2Img Modus aktiv (base64), Stärke: %s", img2img_strength)
                     else:
-                        # FLUX: base64-Bild übergeben
-                        from django.core.files.storage import default_storage
-                        with default_storage.open(job.reference_image.name) as f:
-                            ref_b64 = base64.b64encode(f.read()).decode()
+                        # FLUX Worker: base64-Bild übergeben
                         input_payload["image"] = ref_b64
                         input_payload["strength"] = img2img_strength
                         input_payload["mode"] = "img2img"
-                        logger.info("[RunPod/FLUX] Img2Img Modus aktiv, Stärke: %s", img2img_strength)
+                        logger.info("[RunPod/FLUX] Img2Img Modus aktiv (base64), Stärke: %s", img2img_strength)
                 except Exception as ref_exc:
                     logger.warning("[RunPod] Referenzfoto konnte nicht gelesen werden: %s — fahre als Text2Img fort", ref_exc)
 
