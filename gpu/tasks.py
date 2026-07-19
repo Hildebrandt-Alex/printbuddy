@@ -245,15 +245,16 @@ def generate_image(self, job_id: str):
                             img.thumbnail((max_size, max_size), Image.Resampling.LANCZOS)
                             logger.info(f"[Img2Img] Resized to {img.width}x{img.height}")
                         
-                        # Als PNG in Memory speichern
+                        # Als JPEG in Memory speichern (kleiner als PNG, besser für data URIs)
                         buffer = io.BytesIO()
-                        img.save(buffer, format='PNG')
+                        img.save(buffer, format='JPEG', quality=95)
                         img_bytes = buffer.getvalue()
-                        ref_b64 = base64.b64encode(img_bytes).decode()
+                        ref_b64 = base64.b64encode(img_bytes).decode('ascii').strip()
+                        logger.info(f"[Img2Img] Base64 Länge: {len(ref_b64)} Zeichen")
                     
                     if is_sdxl:
                         # SDXL Worker: "image_url" mit data URI (laut offizieller Doku!)
-                        input_payload["image_url"] = f"data:image/png;base64,{ref_b64}"
+                        input_payload["image_url"] = f"data:image/jpeg;base64,{ref_b64}"
                         input_payload["strength"] = img2img_strength
                         logger.info("[RunPod/SDXL] Img2Img Modus aktiv (image_url data URI), Stärke: %s", img2img_strength)
                     else:
