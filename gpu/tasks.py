@@ -229,10 +229,10 @@ def generate_image(self, job_id: str):
                         ref_b64 = base64.b64encode(f.read()).decode()
                     
                     if is_sdxl:
-                        # SDXL Worker: base64-encoded image in "image" field
-                        input_payload["image"] = ref_b64
+                        # SDXL Worker: Verwendet "init_image" (nicht "image"!) + "strength"
+                        input_payload["init_image"] = ref_b64
                         input_payload["strength"] = img2img_strength
-                        logger.info("[RunPod/SDXL] Img2Img Modus aktiv (base64), Stärke: %s", img2img_strength)
+                        logger.info("[RunPod/SDXL] Img2Img Modus aktiv (init_image base64), Stärke: %s", img2img_strength)
                     else:
                         # FLUX Worker: base64-Bild übergeben
                         input_payload["image"] = ref_b64
