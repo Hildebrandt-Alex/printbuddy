@@ -351,7 +351,7 @@ def asset_select(request, job_id):
         thumb_path=f"exports/preview/{preview_filename}",  # Preview ist bereits klein — kein Pillow-Open auf NAS
         is_public=False,  # Admin gibt explizit frei
         source_job_id=job.id,
-        project=job.project,  # Projekt vom Job erben
+        project=getattr(job, 'project', None),  # Projekt vom Job erben (falls vorhanden)
     )
 
     try:
