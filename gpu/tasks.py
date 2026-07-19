@@ -231,8 +231,6 @@ def generate_image(self, job_id: str):
 
                     if is_sdxl:
                         # SDXL Worker benötigt echte HTTP URL (keine Data URI!)
-                        from django.conf import settings
-                        
                         # Öffentliche URL zum Referenzbild konstruieren
                         # reference_image.name ist z.B. "jobs/refs/abc123.png"
                         image_url = f"{settings.MEDIA_URL_EXTERNAL}/{job.reference_image.name}"
