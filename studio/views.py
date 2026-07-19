@@ -438,12 +438,58 @@ OUTPUT_TYPES = {
             "step_mockup": False, "step_auto_qa": False,
         },
     },
+    "img2img": {
+        "label": "Foto → KI (Img2Img)",
+        "icon": "📸",
+        "description": "Lade ein Referenzfoto hoch und lass es vom KI-Modell nach deinem Prompt umgestalten.",
+        "steps_hint": "img2img → preview",
+        "allowed_models": ["sdxl", "flux_schnell"],
+        "pipeline_category": "custom",
+        "template_flags": {
+            "step_generate": True, "step_upscale": False, "step_vectorize": False,
+            "step_cmyk": False, "step_pod_export": False, "step_preview": True,
+            "step_mockup": False, "step_auto_qa": False,
+        },
+    },
 }
 
+# Modell-Metadaten: Parameter + Endpoint + Verfügbarkeit
+# available: True = Endpoint konfiguriert und nutzbar
+# endpoint_var: Name der settings-Variable die den Endpoint-ID hält
 MODEL_META = {
-    "flux_schnell": {"label": "FLUX Schnell", "steps": 4,  "guidance": 0,   "license": "Apache 2.0 — kommerziell ✅", "badge": "ok"},
-    "sdxl":         {"label": "SDXL",         "steps": 30, "guidance": 7.5, "license": "CreativeML Open Rail+M — kommerziell ✅", "badge": "ok"},
-    "flux_dev":     {"label": "FLUX Dev",      "steps": 20, "guidance": 3.5, "license": "⚠️ Nicht kommerziell — nur Preview/Test!", "badge": "warn"},
+    "flux_schnell": {
+        "label": "FLUX Schnell",
+        "steps": 4,
+        "guidance": 0.0,
+        "license": "Apache 2.0 — kommerziell ✅",
+        "badge": "ok",
+        "available": True,
+        "endpoint_var": "RUNPOD_ENDPOINT_ID",
+        "img2img_support": True,
+        "note": "Schnellstes Modell (4 Steps). Ideal für Produktion und schnelle Iterationen.",
+    },
+    "sdxl": {
+        "label": "SDXL 1.0",
+        "steps": 30,
+        "guidance": 7.5,
+        "license": "CreativeML Open Rail+M — kommerziell ✅",
+        "badge": "ok",
+        "available": True,
+        "endpoint_var": "RUNPOD_SDXL_ENDPOINT_ID",
+        "img2img_support": True,
+        "note": "Hochqualitativ, 30 Steps. Besser für Details und realistische Darstellungen. Benötigt eigenen Endpoint.",
+    },
+    "flux_dev": {
+        "label": "FLUX Dev",
+        "steps": 20,
+        "guidance": 3.5,
+        "license": "⚠️ Nicht kommerziell — nur Preview/Test!",
+        "badge": "warn",
+        "available": True,
+        "endpoint_var": "RUNPOD_ENDPOINT_ID",
+        "img2img_support": False,
+        "note": "Höhere Qualität als Schnell, aber nicht kommerziell lizenziert. Nur für interne Tests.",
+    },
 }
 
 ASPECT_RATIOS = {
@@ -479,22 +525,27 @@ def _wizard_clear(request):
 
 
 def _get_or_create_template(output_type: str, model: str) -> PipelineTemplate:
-    """Sucht passendes Template oder legt es automatisch an."""
+    """Sucht passendes Template oder legt es automatisch an.
+    WICHTIG: Steps/Guidance werden immer modell-spezifisch gesetzt — nie am falschen Template wiederverwenden.
+    """
     flags = OUTPUT_TYPES[output_type]["template_flags"]
     meta  = MODEL_META[model]
     category = OUTPUT_TYPES[output_type]["pipeline_category"]
 
+    # Name ist eindeutig pro Output-Typ + Modell
+    template_name = f"{OUTPUT_TYPES[output_type]['label']} — {meta['label']} (auto)"
+
     template = PipelineTemplate.objects.filter(
+        name=template_name,
         category=category,
         default_model=model,
         is_active=True,
-        **flags,
     ).first()
 
     if not template:
         template = PipelineTemplate.objects.create(
-            name=f"{OUTPUT_TYPES[output_type]['label']} — {meta['label']} (auto)",
-            description="Automatisch erstellt durch Studio-Wizard",
+            name=template_name,
+            description=f"Automatisch erstellt durch Studio-Wizard — {meta['note']}",
             category=category,
             default_model=model,
             default_steps=meta["steps"],
@@ -504,6 +555,13 @@ def _get_or_create_template(output_type: str, model: str) -> PipelineTemplate:
             is_active=True,
             **flags,
         )
+    else:
+        # Steps/Guidance aktualisieren falls sie sich geändert haben
+        if template.default_steps != meta["steps"] or template.default_guidance != meta["guidance"]:
+            template.default_steps = meta["steps"]
+            template.default_guidance = meta["guidance"]
+            template.save(update_fields=["default_steps", "default_guidance"])
+
     return template
 
 
@@ -520,12 +578,18 @@ def wizard_step1(request):
         return redirect("studio:wizard_step2")
 
     _wizard_clear(request)
+    # Modell-Verfügbarkeit aus Settings prüfen (welche Endpoints konfiguriert sind)
+    from django.conf import settings as djsettings
+    for key, meta in MODEL_META.items():
+        env_var = meta.get("endpoint_var", "")
+        meta["endpoint_configured"] = bool(getattr(djsettings, env_var, ""))
     return render(request, "studio/wizard/step1.html", {
         "output_types": OUTPUT_TYPES,
+        "model_meta": MODEL_META,
     })
 
 
-# ── Step 2: Modell + Prompt ───────────────────────────────────────────────
+# ── Step 2: Modell + Prompt (+ Referenzfoto bei Img2Img) ─────────────────
 
 @studio_required
 def wizard_step2(request):
@@ -535,7 +599,14 @@ def wizard_step2(request):
 
     output_type = wizard["output_type"]
     otype_meta  = OUTPUT_TYPES[output_type]
-    allowed     = {k: MODEL_META[k] for k in otype_meta["allowed_models"]}
+    is_img2img  = (output_type == "img2img")
+
+    # Bei Img2Img: nur Modelle die img2img_support=True haben
+    if is_img2img:
+        allowed = {k: MODEL_META[k] for k in otype_meta["allowed_models"] if MODEL_META[k].get("img2img_support")}
+    else:
+        allowed = {k: MODEL_META[k] for k in otype_meta["allowed_models"]}
+
     prompts     = PromptTemplate.objects.filter(is_public=True).order_by("category", "title")
 
     if request.method == "POST":
@@ -544,6 +615,7 @@ def wizard_step2(request):
         negative_prompt = request.POST.get("negative_prompt", "").strip()
         num_images     = int(request.POST.get("num_images") or 1)
         seed           = request.POST.get("seed") or None
+        strength       = float(request.POST.get("strength") or 0.75)  # Img2Img Stärke
 
         errors = []
         if model not in allowed:
@@ -551,11 +623,37 @@ def wizard_step2(request):
         if not prompt:
             errors.append("Prompt ist erforderlich.")
 
+        # Referenzfoto bei Img2Img verarbeiten
+        reference_image_path = None
+        if is_img2img:
+            ref_file = request.FILES.get("reference_image")
+            if not ref_file:
+                errors.append("Bitte ein Referenzfoto hochladen.")
+            else:
+                # Bild validieren (nur echte Bilder)
+                try:
+                    from PIL import Image as PilImage
+                    import io as _io
+                    PilImage.open(_io.BytesIO(ref_file.read())).verify()
+                    ref_file.seek(0)
+                except Exception:
+                    errors.append("Referenzfoto ist kein gültiges Bild (JPG/PNG erwartet).")
+                    ref_file = None
+
+                if ref_file and not errors:
+                    from django.core.files.storage import default_storage
+                    import uuid as _uuid
+                    ext = ref_file.name.rsplit(".", 1)[-1].lower() if "." in ref_file.name else "jpg"
+                    safe_ext = ext if ext in ("jpg", "jpeg", "png", "webp") else "jpg"
+                    ref_filename = f"jobs/refs/{_uuid.uuid4()}.{safe_ext}"
+                    default_storage.save(ref_filename, ref_file)
+                    reference_image_path = ref_filename
+
         if errors:
             for e in errors:
                 messages.error(request, e)
             return render(request, "studio/wizard/step2.html", {
-                "output_type": output_type, "otype_meta": otype_meta,
+                "output_type": output_type, "otype_meta": otype_meta, "is_img2img": is_img2img,
                 "allowed_models": allowed, "prompts": prompts, "post": request.POST,
             })
 
@@ -565,12 +663,15 @@ def wizard_step2(request):
             "negative_prompt": negative_prompt,
             "num_images": num_images,
             "seed": int(seed) if seed else None,
+            "reference_image": reference_image_path,
+            "img2img_strength": strength if is_img2img else None,
         })
         return redirect("studio:wizard_step3")
 
     return render(request, "studio/wizard/step2.html", {
         "output_type": output_type,
         "otype_meta": otype_meta,
+        "is_img2img": is_img2img,
         "allowed_models": allowed,
         "prompts": prompts,
         "post": wizard,
@@ -689,6 +790,8 @@ def wizard_confirm(request):
         if details.get("product_id"):  notes_parts.append(f"Produkt-ID: {details['product_id']}")
         if details.get("channel_id"):  notes_parts.append(f"Channel-ID: {details['channel_id']}")
         if details.get("print_format"):notes_parts.append(f"Format: {details['print_format']}, {details.get('dpi')}dpi, Bleed {details.get('bleed_mm')}mm")
+        if wizard.get("img2img_strength"):
+            notes_parts.append(f"Img2Img Stärke: {wizard['img2img_strength']}")
 
         meta = MODEL_META[model]
         job = Job.objects.create(
@@ -697,6 +800,7 @@ def wizard_confirm(request):
             project=project,
             prompt=wizard["prompt"],
             negative_prompt=wizard.get("negative_prompt", ""),
+            reference_image=wizard.get("reference_image") or "",
             model=model,
             width=width,
             height=height,
@@ -723,6 +827,7 @@ def wizard_confirm(request):
         "details": details,
         "user_projects": user_projects,
         "default_project": _get_default_project(),
+        "is_img2img": (output_type == "img2img"),
     })
 
 

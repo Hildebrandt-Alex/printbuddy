@@ -117,16 +117,26 @@ def generate_image(self, job_id: str):
             logger.info("[MOCK] generate_image fertig: %s", asset_id)
             return str(asset_id)
 
+        # ── Modell-spezifischen Endpoint wählen ──────────────────────────────
+        is_sdxl     = (model == "sdxl")
+        is_img2img  = bool(job.reference_image)
+
+        if is_sdxl:
+            endpoint_id = getattr(settings, "RUNPOD_SDXL_ENDPOINT_ID", "") or getattr(settings, "RUNPOD_ENDPOINT_ID", "")
+        else:
+            endpoint_id = getattr(settings, "RUNPOD_ENDPOINT_ID", "")
+
+        if not endpoint_id:
+            raise ValueError(f"Kein RunPod-Endpoint konfiguriert für Modell '{model}'. "
+                             f"Bitte RUNPOD_ENDPOINT_ID (FLUX) oder RUNPOD_SDXL_ENDPOINT_ID (SDXL) in .env setzen.")
+
         # ── RunPod REST API (primary) ────────────────────────────────────────
-        # Für die Public API muss die HTTP REST API direkt aufgerufen werden.
-        # runpod.run_sync() funktioniert nur für eigene Serverless-Endpoints.
         try:
             import requests as req
             import time
             import base64
 
             api_key     = settings.RUNPOD_API_KEY
-            endpoint_id = settings.RUNPOD_ENDPOINT_ID
             base_url    = f"https://api.runpod.ai/v2/{endpoint_id}"
             headers     = {
                 "Authorization": f"Bearer {api_key}",
@@ -139,10 +149,32 @@ def generate_image(self, job_id: str):
                 "width": width,
                 "height": height,
                 "num_inference_steps": steps,
-                "guidance": float(guidance),
+                "guidance_scale": float(guidance),
                 "image_format": "png",
                 "seed": seed if seed else -1,
+                "num_images": num_images,
             }
+
+            # Img2Img: Referenzfoto als base64 übergeben
+            if is_img2img and job.reference_image:
+                try:
+                    from django.core.files.storage import default_storage
+                    with default_storage.open(job.reference_image.name) as f:
+                        ref_b64 = base64.b64encode(f.read()).decode()
+                    input_payload["image"] = ref_b64
+                    # Strength aus Job-Notes extrahieren (gespeichert als "Img2Img Stärke: 0.75")
+                    strength = 0.75
+                    for line in (job.notes or "").splitlines():
+                        if "Img2Img" in line and ":" in line:
+                            try:
+                                strength = float(line.split(":")[-1].strip())
+                            except ValueError:
+                                pass
+                    input_payload["strength"] = strength
+                    input_payload["mode"] = "img2img"
+                    logger.info("[RunPod] Img2Img Modus aktiv, Stärke: %s", strength)
+                except Exception as ref_exc:
+                    logger.warning("[RunPod] Referenzfoto konnte nicht gelesen werden: %s — fahre als Text2Img fort", ref_exc)
 
             # Job starten (async)
             logger.info("[RunPod] POST %s/run", base_url)
