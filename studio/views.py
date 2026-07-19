@@ -281,18 +281,46 @@ def job_results(request, job_id):
         output_asset_id__isnull=True
     )
 
+    # Prüfe welche Assets bereits als GalleryImage vorgemerkt sind
+    from gallery.models import GalleryImage
+    # Hole alle GalleryImages für diesen Job
+    existing_gallery_images = list(GalleryImage.objects.filter(source_job_id=job.id))
+
     assets = []
     for step in preview_steps:
-        filename = f"{step.output_asset_id}_preview.jpg"
+        asset_id = str(step.output_asset_id)
+        filename = f"{asset_id}_preview.jpg"
         filepath = preview_dir / filename
         try:
             file_exists = filepath.exists()
         except (PermissionError, OSError):
             file_exists = True  # NAS nicht lesbar für www-data — trotzdem anzeigen, Nginx serviert es
+        
+        # Status prüfen: nicht vorgemerkt / vorgemerkt / online
+        # Finde GalleryImage anhand des Asset-UUID im Dateinamen
+        gallery_img = None
+        for img in existing_gallery_images:
+            if asset_id in str(img.file_path.name):
+                gallery_img = img
+                break
+        
+        if gallery_img:
+            if gallery_img.is_public:
+                status = "online"
+                status_label = "✓ Online in Galerie"
+            else:
+                status = "vorgemerkt"
+                status_label = "● Vorgemerkt (wartet auf Admin-Freigabe)"
+        else:
+            status = "not_selected"
+            status_label = None
+        
         assets.append({
-            "asset_id": str(step.output_asset_id),
+            "asset_id": asset_id,
             "filename": filename,
             "exists": file_exists,
+            "gallery_status": status,
+            "gallery_status_label": status_label,
         })
 
     return render(request, "studio/job_results.html", {"job": job, "assets": assets})
@@ -342,27 +370,36 @@ def asset_select(request, job_id):
         slug = f"{slug_base}-{counter}"
         counter += 1
 
-    gallery_image = GalleryImage.objects.create(
-        title=title,
-        slug=slug,
-        category=category,
-        cta_type=cta_type,
-        file_path=f"exports/preview/{preview_filename}",
-        thumb_path=f"exports/preview/{preview_filename}",  # Preview ist bereits klein — kein Pillow-Open auf NAS
-        is_public=False,  # Admin gibt explizit frei
-        source_job_id=job.id,
-        project=getattr(job, 'project', None),  # Projekt vom Job erben (falls vorhanden)
-    )
+    try:
+        gallery_image = GalleryImage.objects.create(
+            title=title,
+            slug=slug,
+            category=category,
+            cta_type=cta_type,
+            file_path=f"exports/preview/{preview_filename}",
+            thumb_path=f"exports/preview/{preview_filename}",  # Preview ist bereits klein — kein Pillow-Open auf NAS
+            is_public=False,  # Admin gibt explizit frei
+            source_job_id=job.id,
+            project=getattr(job, 'project', None),  # Projekt vom Job erben (falls vorhanden)
+        )
+        logger.info(
+            "[asset_select] GalleryImage %s erstellt von User %s (Job %s, Asset %s)",
+            gallery_image.id, request.user.username, job_id, asset_id,
+        )
+    except Exception as exc:
+        logger.error(
+            "[asset_select] GalleryImage.create FEHLER: %s — Job %s, User %s, Asset %s",
+            type(exc).__name__, job_id, request.user.username, asset_id,
+            exc_info=True,
+        )
+        messages.error(request, f"Fehler beim Vormerken: {type(exc).__name__}: {str(exc)}")
+        return redirect("studio:job_results", job_id=job.id)
 
     try:
         generate_all_mockups.delay(str(gallery_image.id))
     except Exception as exc:
         logger.warning("[asset_select] generate_all_mockups.delay fehlgeschlagen: %s", exc)
 
-    logger.info(
-        "[asset_select] GalleryImage %s von User %s (Job %s)",
-        gallery_image.id, request.user.username, job_id,
-    )
     messages.success(
         request,
         f"'{title}' für Galerie vorgemerkt — Admin muss is_public aktivieren.",
