@@ -617,6 +617,18 @@ def wizard_step2(request):
         seed           = request.POST.get("seed") or None
         strength       = float(request.POST.get("strength") or 0.75)  # Img2Img Stärke
 
+        # Modell-spezifische Parameter auslesen
+        model_params = {}
+        if model in ("flux_schnell", "flux_dev"):
+            model_params["steps"] = int(request.POST.get("flux_steps") or 4)
+            model_params["guidance"] = float(request.POST.get("flux_guidance") or 0.0)
+        elif model == "sdxl":
+            model_params["steps"] = int(request.POST.get("sdxl_steps") or 30)
+            model_params["refiner_steps"] = int(request.POST.get("sdxl_refiner_steps") or 50)
+            model_params["guidance"] = float(request.POST.get("sdxl_guidance") or 7.5)
+            model_params["scheduler"] = request.POST.get("sdxl_scheduler") or "K_EULER"
+            model_params["high_noise_frac"] = float(request.POST.get("sdxl_high_noise_frac") or 0.8)
+
         errors = []
         if model not in allowed:
             errors.append("Bitte ein Modell wählen.")
@@ -665,6 +677,7 @@ def wizard_step2(request):
             "seed": int(seed) if seed else None,
             "reference_image": reference_image_path,
             "img2img_strength": strength if is_img2img else None,
+            "model_params": model_params,  # Modell-spezifische Parameter
         })
         return redirect("studio:wizard_step3")
 
@@ -794,6 +807,22 @@ def wizard_confirm(request):
             notes_parts.append(f"Img2Img Stärke: {wizard['img2img_strength']}")
 
         meta = MODEL_META[model]
+        
+        # Modell-spezifische Parameter: Wizard-Overrides oder Template-Defaults
+        model_params = wizard.get("model_params", {})
+        num_steps = model_params.get("steps", meta["steps"])
+        guidance = model_params.get("guidance", meta["guidance"])
+        
+        # SDXL-spezifische Parameter in notes speichern (werden von gpu/tasks.py gelesen)
+        sdxl_params = {}
+        if model == "sdxl":
+            sdxl_params = {
+                "refiner_steps": model_params.get("refiner_steps", 50),
+                "scheduler": model_params.get("scheduler", "K_EULER"),
+                "high_noise_frac": model_params.get("high_noise_frac", 0.8),
+            }
+            notes_parts.append(f"SDXL: Refiner={sdxl_params['refiner_steps']} Scheduler={sdxl_params['scheduler']} HighNoise={sdxl_params['high_noise_frac']}")
+        
         job = Job.objects.create(
             title=title,
             pipeline_template=template,
@@ -804,8 +833,8 @@ def wizard_confirm(request):
             model=model,
             width=width,
             height=height,
-            num_steps=meta["steps"],
-            guidance=meta["guidance"],
+            num_steps=num_steps,
+            guidance=guidance,
             num_images=wizard.get("num_images", 1),
             seed=wizard.get("seed"),
             notes="\n".join(notes_parts),

@@ -148,16 +148,33 @@ def generate_image(self, job_id: str):
             if is_sdxl:
                 # SDXL Worker 2.1.1 API-Contract (runpod-workers/worker-sdxl)
                 # Endpoint: vdjnfxf6h8q0ra
+                
+                # SDXL-spezifische Parameter aus Job.notes parsen (falls vom Wizard gesetzt)
+                refiner_steps = 50
+                scheduler = "K_EULER"
+                high_noise_frac = 0.8
+                
+                if job.notes:
+                    import re
+                    # Format: "SDXL: Refiner=50 Scheduler=K_EULER HighNoise=0.8"
+                    refiner_match = re.search(r'Refiner=(\d+)', job.notes)
+                    scheduler_match = re.search(r'Scheduler=(\w+)', job.notes)
+                    noise_match = re.search(r'HighNoise=([\d.]+)', job.notes)
+                    
+                    if refiner_match: refiner_steps = int(refiner_match.group(1))
+                    if scheduler_match: scheduler = scheduler_match.group(1)
+                    if noise_match: high_noise_frac = float(noise_match.group(1))
+                
                 input_payload = {
                     "prompt": prompt,
                     "negative_prompt": negative_prompt,
                     "width": width,
                     "height": height,
-                    "num_inference_steps": steps,          # 25 Standard
-                    "refiner_inference_steps": 50,         # SDXL Refiner
-                    "guidance_scale": float(guidance),     # 7.5 Standard
-                    "high_noise_frac": 0.8,
-                    "scheduler": "K_EULER",
+                    "num_inference_steps": steps,          # Vom Wizard-Override oder Template-Default
+                    "refiner_inference_steps": refiner_steps,
+                    "guidance_scale": float(guidance),
+                    "high_noise_frac": high_noise_frac,
+                    "scheduler": scheduler,
                     "seed": seed if seed else 1337,
                     "num_images": num_images,
                     "image_url": None,                     # Img2Img: URL wird unten gesetzt

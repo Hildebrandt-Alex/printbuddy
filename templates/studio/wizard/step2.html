@@ -145,6 +145,65 @@
       </div>
     </div>
 
+    <!-- Modell-spezifische Parameter (dynamisch je nach Auswahl) -->
+    <div class="card" id="model-params" style="margin-bottom:1rem;display:none">
+      <div class="card-title">Erweiterte Parameter</div>
+      
+      <!-- FLUX Parameter -->
+      <div id="flux-params" class="model-param-group" style="display:none">
+        <div class="grid-2">
+          <div class="form-group">
+            <label>Steps <span style="color:var(--text-muted);font-size:.75rem">(Standard: 4)</span></label>
+            <input type="number" name="flux_steps" min="1" max="50" value="{{ post.flux_steps|default:'4' }}">
+            <div class="form-hint">FLUX Schnell optimiert für 1-4 Steps</div>
+          </div>
+          <div class="form-group">
+            <label>Guidance <span style="color:var(--text-muted);font-size:.75rem">(Standard: 0.0)</span></label>
+            <input type="number" name="flux_guidance" min="0" max="10" step="0.5" value="{{ post.flux_guidance|default:'0.0' }}">
+            <div class="form-hint">0.0 = ohne Guidance (FLUX empfohlen)</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SDXL Parameter -->
+      <div id="sdxl-params" class="model-param-group" style="display:none">
+        <div class="grid-2">
+          <div class="form-group">
+            <label>Base Steps <span style="color:var(--text-muted);font-size:.75rem">(Standard: 30)</span></label>
+            <input type="number" name="sdxl_steps" min="10" max="150" value="{{ post.sdxl_steps|default:'30' }}">
+            <div class="form-hint">Mehr Steps = bessere Qualität, länger</div>
+          </div>
+          <div class="form-group">
+            <label>Refiner Steps <span style="color:var(--text-muted);font-size:.75rem">(Standard: 50)</span></label>
+            <input type="number" name="sdxl_refiner_steps" min="10" max="150" value="{{ post.sdxl_refiner_steps|default:'50' }}">
+            <div class="form-hint">Refiner-Pass für Details</div>
+          </div>
+        </div>
+        <div class="grid-2">
+          <div class="form-group">
+            <label>Guidance <span style="color:var(--text-muted);font-size:.75rem">(Standard: 7.5)</span></label>
+            <input type="number" name="sdxl_guidance" min="1" max="20" step="0.5" value="{{ post.sdxl_guidance|default:'7.5' }}">
+            <div class="form-hint">Wie stark der Prompt befolgt wird</div>
+          </div>
+          <div class="form-group">
+            <label>Scheduler</label>
+            <select name="sdxl_scheduler">
+              <option value="K_EULER" {% if post.sdxl_scheduler == "K_EULER" or not post.sdxl_scheduler %}selected{% endif %}>K_EULER (Standard)</option>
+              <option value="DDIM" {% if post.sdxl_scheduler == "DDIM" %}selected{% endif %}>DDIM</option>
+              <option value="DPMSolverMultistep" {% if post.sdxl_scheduler == "DPMSolverMultistep" %}selected{% endif %}>DPM++ Multistep</option>
+              <option value="HeunDiscrete" {% if post.sdxl_scheduler == "HeunDiscrete" %}selected{% endif %}>Heun</option>
+              <option value="PNDM" {% if post.sdxl_scheduler == "PNDM" %}selected{% endif %}>PNDM</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>High Noise Fraction <span style="color:var(--text-muted);font-size:.75rem">(Standard: 0.8)</span></label>
+          <input type="number" name="sdxl_high_noise_frac" min="0.1" max="1.0" step="0.05" value="{{ post.sdxl_high_noise_frac|default:'0.8' }}">
+          <div class="form-hint">Wann Base → Refiner wechselt (0.8 = 80% Base, 20% Refiner)</div>
+        </div>
+      </div>
+    </div>
+
     <button type="submit" class="btn btn-primary" style="width:100%">Weiter → Details</button>
   </form>
 
@@ -167,15 +226,49 @@
 </div>
 
 <script>
+// Modell-Karten Selection
 document.querySelectorAll('input[name=model]').forEach(function(r) {
   r.addEventListener('change', function() {
     document.querySelectorAll('.model-card').forEach(c => c.classList.remove('selected'));
     document.getElementById('mcard_' + this.value).classList.add('selected');
+    updateModelParams(this.value);
   });
 });
+
+// Modell-spezifische Parameter anzeigen/verstecken
+function updateModelParams(model) {
+  const container = document.getElementById('model-params');
+  const fluxParams = document.getElementById('flux-params');
+  const sdxlParams = document.getElementById('sdxl-params');
+  
+  // Alle verstecken
+  fluxParams.style.display = 'none';
+  sdxlParams.style.display = 'none';
+  
+  // Passende anzeigen
+  if (model === 'flux_schnell' || model === 'flux_dev') {
+    fluxParams.style.display = 'block';
+    container.style.display = 'block';
+  } else if (model === 'sdxl') {
+    sdxlParams.style.display = 'block';
+    container.style.display = 'block';
+  } else {
+    container.style.display = 'none';
+  }
+}
+
+// Negativer Prompt Toggle
 function toggleNeg() {
   var b = document.getElementById('neg-block');
   b.style.display = b.style.display === 'none' ? 'block' : 'none';
 }
+
+// Beim Laden: korrekte Parameter-Sektion anzeigen
+document.addEventListener('DOMContentLoaded', function() {
+  const selectedModel = document.querySelector('input[name=model]:checked');
+  if (selectedModel) {
+    updateModelParams(selectedModel.value);
+  }
+});
 </script>
 {% endblock %}
