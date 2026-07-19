@@ -158,6 +158,7 @@ def generate_image(self, job_id: str):
             if is_sdxl:
                 # SDXL Worker 2.1.1 API-Contract (runpod-workers/worker-sdxl)
                 # Endpoint: vdjnfxf6h8q0ra
+                # Doku: https://github.com/runpod-workers/worker-sdxl
                 
                 # SDXL-spezifische Parameter aus Job.notes parsen (falls vom Wizard gesetzt)
                 refiner_steps = 50
@@ -175,20 +176,22 @@ def generate_image(self, job_id: str):
                     if scheduler_match: scheduler = scheduler_match.group(1)
                     if noise_match: high_noise_frac = float(noise_match.group(1))
                 
+                # SDXL Worker erwartet "input"-Wrapper mit spezifischen Keys
                 input_payload = {
                     "prompt": prompt,
                     "negative_prompt": negative_prompt,
                     "width": width,
                     "height": height,
-                    "num_inference_steps": steps,          # Vom Wizard-Override oder Template-Default
+                    "num_inference_steps": steps,
                     "refiner_inference_steps": refiner_steps,
                     "guidance_scale": float(guidance),
                     "high_noise_frac": high_noise_frac,
                     "scheduler": scheduler,
-                    "seed": seed if seed else 1337,
+                    "seed": seed if seed else -1,  # -1 = random für SDXL
                     "num_images": num_images,
-                    # Img2Img: "image" wird unten als base64 hinzugefügt (nicht image_url)
+                    "refine": "expert_ensemble_refiner",  # SDXL Refiner-Modus
                 }
+                logger.info(f"[RunPod/SDXL] Payload Keys: {list(input_payload.keys())}")
             else:
                 # FLUX Worker API-Contract
                 # FLUX Schnell: max. 8 Steps (optimiert für 1-4)
@@ -307,12 +310,26 @@ def generate_image(self, job_id: str):
                     time.sleep(3)
 
             if result is None:
-                logger.error(f"[RunPod] ⏱️ Result ist None nach {timeout_seconds}s — Letzter Status: {last_status}")
-                logger.error(f"[RunPod] Status-Data bei COMPLETED war: {status_data if last_status == 'COMPLETED' else 'N/A'}")
+                logger.error(f"[RunPod] ⏱️ Result ist None — Letzter Status: {last_status}")
+                logger.error(f"[RunPod] COMPLETED Response Keys: {list(status_data.keys())}")
+                logger.error(f"[RunPod] COMPLETED Full Response: {status_data}")
+                
+                # Letzter Versuch: Job direkt von RunPod abrufen (manchmal ist Output verzögert)
+                logger.info("[RunPod] Versuche direkten Job-Abruf...")
+                try:
+                    direct_resp = req.get(f"{base_url}/status/{run_id}", headers=headers, timeout=30)
+                    direct_data = direct_resp.json()
+                    logger.info(f"[RunPod] Direkter Abruf — Keys: {list(direct_data.keys())}")
+                    logger.info(f"[RunPod] Direkter Abruf — Full: {direct_data}")
+                except Exception as e:
+                    logger.error(f"[RunPod] Direkter Abruf fehlgeschlagen: {e}")
+                
                 raise ValueError(
-                    f"RunPod Job {run_id} — Output ist None trotz Status: {last_status}\n"
-                    f"Prüfe: https://www.runpod.io/console/serverless/user/jobs\n"
-                    f"Status-Response möglicherweise in falschem Format"
+                    f"RunPod Job {run_id} — Output fehlt komplett!\n"
+                    f"Status: {last_status}\n"
+                    f"Response hatte nur: {list(status_data.keys())}\n"
+                    f"SDXL Worker gibt möglicherweise kein Output zurück.\n"
+                    f"Prüfe: https://www.runpod.io/console/serverless/user/jobs/{run_id}"
                 )
 
             # Bild dekodieren + speichern
