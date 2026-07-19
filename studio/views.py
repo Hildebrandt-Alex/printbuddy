@@ -161,6 +161,10 @@ def job_list(request):
 def job_create(request):
     templates = PipelineTemplate.objects.filter(is_active=True).order_by("name")
     prompt_templates = PromptTemplate.objects.filter(is_public=True).order_by("category", "title")
+    # Projekte immer laden — wird in allen Returns benötigt
+    projects = Project.objects.filter(
+        models.Q(created_by=request.user) | models.Q(team_members=request.user)
+    ).distinct().order_by('title')
 
     if request.method == "POST":
         title          = request.POST.get("title", "").strip()
@@ -189,6 +193,7 @@ def job_create(request):
             return render(request, "studio/job_create.html", {
                 "templates": templates,
                 "prompt_templates": prompt_templates,
+                "projects": projects,
                 "post": request.POST,
             })
 
@@ -199,6 +204,7 @@ def job_create(request):
             return render(request, "studio/job_create.html", {
                 "templates": templates,
                 "prompt_templates": prompt_templates,
+                "projects": projects,
                 "post": request.POST,
             })
 
@@ -231,9 +237,6 @@ def job_create(request):
         messages.success(request, f"Job '{job.title}' angelegt. Admin muss ihn starten.")
         return redirect("studio:job_detail", job_id=job.id)
 
-    projects = Project.objects.filter(
-        models.Q(created_by=request.user) | models.Q(team_members=request.user)
-    ).distinct().order_by('title')
     return render(request, 'studio/job_create.html', {
         'templates': templates,
         'prompt_templates': prompt_templates,
@@ -347,9 +350,13 @@ def asset_select(request, job_id):
         file_path=f"exports/preview/{preview_filename}",
         is_public=False,  # Admin gibt explizit frei
         source_job_id=job.id,
+        project=job.project,  # Projekt vom Job erben
     )
 
-    generate_all_mockups.delay(str(gallery_image.id))
+    try:
+        generate_all_mockups.delay(str(gallery_image.id))
+    except Exception as exc:
+        logger.warning("[asset_select] generate_all_mockups.delay fehlgeschlagen: %s", exc)
 
     logger.info(
         "[asset_select] GalleryImage %s von User %s (Job %s)",
@@ -647,8 +654,28 @@ def wizard_confirm(request):
         ratio = details.get("aspect_ratio", "1:1")
         width, height = ASPECT_RATIOS.get(ratio, (1024, 1024))
 
+    # Projekte für Auswahl in Confirm-Form
+    user_projects = Project.objects.filter(
+        models.Q(created_by=request.user) | models.Q(team_members=request.user)
+    ).distinct().order_by('title')
+
+    def _get_default_project():
+        """'Allgemein'-Projekt als Fallback — wird in Data-Migration erstellt."""
+        return Project.objects.filter(slug='allgemein').first()
+
     if request.method == "POST":
         title = request.POST.get("title", f"{OUTPUT_TYPES[output_type]['label']} — {wizard['prompt'][:40]}").strip()
+
+        # Projekt zuordnen — Auswahl oder "Allgemein" als Default
+        project_id = request.POST.get("project_id", "").strip()
+        project = None
+        if project_id:
+            try:
+                project = Project.objects.get(id=project_id)
+            except Project.DoesNotExist:
+                pass
+        if project is None:
+            project = _get_default_project()
 
         try:
             template = _get_or_create_template(output_type, model)
@@ -666,6 +693,7 @@ def wizard_confirm(request):
         job = Job.objects.create(
             title=title,
             pipeline_template=template,
+            project=project,
             prompt=wizard["prompt"],
             negative_prompt=wizard.get("negative_prompt", ""),
             model=model,
@@ -692,6 +720,8 @@ def wizard_confirm(request):
         "width": width,
         "height": height,
         "details": details,
+        "user_projects": user_projects,
+        "default_project": _get_default_project(),
     })
 
 
