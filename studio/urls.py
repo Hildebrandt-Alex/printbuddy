@@ -12,6 +12,10 @@ urlpatterns = [
     path("jobs/<uuid:job_id>/results/",   views.job_results,         name="job_results"),
     path("jobs/<uuid:job_id>/select/",    views.asset_select,        name="asset_select"),
     path("prompts/",                      views.prompt_library,      name="prompt_library"),
+    
+    # Knowledge Base
+    path("knowledge/models/",             views.knowledge_models,    name="knowledge_models"),
+    path("knowledge/it/",                 views.knowledge_it,        name="knowledge_it"),
 
     # Guided Wizard (Haupteinstieg)
     path("create/",          views.wizard_step1,   name="wizard_step1"),

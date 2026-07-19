@@ -698,6 +698,65 @@ refactor: Umstrukturierung ohne Funktionsänderung
 
 **Test-Gate:** Bilder in Results sichtbar und selektierbar. Status-Update nach ≤ 3s ohne Page-Reload.
 
+### Phase 6.5 — Studio Extended: Knowledge Base (Woche 5–6)
+
+**Status:** ✅ **Completed** (19. Juli 2026)
+
+1. ✅ Knowledge Modelle (`/studio/knowledge/models/`)
+   - Ordnerverzeichnis-Struktur mit aufklappbaren `<details>`
+   - Alle Produktions-Modelle erklärt (FLUX Schnell, SDXL)
+   - Alle Test-Modelle (FLUX Dev mit Lizenz-Warnung)
+   - Weitere Open-Source Modelle (SD 1.5, SDXL Turbo, Stable Cascade, PixArt-Σ)
+   - Proprietäre Modelle (DALL-E 3, Midjourney, Adobe Firefly)
+   - Custom LoRAs erklärt
+   - Parameter-Erklärungen (Steps, Guidance, Seed, Negative Prompt, Aspect Ratio)
+   - **Alle Pipeline-Typen erklärt:**
+     - ✅ Text-to-Image (Implementiert)
+     - 🟡 Image-to-Image (In Planung)
+     - 🔴 Inpainting (Future)
+     - 🔴 ControlNet (Future)
+     - 🟡 Multi-Image Compositing (In Planung)
+     - ✅ Upscaling Real-ESRGAN (Implementiert)
+     - 🔴 Video-Generierung AnimateDiff/SVD (Future)
+     - 🔴 3D-Generierung Shap-E (Research)
+   - Prompt Engineering Best Practices
+
+2. ✅ Knowledge IT (`/studio/knowledge/it/`)
+   - Komponenten-Übersicht (VPS, NAS, RunPod, Tailscale)
+   - Django Apps & Models erklärt
+   - NAS Ordnerstruktur mit File-Tree Visualisierung
+   - Tailscale VPN Konfiguration
+   - **"Wo was ändern?" Developer-Guide:**
+     - Frontend (Templates, Styling)
+     - Backend (Views, Models, Migrations)
+     - GPU-Pipeline (Tasks, RunPod)
+     - NAS Struktur (Permissions)
+     - VPS Server (Nginx, Gunicorn, Celery, systemd)
+   - Wichtige Parameter & Environment-Variablen
+   - Tech-Stack Vergleich: Was & Warum + Upgrade-Szenarien
+   - Konten & Zugänge (Django-Rollen, Linux-User, Synology, Externe Dienste)
+
+3. ✅ Navigation erweitert
+   - Studio Nav-Bar: `📚 Modelle` und `⚙️ IT` Links
+   - Routes: `/studio/knowledge/models/` und `/studio/knowledge/it/`
+   - Views: `knowledge_models`, `knowledge_it` in `studio/views.py`
+
+**Test-Gate:** 
+- [x] Knowledge-Seiten im Studio erreichbar
+- [x] Alle Modelle (aktuelle + zukünftige) dokumentiert
+- [x] Alle Pipeline-Typen mit Status-Badges (✅🟡🔴) erklärt
+- [x] Developer-Guide vollständig (wo welche Änderung welche Wirkung hat)
+- [x] Aufklappbare Navigation funktioniert ohne JavaScript (HTML5 `<details>`)
+- [x] Dark Theme konsistent mit Studio-Design
+- [x] Mobile-responsive
+
+**Nächste Phase 6.5 Steps (noch offen):**
+- [ ] Priority 1: Projekt-System (Model + UI + Asset-Management)
+- [ ] Priority 3: Fotografie-Features (Img2Img, Compositing, Inpainting)
+- [ ] Priority 4: Quick Adjustments (Color sliders, Background removal)
+- [ ] Priority 5: Vertrieb (Printful Tiefen-Integration, Etsy-Recherche)
+- [ ] Priority 6: Backend-Dokumentation (Admin help texts)
+
 ### Phase 7 — Merch-Shop (Woche 6–7)
 
 1. `ProductListView`, `ProductDetailView`, `CartView` (Session-basiert)

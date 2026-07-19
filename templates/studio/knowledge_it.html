@@ -1,0 +1,826 @@
+{% extends "studio/base.html" %}
+
+{% block title %}Knowledge: IT & System{% endblock %}
+
+{% block extra_head %}
+<style>
+  .knowledge-container {
+    max-width: 1000px;
+    margin: 0 auto;
+  }
+  
+  .kb-intro {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+  }
+  
+  .kb-intro h2 {
+    font-size: 1.3rem;
+    margin-bottom: 0.75rem;
+    color: var(--accent2);
+  }
+  
+  .kb-intro p {
+    color: var(--text-muted);
+    line-height: 1.6;
+    margin-bottom: 0.5rem;
+  }
+  
+  /* Folder Tree */
+  .folder-tree {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  
+  details {
+    border-bottom: 1px solid var(--border);
+  }
+  
+  details:last-child {
+    border-bottom: none;
+  }
+  
+  summary {
+    padding: 1rem 1.25rem;
+    cursor: pointer;
+    user-select: none;
+    font-weight: 600;
+    font-size: 1rem;
+    color: var(--text);
+    background: var(--surface);
+    transition: background 0.15s;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+  
+  summary:hover {
+    background: var(--surface2);
+  }
+  
+  summary::marker {
+    content: "▶ ";
+    color: var(--accent);
+  }
+  
+  details[open] > summary::marker {
+    content: "▼ ";
+  }
+  
+  .folder-icon {
+    font-size: 1.2rem;
+  }
+  
+  .folder-content {
+    padding: 0 1.25rem 1.25rem 2.5rem;
+    background: var(--bg);
+  }
+  
+  .info-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    font-size: 0.875rem;
+    line-height: 1.6;
+  }
+  
+  .info-card:last-child {
+    margin-bottom: 0;
+  }
+  
+  .info-card h4 {
+    color: var(--accent2);
+    margin-bottom: 0.5rem;
+    font-size: 1rem;
+  }
+  
+  .info-card strong {
+    color: var(--text);
+  }
+  
+  .info-card code {
+    background: var(--bg);
+    padding: 0.15rem 0.4rem;
+    border-radius: 3px;
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 0.85em;
+    color: var(--accent2);
+  }
+  
+  .component-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+    margin-top: 1rem;
+  }
+  
+  .component-box {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 1rem;
+  }
+  
+  .component-title {
+    font-weight: 700;
+    color: var(--accent2);
+    margin-bottom: 0.5rem;
+    font-size: 0.95rem;
+  }
+  
+  .component-desc {
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    line-height: 1.4;
+  }
+  
+  .file-tree {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 1rem;
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 0.8rem;
+    line-height: 1.6;
+    overflow-x: auto;
+  }
+  
+  .file-tree .folder {
+    color: var(--accent2);
+    font-weight: 600;
+  }
+  
+  .file-tree .file {
+    color: var(--text-muted);
+  }
+  
+  .file-tree .comment {
+    color: var(--green);
+  }
+  
+  .warning-box {
+    background: #78350f;
+    border: 1px solid var(--yellow);
+    border-radius: 6px;
+    padding: 1rem;
+    margin-top: 1rem;
+    font-size: 0.85rem;
+    line-height: 1.5;
+    color: #fde68a;
+  }
+  
+  .warning-box strong {
+    color: #fff;
+  }
+  
+  .action-table {
+    width: 100%;
+    margin-top: 1rem;
+    font-size: 0.8rem;
+  }
+  
+  .action-table th {
+    background: var(--bg);
+    font-weight: 600;
+    color: var(--accent2);
+    text-align: left;
+    padding: 0.5rem;
+  }
+  
+  .action-table td {
+    padding: 0.5rem;
+    vertical-align: top;
+  }
+  
+  .action-table code {
+    background: var(--bg);
+    padding: 0.15rem 0.4rem;
+    border-radius: 3px;
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 0.85em;
+    color: var(--accent2);
+  }
+  
+  @media (max-width: 768px) {
+    .component-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="knowledge-container">
+  <div class="page-header">
+    <h1>⚙️ Knowledge: IT & System</h1>
+  </div>
+  
+  <div class="kb-intro">
+    <h2>PrintBuddy System-Architektur</h2>
+    <p>
+      <strong>Übersicht:</strong> PrintBuddy ist eine Django-Applikation, die auf einem 
+      Hetzner VPS läuft und mit einem NAS-Homeserver (Synology) via Tailscale VPN verbunden ist. 
+      GPU-Workloads laufen auf RunPod (Cloud GPU), CPU-Tasks lokal auf dem VPS.
+    </p>
+    <p>
+      <strong>Daten-Flow:</strong> 
+      Studio (Browser) → VPS (Django) → Celery → RunPod (GPU) → NAS (Storage) → Nginx (Delivery)
+    </p>
+  </div>
+  
+  <div class="folder-tree">
+    
+    <!-- Komponenten-Übersicht -->
+    <details open>
+      <summary>
+        <span class="folder-icon">🏗️</span>
+        <span>Komponenten-Übersicht</span>
+      </summary>
+      <div class="folder-content">
+        
+        <div class="component-grid">
+          <div class="component-box">
+            <div class="component-title">🌐 Hetzner VPS</div>
+            <div class="component-desc">
+              <strong>IP:</strong> 67.86.108.37<br>
+              <strong>OS:</strong> Ubuntu 22.04 LTS<br>
+              <strong>CPU:</strong> 4 vCores<br>
+              <strong>RAM:</strong> 8 GB<br>
+              <strong>Rolle:</strong> Django, PostgreSQL, Redis, Celery CPU-Worker, Nginx
+            </div>
+          </div>
+          
+          <div class="component-box">
+            <div class="component-title">💾 Synology NAS</div>
+            <div class="component-desc">
+              <strong>Modell:</strong> DS925+<br>
+              <strong>Mount:</strong> /mnt/agency_nas<br>
+              <strong>Protokoll:</strong> NFSv4 via Tailscale<br>
+              <strong>Rolle:</strong> Langzeit-Storage, Druckdatei-Bundles, Backups
+            </div>
+          </div>
+          
+          <div class="component-box">
+            <div class="component-title">🚀 RunPod (GPU)</div>
+            <div class="component-desc">
+              <strong>Region:</strong> EU (Niederlande)<br>
+              <strong>GPU:</strong> On-Demand (A4000/A5000)<br>
+              <strong>Kosten:</strong> ~€0.03–0.04 pro Bild<br>
+              <strong>Rolle:</strong> FLUX/SDXL Generierung, Upscaling
+            </div>
+          </div>
+          
+          <div class="component-box">
+            <div class="component-title">🔐 Tailscale VPN</div>
+            <div class="component-desc">
+              <strong>Network:</strong> 100.x.x.x (privat)<br>
+              <strong>Verbindung:</strong> VPS ↔ NAS<br>
+              <strong>Rolle:</strong> Sichere NFS-Verbindung ohne öffentliche Ports
+            </div>
+          </div>
+        </div>
+        
+        <div class="info-card" style="margin-top: 1rem;">
+          <h4>Warum diese Stack-Wahl?</h4>
+          <strong>VPS statt eigener Server:</strong> Niedrige Fixkosten, einfaches Backup, professionelle Uptime.<br>
+          <strong>RunPod statt eigene GPU:</strong> Nur zahlen wenn generiert wird. Keine Hardware-Wartung.<br>
+          <strong>NAS via Tailscale:</strong> Günstig (einmalig €500 statt Cloud-Abo), hohe Kapazität, volle Kontrolle.<br>
+          <strong>PostgreSQL lokal:</strong> Niedrige Latenz, kein externes DB-Abo nötig.
+        </div>
+        
+      </div>
+    </details>
+    
+    <!-- Django Apps & Models -->
+    <details>
+      <summary>
+        <span class="folder-icon">📦</span>
+        <span>Django Apps & Models</span>
+      </summary>
+      <div class="folder-content">
+        
+        <div class="info-card">
+          <h4>jobs — Job-Pipeline & Templates</h4>
+          <strong>Models:</strong> <code>PipelineTemplate</code>, <code>Job</code>, <code>JobStep</code>, <code>PromptTemplate</code><br>
+          <strong>Zweck:</strong> Steuerung der Generierungs-Pipeline.<br>
+          <strong>Wichtige Felder:</strong><br>
+          • <code>Job.status</code> — draft/queued/running/done/failed<br>
+          • <code>Job.created_by</code> — FK zu User (Studio-Worker)<br>
+          • <code>PipelineTemplate.default_model</code> — flux_schnell/sdxl/flux_dev
+        </div>
+        
+        <div class="info-card">
+          <h4>gallery — Öffentliche Galerie</h4>
+          <strong>Models:</strong> <code>GalleryImage</code><br>
+          <strong>Zweck:</strong> Öffentliche Landing Page, kuratierte Bilder.<br>
+          <strong>Wichtige Felder:</strong><br>
+          • <code>is_public</code> — Admin-Freigabe (Boolean)<br>
+          • <code>file_path</code> — Pfad relativ zu NAS-Root<br>
+          • <code>source_job_id</code> — UUID (loses Coupling, kein FK)
+        </div>
+        
+        <div class="info-card">
+          <h4>shop — Merch-Shop & Bestellungen</h4>
+          <strong>Models:</strong> <code>Product</code>, <code>ProductVariant</code>, <code>Order</code>, <code>OrderLine</code><br>
+          <strong>Zweck:</strong> E-Commerce, Stripe Integration, Printful Fulfillment.<br>
+          <strong>Wichtige Felder:</strong><br>
+          • <code>Order.stripe_session_id</code> — Stripe Checkout Session<br>
+          • <code>Order.status</code> — pending/paid/processing/shipped<br>
+          • <code>ProductVariant.printful_variant_id</code> — Externe Produkt-ID
+        </div>
+        
+        <div class="info-card">
+          <h4>gpu — Celery GPU-Tasks</h4>
+          <strong>Tasks:</strong> <code>generate_image</code>, <code>upscale_image</code><br>
+          <strong>Queue:</strong> <code>gpu_queue</code> (Concurrency=1)<br>
+          <strong>Zweck:</strong> RunPod API-Calls für Generierung & Upscaling.
+        </div>
+        
+        <div class="info-card">
+          <h4>postprocess — CPU-Tasks</h4>
+          <strong>Tasks:</strong> <code>cmyk_export</code>, <code>pod_export</code>, <code>preview_export</code>, <code>vectorize_image</code>, <code>mockup_gen</code><br>
+          <strong>Queue:</strong> <code>cpu_queue</code> (Concurrency=2)<br>
+          <strong>Zweck:</strong> VPS-seitige Bild-Verarbeitung (Pillow, Inkscape, Ghostscript).
+        </div>
+        
+        <div class="info-card">
+          <h4>channels — Sales-Channels</h4>
+          <strong>Models:</strong> <code>SalesChannel</code><br>
+          <strong>Zweck:</strong> Abstraktion für Shop, Etsy, WooCommerce, Shopify, manuelle Bestellungen.<br>
+          <strong>Wichtige Felder:</strong><br>
+          • <code>channel_type</code> — own_shop/etsy/woocommerce/shopify/manual<br>
+          • <code>webhook_url</code> — Wo Bestellbestätigungen gepusht werden
+        </div>
+        
+        <div class="info-card">
+          <h4>partners — Fulfillment-Partner</h4>
+          <strong>Models:</strong> <code>FulfillmentPartner</code>, <code>PartnerProduct</code>, <code>PartnerVariant</code><br>
+          <strong>Zweck:</strong> Lokale Druckstudios als alternative Fulfillment-Option.<br>
+          <strong>Wichtige Felder:</strong><br>
+          • <code>FulfillmentPartner.user</code> — OneToOne zu Django-User (Login)<br>
+          • <code>PartnerVariant.is_available</code> — Produkt aktuell lieferbar?
+        </div>
+        
+      </div>
+    </details>
+    
+    <!-- NAS Ordnerstruktur -->
+    <details>
+      <summary>
+        <span class="folder-icon">📂</span>
+        <span>NAS Ordnerstruktur (Homeserver)</span>
+      </summary>
+      <div class="folder-content">
+        
+        <div class="info-card">
+          <h4>Mount-Point auf VPS</h4>
+          <code>/mnt/agency_nas/</code> — NFSv4 via Tailscale<br>
+          <strong>User:</strong> <code>printbuddy-nas</code> (UID=1024)<br>
+          <strong>Permissions:</strong> Ordner <code>drwxr-xr-x</code> (0755), Dateien <code>rw-r--r--</code> (0644)
+        </div>
+        
+        <div class="file-tree">
+<span class="folder">📁 /mnt/agency_nas/</span>
+  <span class="folder">📁 raw/</span>                    <span class="comment"># GPU-Roh-Outputs (vollaufgelöst)</span>
+    <span class="file">├─ {uuid}.png</span>           <span class="comment"># FLUX/SDXL Original-Output</span>
+    <span class="file">└─ {uuid}_upscaled.png</span>  <span class="comment"># Real-ESRGAN 4x Upscale</span>
+  
+  <span class="folder">📁 exports/</span>
+    <span class="folder">📁 pod/</span>                <span class="comment"># PNG 300dpi sRGB (Printful-ready)</span>
+    <span class="folder">📁 offset/</span>             <span class="comment"># CMYK TIFF + PDF/X-4 (Offset-Druck)</span>
+      <span class="file">├─ {uuid}.tif</span>       <span class="comment"># TIFF mit 3mm Bleed</span>
+      <span class="file">└─ {uuid}.pdf</span>       <span class="comment"># PDF/X-4 Standard</span>
+    <span class="folder">📁 preview/</span>            <span class="comment"># JPG 72dpi max 1200px (Web)</span>
+      <span class="file">└─ {uuid}_preview.jpg</span>
+    <span class="folder">📁 vector/</span>             <span class="comment"># SVG (Inkscape CLI Output)</span>
+      <span class="file">└─ {uuid}.svg</span>
+  
+  <span class="folder">📁 gallery/</span>               <span class="comment"># Kuratierte öffentliche Bilder</span>
+    <span class="file">├─ full/{slug}.jpg</span>    <span class="comment"># Original hochauflösend</span>
+    <span class="file">└─ thumbs/{slug}.jpg</span>  <span class="comment"># 600x600 Thumbnail</span>
+  
+  <span class="folder">📁 bundles/</span>               <span class="comment"># ZIP-Druckdatei-Bundles je Order</span>
+    <span class="file">└─ order_{uuid}.zip</span>   <span class="comment"># Alle Export-Typen für Bestellung</span>
+  
+  <span class="folder">📁 backups/</span>
+    <span class="folder">📁 db/</span>                 <span class="comment"># pg_dump täglich 02:00</span>
+    <span class="folder">📁 media/</span>              <span class="comment"># Django media/ wöchentlich</span>
+        </div>
+        
+        <div class="warning-box">
+          <strong>⚠️ NAS-Zugriff für Studio-Worker:</strong><br>
+          Studio-Worker sehen NUR die Preview-Bilder via Nginx (<code>/media/exports/preview/</code>).<br>
+          Direkter NAS-Zugriff nur für VPS-Prozesse (Django, Celery).<br>
+          Kein FTP/SFTP für externe User!
+        </div>
+        
+      </div>
+    </details>
+    
+    <!-- Tailscale Konfiguration -->
+    <details>
+      <summary>
+        <span class="folder-icon">🔐</span>
+        <span>Tailscale VPN — Netzwerk & Konten</span>
+      </summary>
+      <div class="folder-content">
+        
+        <div class="info-card">
+          <h4>Was ist Tailscale?</h4>
+          <strong>Zweck:</strong> Sicheres, verschlüsseltes VPN zwischen VPS und NAS.<br>
+          <strong>Vorteil:</strong> Keine öffentlichen NFS-Ports nötig. WireGuard-basiert (schnell, sicher).<br>
+          <strong>Network:</strong> 100.x.x.x (privates Mesh-Netzwerk)
+        </div>
+        
+        <div class="info-card">
+          <h4>Registrierte Geräte im Tailscale-Netz</h4>
+          <strong>1. Hetzner VPS (printbuddy-vps)</strong><br>
+          • Tailscale IP: <code>100.x.x.x</code> (variabel)<br>
+          • Hostname: <code>printbuddy-vps</code><br>
+          • Rolle: Client (mountet NAS via NFS)<br>
+          <br>
+          <strong>2. Synology NAS (printbuddy-nas)</strong><br>
+          • Tailscale IP: <code>100.y.y.y</code> (variabel)<br>
+          • Hostname: <code>printbuddy-nas</code><br>
+          • Rolle: Server (expose NFSv4 im Tailscale-Netz)<br>
+          <br>
+          <strong>3. Lokaler Dev-Rechner (optional)</strong><br>
+          • Für Admins: Direkter SSH-Zugang zum VPS via Tailscale<br>
+          • Für NAS-Maintenance: Synology DSM Web-UI via Tailscale IP
+        </div>
+        
+        <div class="info-card">
+          <h4>NFS Mount-Konfiguration</h4>
+          <strong>VPS /etc/fstab:</strong><br>
+          <code>
+          100.y.y.y:/volume1/agency_nas /mnt/agency_nas nfs4 defaults,_netdev 0 0
+          </code><br>
+          <br>
+          <strong>NAS NFS-Freigabe (Synology DSM):</strong><br>
+          • Shared Folder: <code>agency_nas</code><br>
+          • NFS-Berechtigung: nur <code>100.x.x.x</code> (VPS Tailscale IP)<br>
+          • Squash: No root squash (UID=1024 mapped zu <code>printbuddy-nas</code> User)
+        </div>
+        
+        <div class="warning-box">
+          <strong>🚨 Sicherheit:</strong><br>
+          NAS ist NICHT öffentlich erreichbar!<br>
+          Nur über Tailscale VPN zugänglich.<br>
+          Keine Ports (80/443/22/2049) im Router forwarded.
+        </div>
+        
+      </div>
+    </details>
+    
+    <!-- Wo was ändern -->
+    <details open>
+      <summary>
+        <span class="folder-icon">🛠️</span>
+        <span>Wo was ändern? — Entwickler-Guides</span>
+      </summary>
+      <div class="folder-content">
+        
+        <div class="info-card">
+          <h4>🎨 Frontend (Studio UI) ändern</h4>
+          <strong>Dateien:</strong> <code>templates/studio/*.html</code><br>
+          <strong>Styling:</strong> Inline-CSS in <code>templates/studio/base.html</code> (<code>&lt;style&gt;</code>)<br>
+          <strong>Neustart nötig?</strong> Nein (DEBUG=True), Ja (Produktion → <code>collectstatic</code>)<br>
+          <br>
+          <strong>Beispiel: Navigation erweitern</strong><br>
+          <code>templates/studio/base.html</code> → <code>&lt;nav&gt;</code> Block<br>
+          Link hinzufügen: <code>&lt;a href="{% url 'studio:neue_view' %}"&gt;Label&lt;/a&gt;</code>
+        </div>
+        
+        <div class="info-card">
+          <h4>⚙️ Backend (Django Logic) ändern</h4>
+          <strong>Views:</strong> <code>studio/views.py</code>, <code>shop/views.py</code> etc.<br>
+          <strong>Models:</strong> <code>jobs/models.py</code>, <code>gallery/models.py</code> etc.<br>
+          <strong>Services:</strong> <code>jobs/services.py</code> (komplexe Business-Logik)<br>
+          <br>
+          <strong>Nach Änderungen:</strong><br>
+          1. <code>python manage.py makemigrations</code> (bei Model-Änderungen)<br>
+          2. <code>python manage.py migrate</code><br>
+          3. <code>sudo systemctl restart gunicorn</code> (Produktion)<br>
+          4. Bei Celery-Tasks: <code>sudo systemctl restart celery-gpu celery-cpu</code>
+        </div>
+        
+        <div class="info-card">
+          <h4>🚀 GPU-Pipeline ändern</h4>
+          <strong>Tasks:</strong> <code>gpu/tasks.py</code> (<code>generate_image</code>, <code>upscale_image</code>)<br>
+          <strong>RunPod Config:</strong> Env-Vars in <code>.env</code> (<code>RUNPOD_API_KEY</code>, <code>RUNPOD_ENDPOINT_ID</code>)<br>
+          <br>
+          <strong>Beispiel: Neues Modell hinzufügen</strong><br>
+          1. RunPod Endpoint erstellen mit neuem Modell<br>
+          2. <code>jobs/models.py</code> → <code>PipelineTemplate.default_model</code> Choices erweitern<br>
+          3. <code>gpu/tasks.py</code> → <code>generate_image</code> Model-Handling anpassen<br>
+          4. Migration + Celery-Restart
+        </div>
+        
+        <div class="info-card">
+          <h4>💾 NAS Ordnerstruktur ändern</h4>
+          <strong>Ort:</strong> Synology DSM → File Station → <code>agency_nas</code><br>
+          <strong>Wichtig:</strong> Permissions beachten! <code>chmod 755</code> für Ordner, <code>644</code> für Dateien.<br>
+          <br>
+          <strong>Nach Struktur-Änderung:</strong><br>
+          • <code>settings.py</code> → <code>NAS_BASE_PATH</code> anpassen (falls Root ändert)<br>
+          • Tasks in <code>gpu/</code> und <code>postprocess/</code> überprüfen (hardcoded Pfade?)<br>
+          • <code>copilot-instructions.md</code> → Section 6 aktualisieren
+        </div>
+        
+        <div class="info-card">
+          <h4>🌐 VPS Server-Konfiguration</h4>
+          <strong>Nginx:</strong> <code>/etc/nginx/sites-available/printbuddy</code><br>
+          <strong>Gunicorn:</strong> <code>/etc/systemd/system/gunicorn-printbuddy.service</code><br>
+          <strong>Celery:</strong> <code>/etc/systemd/system/celery-printbuddy-gpu.service</code> + <code>cpu.service</code><br>
+          <strong>PostgreSQL:</strong> <code>localhost:5432</code> (nur lokal erreichbar)<br>
+          <strong>Redis:</strong> <code>localhost:6379</code> (nur lokal erreichbar)<br>
+          <br>
+          <strong>Nach Config-Änderung:</strong><br>
+          • <code>sudo systemctl daemon-reload</code> (bei systemd-Änderungen)<br>
+          • <code>sudo systemctl restart SERVICE_NAME</code><br>
+          • <code>sudo nginx -t && sudo systemctl reload nginx</code> (Nginx-Config-Test)
+        </div>
+        
+        <div class="warning-box">
+          <strong>⚠️ WICHTIG — Wirkung von Änderungen:</strong><br>
+          • <strong>Frontend (HTML/CSS):</strong> Nur Browser-Refresh (dev), <code>collectstatic</code> (prod)<br>
+          • <strong>Backend (Views/Models):</strong> Gunicorn-Restart (prod)<br>
+          • <strong>Celery-Tasks:</strong> Celery-Workers-Restart (gpu+cpu)<br>
+          • <strong>Systemd-Services:</strong> <code>daemon-reload</code> + Service-Restart<br>
+          • <strong>NAS-Struktur:</strong> Kein Restart, aber Code anpassen (Pfade!)
+        </div>
+        
+      </div>
+    </details>
+    
+    <!-- Wichtige Parameter -->
+    <details>
+      <summary>
+        <span class="folder-icon">🎛️</span>
+        <span>Wichtige Parameter & Environment-Variablen</span>
+      </summary>
+      <div class="folder-content">
+        
+        <div class="info-card">
+          <h4>Django Settings (.env)</h4>
+          <code>SECRET_KEY</code> — Django-Sicherheit (>= 50 Zeichen, zufällig)<br>
+          <code>DEBUG</code> — <strong style="color: var(--red);">MUSS False sein in Produktion!</strong><br>
+          <code>ALLOWED_HOSTS</code> — Domain (datemyhobby.com)<br>
+          <code>DATABASE_URL</code> — PostgreSQL Connection String<br>
+          <br>
+          <strong>⚠️ NIE in Git committen!</strong> Nur <code>.env.example</code> im Repo.
+        </div>
+        
+        <div class="info-card">
+          <h4>RunPod (GPU)</h4>
+          <code>RUNPOD_API_KEY</code> — API-Key von RunPod Dashboard<br>
+          <code>RUNPOD_ENDPOINT_ID</code> — Serverless Endpoint ID (FLUX Schnell)<br>
+          <code>RUNPOD_UPSCALE_ENDPOINT</code> — Real-ESRGAN Endpoint ID<br>
+          <br>
+          <strong>Kosten-Kontrolle:</strong> RunPod Dashboard → Billing & Usage
+        </div>
+        
+        <div class="info-card">
+          <h4>Stripe (Zahlungen)</h4>
+          <code>STRIPE_SECRET_KEY</code> — <code>sk_live_...</code> (Produktion) / <code>sk_test_...</code> (Dev)<br>
+          <code>STRIPE_WEBHOOK_SECRET</code> — <code>whsec_...</code> (Webhook-Signatur-Verifikation)<br>
+          <code>STRIPE_PUBLISHABLE_KEY</code> — <code>pk_live_...</code> / <code>pk_test_...</code><br>
+          <br>
+          <strong style="color: var(--red);">🚨 KRITISCH:</strong> <code>construct_event()</code> in <code>stripe_webhook</code> NIEMALS deaktivieren!
+        </div>
+        
+        <div class="info-card">
+          <h4>Printful (Fulfillment)</h4>
+          <code>PRINTFUL_API_KEY</code> — API-Key von Printful Dashboard<br>
+          <br>
+          <strong>Mock API (Test):</strong> Printful bietet Sandbox-Modus für Tests ohne echte Bestellungen.
+        </div>
+        
+        <div class="info-card">
+          <h4>Celery Queues</h4>
+          <code>gpu_queue</code> — Concurrency=1 (RunPod ist rate-limited)<br>
+          <code>cpu_queue</code> — Concurrency=2 (VPS CPU-Tasks)<br>
+          <br>
+          <strong>Queue-Monitoring:</strong> Flower (<code>http://vps-ip:5555</code> mit HTTP-Auth)
+        </div>
+        
+      </div>
+    </details>
+    
+    <!-- Tech-Stack Vergleich -->
+    <details>
+      <summary>
+        <span class="folder-icon">⚖️</span>
+        <span>Tech-Stack: Was & Warum — Upgrade-Szenarien</span>
+      </summary>
+      <div class="folder-content">
+        
+        <div class="info-card">
+          <h4>Django 4.2 LTS</h4>
+          <strong>Gewählt weil:</strong><br>
+          • Mature, stabil, große Community<br>
+          • ORM + Admin-UI out-of-the-box<br>
+          • Gut für monolithische Architektur (kein Microservices-Overhead)<br>
+          <br>
+          <strong>Alternative wäre gewesen:</strong> FastAPI (Async, API-first) → aber mehr manueller Setup-Aufwand<br>
+          <br>
+          <strong style="color: var(--accent2);">Upgrade-Szenario:</strong><br>
+          Django 5.x → LTS-Pfad weiter (2026: Django 5.2 LTS).<br>
+          Nur upgraden wenn kritische Security-Fixes oder neue Features benötigt.
+        </div>
+        
+        <div class="info-card">
+          <h4>PostgreSQL 15</h4>
+          <strong>Gewählt weil:</strong><br>
+          • Open Source, DSGVO-konform (lokale Kontrolle)<br>
+          • JSON-Support für flexible Felder (<code>JSONField</code>)<br>
+          • Deutlich performanter als MySQL für Django ORM<br>
+          <br>
+          <strong>Alternative wäre gewesen:</strong> MySQL → aber schlechtere Django-Integration, keine JSON-Aggregates<br>
+          <br>
+          <strong style="color: var(--accent2);">Upgrade-Szenario:</strong><br>
+          PostgreSQL 16/17 → Minor-Upgrades safe. Major-Version-Upgrade nur wenn neue Features kritisch (z.B. Performance).
+        </div>
+        
+        <div class="info-card">
+          <h4>Celery 5 + Redis 7</h4>
+          <strong>Gewählt weil:</strong><br>
+          • Best Practice für asynchrone Tasks in Django<br>
+          • Redis schneller als RabbitMQ für kleine/mittlere Workloads<br>
+          • Einfaches Monitoring (Flower)<br>
+          <br>
+          <strong>Alternative wäre gewesen:</strong> Django-Q oder Huey → aber weniger Community-Support<br>
+          <br>
+          <strong style="color: var(--accent2);">Upgrade-Szenario:</strong><br>
+          Redis Sentinel/Cluster → Nur wenn HA (High Availability) kritisch wird (>10k Jobs/Tag).<br>
+          RabbitMQ → Nur wenn komplexere Task-Routing-Logik benötigt.
+        </div>
+        
+        <div class="info-card">
+          <h4>Hetzner VPS</h4>
+          <strong>Gewählt weil:</strong><br>
+          • DSGVO-konform (DE Datacenter)<br>
+          • Günstig (~€10–20/Monat für 4 vCores, 8 GB RAM)<br>
+          • Root-Zugang (volle Kontrolle)<br>
+          <br>
+          <strong>Alternative wäre gewesen:</strong> AWS/GCP/Azure → aber deutlich teurer, Vendor Lock-in<br>
+          <br>
+          <strong style="color: var(--accent2);">Upgrade-Szenario:</strong><br>
+          Dedicated Server (Hetzner AX-Serie) → Wenn VPS-CPU-Limit erreicht (>500 Orders/Tag).<br>
+          Kubernetes → Nur wenn Multi-Region-Deployment kritisch wird.
+        </div>
+        
+        <div class="info-card">
+          <h4>RunPod On-Demand GPU</h4>
+          <strong>Gewählt weil:</strong><br>
+          • Nur zahlen wenn generiert wird (~€0.03–0.04 pro Bild)<br>
+          • Keine Wartezeiten bei Spot-Instanzen<br>
+          • EU-Region verfügbar (Niederlande)<br>
+          <br>
+          <strong>Alternative wäre gewesen:</strong> Eigener GPU-Server (Hetzner GX2-15, ~€107/Mo) → break-even bei ~200 Jobs/Monat<br>
+          <br>
+          <strong style="color: var(--accent2);">Upgrade-Szenario:</strong><br>
+          Hetzner GPU-Dedicated → Wenn regelmäßig >300 Bilder/Monat generiert werden (Kosten-Break-even).<br>
+          Vast.ai Fallback bleibt als Backup.
+        </div>
+        
+        <div class="info-card">
+          <h4>NAS via Tailscale</h4>
+          <strong>Gewählt weil:</strong><br>
+          • Einmalig €500 statt Cloud-Abo (€20+/Monat)<br>
+          • Volle Kontrolle, hohe Kapazität (4+ TB)<br>
+          • Tailscale = sicher ohne öffentliche Ports<br>
+          <br>
+          <strong>Alternative wäre gewesen:</strong> S3 (AWS) oder Hetzner Storage Box → aber laufende Kosten, kein lokaler Zugriff<br>
+          <br>
+          <strong style="color: var(--accent2);">Upgrade-Szenario:</strong><br>
+          S3-Migration → Nur wenn NAS-Heimanschluss zum Problem wird (z.B. Umzug, Downtime).<br>
+          Hybrid: NAS primär, S3 als Backup (z.B. via <code>rclone sync</code>).
+        </div>
+        
+        <div class="warning-box">
+          <strong>💡 Upgrade-Philosophie:</strong><br>
+          "Don't fix what isn't broken."<br>
+          Upgrades nur wenn:<br>
+          1. Security-Patches kritisch<br>
+          2. Performance wird zum Bottleneck (messbar!)<br>
+          3. Neue Features business-kritisch<br>
+          <br>
+          Kein Upgrade nur wegen "neueste Version".
+        </div>
+        
+      </div>
+    </details>
+    
+    <!-- Konten-Übersicht -->
+    <details>
+      <summary>
+        <span class="folder-icon">👤</span>
+        <span>Konten & Zugänge — Wer hat wo Zugriff?</span>
+      </summary>
+      <div class="folder-content">
+        
+        <div class="info-card">
+          <h4>Django User-Rollen</h4>
+          <strong>1. Admins (<code>is_staff=True</code> + <code>is_superuser=True</code>)</strong><br>
+          • Voll-Zugriff auf Django Admin<br>
+          • Können Jobs starten (ADR-11)<br>
+          • Können GalleryImage <code>is_public</code> setzen<br>
+          • Zugriff auf alle Studio-Features<br>
+          <br>
+          <strong>2. Studio Workers (Gruppe: <code>studio_workers</code>)</strong><br>
+          • Können Jobs erstellen (nur Draft)<br>
+          • Können Bilder für Galerie vormerken<br>
+          • Können Prompt-Bibliothek nutzen<br>
+          • Können Jobs/Results sehen (nur eigene)<br>
+          • KEIN Admin-Zugriff<br>
+          • KÖNNEN NICHT Jobs starten (ADR-11)<br>
+          <br>
+          <strong>3. Druckpartner (Gruppe: <code>print_partners</code>)</strong><br>
+          • Können eigene Bestellungen sehen<br>
+          • Können Bundles herunterladen<br>
+          • Können Tracking-Codes eintragen<br>
+          • KEIN Zugriff auf Studio oder Admin
+        </div>
+        
+        <div class="info-card">
+          <h4>VPS Linux-User</h4>
+          <strong>1. <code>root</code></strong><br>
+          • System-Administration<br>
+          • SSH-Zugang für Admins<br>
+          • Nginx/PostgreSQL/Redis-Management<br>
+          <br>
+          <strong>2. <code>www-data</code></strong><br>
+          • Nginx Worker-Prozess<br>
+          • Liest NAS-Dateien (/media/)<br>
+          • KEIN Schreibzugriff auf NAS<br>
+          <br>
+          <strong>3. <code>printbuddy</code> (App-User)</strong><br>
+          • Gunicorn + Celery laufen als dieser User<br>
+          • Schreibzugriff auf NAS via UID=1024-Mapping<br>
+          • Home: <code>/opt/printbuddy/</code>
+        </div>
+        
+        <div class="info-card">
+          <h4>NAS Synology-User</h4>
+          <strong>1. <code>admin</code> (Synology DSM Admin)</strong><br>
+          • Full Admin-Zugriff auf Synology DSM Web-UI<br>
+          • Kann NFS-Freigaben konfigurieren<br>
+          • Kann Tailscale-Einstellungen ändern<br>
+          <br>
+          <strong>2. <code>printbuddy-nas</code> (UID=1024)</strong><br>
+          • Mapped zu VPS <code>printbuddy</code> User<br>
+          • Schreibrechte auf <code>agency_nas</code> Shared Folder<br>
+          • Kein DSM-Login (nur für NFS-Mapping)
+        </div>
+        
+        <div class="info-card">
+          <h4>Externe Dienste-Konten</h4>
+          <strong>RunPod Account</strong><br>
+          • E-Mail: (Admin-E-Mail)<br>
+          • API-Key im VPS <code>.env</code><br>
+          • Billing-Dashboard: runpod.io/console<br>
+          <br>
+          <strong>Stripe Account</strong><br>
+          • E-Mail: (Business-E-Mail)<br>
+          • Dashboard: dashboard.stripe.com<br>
+          • Webhook-URL: https://datemyhobby.com/shop/webhook/stripe/<br>
+          <br>
+          <strong>Printful Account</strong><br>
+          • E-Mail: (Business-E-Mail)<br>
+          • Dashboard: printful.com/dashboard<br>
+          <br>
+          <strong>Etsy Developer Account</strong><br>
+          • E-Mail: (Business-E-Mail)<br>
+          • API-Keys: etsy.com/developers<br>
+          <br>
+          <strong>Tailscale Account</strong><br>
+          • E-Mail: (Admin-E-Mail)<br>
+          • Dashboard: login.tailscale.com/admin<br>
+          • Network-Name: printbuddy-net
+        </div>
+        
+        <div class="warning-box">
+          <strong>🔐 Sicherheits-Regeln:</strong><br>
+          • NIE Passwörter in Git-Repo committen<br>
+          • Alle API-Keys in <code>.env</code> (nie in Code)<br>
+          • Django <code>SECRET_KEY</code> >= 50 Zeichen, zufällig<br>
+          • SSH-Key-Only Auth auf VPS (keine Passwort-Logins)<br>
+          • Django Admin-URL custom (nicht <code>/admin/</code>)<br>
+          • Stripe Webhook-Signatur-Check NIEMALS deaktivieren
+        </div>
+        
+      </div>
+    </details>
+    
+  </div>
+  
+</div>
+{% endblock %}

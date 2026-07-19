@@ -1,0 +1,1286 @@
+{% extends "studio/base.html" %}
+
+{% block title %}Knowledge: AI-Modelle{% endblock %}
+
+{% block extra_head %}
+<style>
+  .knowledge-container {
+    max-width: 900px;
+    margin: 0 auto;
+  }
+  
+  .kb-intro {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+  }
+  
+  .kb-intro h2 {
+    font-size: 1.3rem;
+    margin-bottom: 0.75rem;
+    color: var(--accent2);
+  }
+  
+  .kb-intro p {
+    color: var(--text-muted);
+    line-height: 1.6;
+    margin-bottom: 0.5rem;
+  }
+  
+  /* Ordnerstruktur */
+  .folder-tree {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  
+  details {
+    border-bottom: 1px solid var(--border);
+  }
+  
+  details:last-child {
+    border-bottom: none;
+  }
+  
+  summary {
+    padding: 1rem 1.25rem;
+    cursor: pointer;
+    user-select: none;
+    font-weight: 600;
+    font-size: 1rem;
+    color: var(--text);
+    background: var(--surface);
+    transition: background 0.15s;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+  
+  summary:hover {
+    background: var(--surface2);
+  }
+  
+  summary::marker {
+    content: "▶ ";
+    color: var(--accent);
+  }
+  
+  details[open] > summary::marker {
+    content: "▼ ";
+  }
+  
+  .folder-icon {
+    font-size: 1.2rem;
+  }
+  
+  .folder-content {
+    padding: 0 1.25rem 1.25rem 2.5rem;
+    background: var(--bg);
+  }
+  
+  .model-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+  }
+  
+  .model-card:last-child {
+    margin-bottom: 0;
+  }
+  
+  .model-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.75rem;
+  }
+  
+  .model-name {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--accent2);
+  }
+  
+  .license-badge {
+    padding: 0.25rem 0.65rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+  
+  .license-ok {
+    background: #14532d;
+    color: #86efac;
+  }
+  
+  .license-warn {
+    background: #78350f;
+    color: #fde68a;
+  }
+  
+  .model-description {
+    color: var(--text-muted);
+    line-height: 1.5;
+    font-size: 0.875rem;
+    margin-bottom: 0.75rem;
+  }
+  
+  .param-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+  }
+  
+  .param-item {
+    background: var(--bg);
+    padding: 0.5rem 0.75rem;
+    border-radius: 4px;
+    font-size: 0.8rem;
+  }
+  
+  .param-label {
+    color: var(--text-muted);
+    display: block;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 0.15rem;
+  }
+  
+  .param-value {
+    color: var(--accent2);
+    font-weight: 600;
+  }
+  
+  .example-prompts {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border);
+  }
+  
+  .example-title {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    margin-bottom: 0.5rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  
+  .example-prompt {
+    background: var(--bg);
+    padding: 0.65rem 0.85rem;
+    border-radius: 4px;
+    border-left: 3px solid var(--accent);
+    font-size: 0.825rem;
+    color: var(--text);
+    line-height: 1.4;
+    margin-bottom: 0.5rem;
+    font-family: 'Consolas', 'Monaco', monospace;
+  }
+  
+  .info-box {
+    background: #1e3a5f;
+    border: 1px solid var(--blue);
+    border-radius: 6px;
+    padding: 1rem;
+    margin-top: 1rem;
+    font-size: 0.85rem;
+    line-height: 1.5;
+    color: #bfdbfe;
+  }
+  
+  .info-box strong {
+    color: #fff;
+  }
+  
+  @media (max-width: 768px) {
+    .param-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="knowledge-container">
+  <div class="page-header">
+    <h1>📚 Knowledge: AI-Modelle</h1>
+  </div>
+  
+  <div class="kb-intro">
+    <h2>Diffusion Models — Grundlagen</h2>
+    <p>
+      <strong>Was ist ein Diffusion Model?</strong><br>
+      Ein AI-Modell, das aus einem Text-Prompt (und optional einem Referenzbild) ein neues Bild generiert. 
+      Der Prozess läuft rückwärts: Das Modell startet mit purem Rauschen und "entrauscht" es schrittweise, 
+      bis ein kohärentes Bild entsteht, das dem Prompt entspricht.
+    </p>
+    <p>
+      <strong>Wichtige Konzepte:</strong><br>
+      • <strong>Steps:</strong> Anzahl der Entrauschungsschritte — mehr Steps = detaillierter, aber langsamer<br>
+      • <strong>Guidance Scale (CFG):</strong> Wie stark das Modell dem Prompt folgt (7-12 = ausgewogen, >15 = sehr literal, oft überzeichnet)<br>
+      • <strong>Seed:</strong> Zufallszahl für Reproduzierbarkeit — gleicher Seed + gleicher Prompt = gleiches Bild<br>
+      • <strong>Negative Prompt:</strong> Was das Modell vermeiden soll (z.B. "blurry, distorted, low quality")<br>
+      • <strong>Latent Space:</strong> Komprimierte Darstellung des Bildes — SDXL/FLUX arbeiten in 8x komprimierten Latents
+    </p>
+  </div>
+  
+  <div class="folder-tree">
+    <!-- Produktions-Modelle -->
+    <details open>
+      <summary>
+        <span class="folder-icon">📁</span>
+        <span>Produktions-Modelle (Kommerziell lizenziert)</span>
+      </summary>
+      <div class="folder-content">
+        
+        <!-- FLUX Schnell -->
+        <details open>
+          <summary style="font-size: 0.95rem; padding: 0.75rem 0;">
+            <span class="folder-icon">🚀</span>
+            <span>FLUX Schnell</span>
+          </summary>
+          <div class="model-card">
+            <div class="model-header">
+              <span class="model-name">FLUX Schnell</span>
+              <span class="license-badge license-ok">✅ Apache 2.0</span>
+            </div>
+            <div class="model-description">
+              <strong>Unser Standard-Modell für alle Produkt-Generierungen.</strong><br>
+              Extrem schnell (4-6 Sekunden), hervorragende Qualität, vollständige kommerzielle Lizenz.
+              Optimiert für Photo-Realismus und Text-in-Bildern.
+            </div>
+            
+            <div class="param-grid">
+              <div class="param-item">
+                <span class="param-label">Steps (Default)</span>
+                <span class="param-value">4</span>
+              </div>
+              <div class="param-item">
+                <span class="param-label">Guidance (CFG)</span>
+                <span class="param-value">0 (distilled)</span>
+              </div>
+              <div class="param-item">
+                <span class="param-label">Resolution</span>
+                <span class="param-value">512–1440px</span>
+              </div>
+              <div class="param-item">
+                <span class="param-label">Speed</span>
+                <span class="param-value">4-6 Sekunden</span>
+              </div>
+              <div class="param-item">
+                <span class="param-label">Kosten (RunPod)</span>
+                <span class="param-value">~€0.03–0.04</span>
+              </div>
+              <div class="param-item">
+                <span class="param-label">Verkauf erlaubt?</span>
+                <span class="param-value" style="color: var(--green);">✅ JA</span>
+              </div>
+            </div>
+            
+            <div class="example-prompts">
+              <div class="example-title">✨ Beispiel-Prompts</div>
+              <div class="example-prompt">
+                A minimalist t-shirt design featuring a geometric mountain landscape 
+                at sunset, flat vector style, limited color palette, centered composition
+              </div>
+              <div class="example-prompt">
+                Vintage coffee poster design, 1960s aesthetic, warm brown tones, 
+                illustrated coffee beans and steam, retro typography "FRESH BREW"
+              </div>
+              <div class="example-prompt">
+                Cute kawaii cat astronaut floating in space, pastel colors, 
+                sticker illustration style, black background
+              </div>
+            </div>
+            
+            <div class="info-box">
+              <strong>💡 Best Practices:</strong><br>
+              • Keine Guidance nötig — Modell ist "distilled" (voroptimiert)<br>
+              • Funktioniert hervorragend mit kurzen, präzisen Prompts<br>
+              • Exzellent für Text-in-Bildern (z.B. Poster-Schriftzüge)<br>
+              • Aspect Ratio 1:1 oder 2:3 empfohlen für beste Qualität
+            </div>
+          </div>
+        </details>
+        
+        <!-- SDXL -->
+        <details>
+          <summary style="font-size: 0.95rem; padding: 0.75rem 0;">
+            <span class="folder-icon">🎨</span>
+            <span>SDXL (Stable Diffusion XL)</span>
+          </summary>
+          <div class="model-card">
+            <div class="model-header">
+              <span class="model-name">SDXL</span>
+              <span class="license-badge license-ok">✅ CreativeML Open Rail+M</span>
+            </div>
+            <div class="model-description">
+              <strong>Fallback-Modell für spezielle Stile.</strong><br>
+              Langsamer als FLUX, aber sehr flexibel. Große Community mit tausenden LoRAs.
+              Gut für künstlerische Stile, Anime, Konzept-Art.
+            </div>
+            
+            <div class="param-grid">
+              <div class="param-item">
+                <span class="param-label">Steps (Default)</span>
+                <span class="param-value">30</span>
+              </div>
+              <div class="param-item">
+                <span class="param-label">Guidance (CFG)</span>
+                <span class="param-value">7.5</span>
+              </div>
+              <div class="param-item">
+                <span class="param-label">Resolution</span>
+                <span class="param-value">1024×1024 optimal</span>
+              </div>
+              <div class="param-item">
+                <span class="param-label">Speed</span>
+                <span class="param-value">~30 Sekunden</span>
+              </div>
+              <div class="param-item">
+                <span class="param-label">Kosten (RunPod)</span>
+                <span class="param-value">~€0.15–0.20</span>
+              </div>
+              <div class="param-item">
+                <span class="param-label">Verkauf erlaubt?</span>
+                <span class="param-value" style="color: var(--green);">✅ JA</span>
+              </div>
+            </div>
+            
+            <div class="example-prompts">
+              <div class="example-title">✨ Beispiel-Prompts</div>
+              <div class="example-prompt">
+                masterpiece, best quality, 1girl, anime style, detailed face, 
+                colorful hair, fantasy background, trending on artstation
+              </div>
+              <div class="example-prompt">
+                oil painting of a medieval castle on a hill, dramatic lighting, 
+                sunset sky, renaissance art style, high detail
+              </div>
+            </div>
+            
+            <div class="info-box">
+              <strong>💡 Wann SDXL nutzen:</strong><br>
+              • Wenn FLUX-Stil nicht passt (z.B. Anime, Kunst-Stile)<br>
+              • Wenn LoRAs benötigt werden (SDXL hat riesige Community)<br>
+              • Für Experimente mit ungewöhnlichen Styles
+            </div>
+          </div>
+        </details>
+        
+      </div>
+    </details>
+    
+    <!-- Test-Modelle -->
+    <details>
+      <summary>
+        <span class="folder-icon">🧪</span>
+        <span>Test-Modelle (Nicht kommerziell)</span>
+      </summary>
+      <div class="folder-content">
+        
+        <!-- FLUX Dev -->
+        <details>
+          <summary style="font-size: 0.95rem; padding: 0.75rem 0;">
+            <span class="folder-icon">⚠️</span>
+            <span>FLUX Dev</span>
+          </summary>
+          <div class="model-card">
+            <div class="model-header">
+              <span class="model-name">FLUX Dev</span>
+              <span class="license-badge license-warn">⚠️ Nicht kommerziell</span>
+            </div>
+            <div class="model-description">
+              <strong>NUR für interne Tests und Studio-Previews!</strong><br>
+              Höchste Qualität der FLUX-Familie, aber ohne kommerzielle Lizenz.
+              Darf NICHT für Bilder verwendet werden, die verkauft werden.
+            </div>
+            
+            <div class="param-grid">
+              <div class="param-item">
+                <span class="param-label">Steps (Default)</span>
+                <span class="param-value">20</span>
+              </div>
+              <div class="param-item">
+                <span class="param-label">Guidance (CFG)</span>
+                <span class="param-value">3.5</span>
+              </div>
+              <div class="param-item">
+                <span class="param-label">Verkauf erlaubt?</span>
+                <span class="param-value" style="color: var(--red);">❌ NEIN</span>
+              </div>
+            </div>
+            
+            <div class="info-box" style="background: #7f1d1d; border-color: var(--red); color: #fecaca;">
+              <strong>🚨 WICHTIG — Lizenz-Regel:</strong><br>
+              Bilder aus FLUX Dev dürfen NICHT verkauft werden!<br>
+              Nur nutzen für: Studio-Previews, QA-Tests, interne Vergleiche.<br>
+              Für Produktions-Jobs IMMER FLUX Schnell oder SDXL verwenden.
+            </div>
+          </div>
+        </details>
+        
+      </div>
+    </details>
+    
+    <!-- Custom LoRAs -->
+    <details>
+      <summary>
+        <span class="folder-icon">🎯</span>
+        <span>Custom LoRAs (Fine-Tuning)</span>
+      </summary>
+      <div class="folder-content">
+        
+        <div class="model-card">
+          <div class="model-name" style="margin-bottom: 0.75rem;">Was ist ein LoRA?</div>
+          <div class="model-description">
+            <strong>LoRA = Low-Rank Adaptation</strong><br>
+            Ein kleines "Addon" für ein Basis-Modell (z.B. SDXL), das auf einen 
+            spezifischen Stil trainiert wurde. Ermöglicht einzigartige Looks 
+            ohne ein komplettes Modell neu zu trainieren.
+          </div>
+          
+          <div class="example-prompts">
+            <div class="example-title">🎨 Mögliche LoRA-Anwendungen</div>
+            <div class="example-prompt">
+              • Brand-spezifischer Stil (z.B. "Printbuddy Aquarell-Style")<br>
+              • Konsistente Charakter-Designs<br>
+              • Spezielle Texturen (z.B. "Vintage Poster Art")<br>
+              • Nischen-Ästhetiken (z.B. "80s Synthwave", "Nordic Folklore")
+            </div>
+          </div>
+          
+          <div class="info-box">
+            <strong>⚠️ Lizenz-Hinweis:</strong><br>
+            LoRAs erben die Lizenz des Basis-Modells!<br>
+            • SDXL-LoRA → kommerziell OK<br>
+            • FLUX Dev-LoRA → NICHT kommerziell<br>
+            Vor Produktion IMMER Lizenz des LoRA-Autors prüfen.
+          </div>
+        </div>
+        
+      </div>
+    </details>
+    
+    <!-- Technische Parameter -->
+    <details>
+      <summary>
+        <span class="folder-icon">⚙️</span>
+        <span>Parameter-Erkärungen</span>
+      </summary>
+      <div class="folder-content">
+        
+        <div class="model-card">
+          <div class="model-name" style="margin-bottom: 0.75rem;">Steps (Sampling Steps)</div>
+          <div class="model-description">
+            Anzahl der Entrauschungsschritte. Mehr Steps = feiner, aber langsamer.<br>
+            <strong>Empfehlung:</strong><br>
+            • FLUX Schnell: 4 Steps (optimiert)<br>
+            • SDXL: 25-35 Steps<br>
+            • Über 50 Steps bringt meist keine Verbesserung mehr
+          </div>
+        </div>
+        
+        <div class="model-card">
+          <div class="model-name" style="margin-bottom: 0.75rem;">Guidance Scale (CFG)</div>
+          <div class="model-description">
+            Steuert wie streng das Modell dem Prompt folgt.<br>
+            <strong>Werte:</strong><br>
+            • 0 = Modell ignoriert Prompt (nur für distilled models wie FLUX Schnell)<br>
+            • 7-9 = Ausgewogen, natürlich<br>
+            • 12-15 = Sehr nah am Prompt, kann aber überzeichnen<br>
+            • >20 = Meist "overcooked", unrealistisch
+          </div>
+        </div>
+        
+        <div class="model-card">
+          <div class="model-name" style="margin-bottom: 0.75rem;">Seed (Zufallszahl)</div>
+          <div class="model-description">
+            Startwert für den Zufallsgenerator.<br>
+            <strong>Funktion:</strong><br>
+            • Gleicher Seed + gleicher Prompt = identisches Bild<br>
+            • Leer lassen = zufälliger Seed (immer neue Varianten)<br>
+            • Nützlich für Variations: Seed kopieren, Prompt leicht ändern
+          </div>
+        </div>
+        
+        <div class="model-card">
+          <div class="model-name" style="margin-bottom: 0.75rem;">Negative Prompt</div>
+          <div class="model-description">
+            Was das Modell NICHT zeigen soll.<br>
+            <strong>Standard Negative Prompts:</strong><br>
+            • Allgemein: "blurry, low quality, distorted, watermark, signature"<br>
+            • Produkt-Designs: "text artifacts, pixelated, low resolution"<br>
+            • Menschen: "deformed hands, extra fingers, disfigured face"
+          </div>
+        </div>
+        
+        <div class="model-card">
+          <div class="model-name" style="margin-bottom: 0.75rem;">Aspect Ratio (Bildformat)</div>
+          <div class="model-description">
+            Seitenverhältnis des generierten Bildes.<br>
+            <strong>Gängige Formate:</strong><br>
+            • 1:1 (1024×1024) — Quadrat, Instagram, Sticker<br>
+            • 2:3 (832×1216) — Portrait, T-Shirt-Designs<br>
+            • 3:2 (1216×832) — Landscape, Poster<br>
+            • 9:16 (768×1344) — Mobile, Stories, TikTok<br>
+            • 16:9 (1344×768) — Desktop, Banner
+          </div>
+        </div>
+        
+      </div>
+    </details>
+    
+    <!-- Weitere kommerzielle Modelle -->
+    <details>
+      <summary>
+        <span class="folder-icon">🌐</span>
+        <span>Weitere Open-Source Modelle (Kommerziell)</span>
+      </summary>
+      <div class="folder-content">
+        
+        <!-- SD 1.5 -->
+        <details>
+          <summary style="font-size: 0.95rem; padding: 0.75rem 0;">
+            <span class="folder-icon">🏛️</span>
+            <span>Stable Diffusion 1.5</span>
+          </summary>
+          <div class="model-card">
+            <div class="model-header">
+              <span class="model-name">Stable Diffusion 1.5</span>
+              <span class="license-badge license-ok">✅ CreativeML</span>
+            </div>
+            <div class="model-description">
+              <strong>Legacy-Modell, aber sehr stabil und ressourcenschonend.</strong><br>
+              512×512 Resolution, kleine Modellgröße (~4GB), läuft auf Consumer-GPUs.
+              Großes Ökosystem an Fine-Tunes und LoRAs (CivitAI Community).
+            </div>
+            
+            <div class="param-grid">
+              <div class="param-item">
+                <span class="param-label">Steps</span>
+                <span class="param-value">25-40</span>
+              </div>
+              <div class="param-item">
+                <span class="param-label">Resolution</span>
+                <span class="param-value">512×512 (native)</span>
+              </div>
+              <div class="param-item">
+                <span class="param-label">Guidance</span>
+                <span class="param-value">7-10</span>
+              </div>
+              <div class="param-item">
+                <span class="param-label">Kosten</span>
+                <span class="param-value">~€0.01–0.02</span>
+              </div>
+            </div>
+            
+            <div class="info-box">
+              <strong>💡 Wann SD 1.5 nutzen:</strong><br>
+              • Batch-Generierung mit geringem Budget<br>
+              • Wenn spezifische SD1.5-LoRAs benötigt werden<br>
+              • Prototyping und schnelle Iterationen<br>
+              • Legacy: Wird zunehmend von SDXL/FLUX ersetzt
+            </div>
+          </div>
+        </details>
+        
+        <!-- SDXL Turbo -->
+        <details>
+          <summary style="font-size: 0.95rem; padding: 0.75rem 0;">
+            <span class="folder-icon">⚡</span>
+            <span>SDXL Turbo</span>
+          </summary>
+          <div class="model-card">
+            <div class="model-header">
+              <span class="model-name">SDXL Turbo</span>
+              <span class="license-badge license-ok">✅ MIT (non-commercial research)</span>
+            </div>
+            <div class="model-description">
+              <strong>Schnelle SDXL-Variante mit nur 1-4 Steps.</strong><br>
+              Adversarial Diffusion Distillation — extrem schnell, aber weniger kontrollierbar.
+              Keine Guidance Scale nötig (wie FLUX Schnell).
+            </div>
+            
+            <div class="param-grid">
+              <div class="param-item">
+                <span class="param-label">Steps</span>
+                <span class="param-value">1-4</span>
+              </div>
+              <div class="param-item">
+                <span class="param-label">Guidance</span>
+                <span class="param-value">0 (distilled)</span>
+              </div>
+              <div class="param-item">
+                <span class="param-label">Speed</span>
+                <span class="param-value">~2-3 Sekunden</span>
+              </div>
+              <div class="param-item">
+                <span class="param-label">Lizenz-Hinweis</span>
+                <span class="param-value">Forschung OK, kommerziell prüfen</span>
+              </div>
+            </div>
+            
+            <div class="info-box">
+              <strong>⚠️ Lizenz-Klärung benötigt:</strong><br>
+              MIT License mit "non-commercial research" Zusatz — vor Produktion Stability AI kontaktieren.
+            </div>
+          </div>
+        </details>
+        
+        <!-- Stable Cascade -->
+        <details>
+          <summary style="font-size: 0.95rem; padding: 0.75rem 0;">
+            <span class="folder-icon">🏔️</span>
+            <span>Stable Cascade</span>
+          </summary>
+          <div class="model-card">
+            <div class="model-header">
+              <span class="model-name">Stable Cascade</span>
+              <span class="license-badge license-ok">✅ Non-commercial Open Rail++</span>
+            </div>
+            <div class="model-description">
+              <strong>Würstchen v2 — Drei-Stufen-Architektur für extrem hohe Qualität.</strong><br>
+              24x komprimierter Latent Space (vs. 8x bei SDXL). Sehr detailliert, aber rechenintensiv.
+              Gut für Text-Rendering und komplexe Kompositionen.
+            </div>
+            
+            <div class="param-grid">
+              <div class="param-item">
+                <span class="param-label">Steps</span>
+                <span class="param-value">20-30 (Stage C)</span>
+              </div>
+              <div class="param-item">
+                <span class="param-label">Resolution</span>
+                <span class="param-value">Bis 2048px</span>
+              </div>
+              <div class="param-item">
+                <span class="param-label">Speed</span>
+                <span class="param-value">~40-60 Sekunden</span>
+              </div>
+              <div class="param-item">
+                <span class="param-label">Kosten</span>
+                <span class="param-value">~€0.25–0.40</span>
+              </div>
+            </div>
+            
+            <div class="info-box">
+              <strong>💡 Wann verwenden:</strong><br>
+              • Wenn höchste Detailtreue gefordert<br>
+              • Text-in-Bildern mit vielen Buchstaben<br>
+              • Große Druckformate (A2+)<br>
+              • Lizenz: Nicht kommerziell ohne Absprache mit Stability AI
+            </div>
+          </div>
+        </details>
+        
+        <!-- PixArt-Σ -->
+        <details>
+          <summary style="font-size: 0.95rem; padding: 0.75rem 0;">
+            <span class="folder-icon">🎭</span>
+            <span>PixArt-Σ (Sigma)</span>
+          </summary>
+          <div class="model-card">
+            <div class="model-header">
+              <span class="model-name">PixArt-Σ</span>
+              <span class="license-badge license-ok">✅ Apache 2.0</span>
+            </div>
+            <div class="model-description">
+              <strong>Diffusion Transformer (DiT) mit T5-Encoder — konkuriert mit SDXL.</strong><br>
+              Training-effizient, gut für asiatische Sprachen (nicht nur Englisch).
+              High-aesthetic Qualität, 4K-Support.
+            </div>
+            
+            <div class="param-grid">
+              <div class="param-item">
+                <span class="param-label">Steps</span>
+                <span class="param-value">20-30</span>
+              </div>
+              <div class="param-item">
+                <span class="param-label">Resolution</span>
+                <span class="param-value">1024–4096px</span>
+              </div>
+              <div class="param-item">
+                <span class="param-label">Multilingual</span>
+                <span class="param-value">✅ (Chinesisch, Japanisch etc.)</span>
+              </div>
+              <div class="param-item">
+                <span class="param-label">Verkauf erlaubt?</span>
+                <span class="param-value" style="color: var(--green);">✅ JA</span>
+              </div>
+            </div>
+            
+            <div class="info-box">
+              <strong>💡 Alternative zu SDXL:</strong><br>
+              Besonders interessant wenn Prompts in anderen Sprachen benötigt oder wenn DiT-Architektur gewünscht (neuere Methode vs. U-Net).
+            </div>
+          </div>
+        </details>
+        
+      </div>
+    </details>
+    
+    <!-- Proprietäre Modelle (nicht API-verfügbar) -->
+    <details>
+      <summary>
+        <span class="folder-icon">🔒</span>
+        <span>Proprietäre Modelle (Cloud-Only)</span>
+      </summary>
+      <div class="folder-content">
+        
+        <!-- DALL-E 3 -->
+        <details>
+          <summary style="font-size: 0.95rem; padding: 0.75rem 0;">
+            <span class="folder-icon">🤖</span>
+            <span>DALL-E 3 (OpenAI)</span>
+          </summary>
+          <div class="model-card">
+            <div class="model-header">
+              <span class="model-name">DALL-E 3</span>
+              <span class="license-badge license-warn">🔒 Proprietär</span>
+            </div>
+            <div class="model-description">
+              <strong>OpenAI's Text-to-Image Modell.</strong><br>
+              Sehr gute Prompt-Adherence, exzellent bei komplexen Szenen.
+              Nur via OpenAI API verfügbar ($0.04–0.12 pro Bild).
+              Kommerzielle Lizenz inklusive (Nutzer behält Rechte).
+            </div>
+            
+            <div class="param-grid">
+              <div class="param-item">
+                <span class="param-label">Verfügbarkeit</span>
+                <span class="param-value">Nur OpenAI API</span>
+              </div>
+              <div class="param-item">
+                <span class="param-label">Resolution</span>
+                <span class="param-value">1024×1024, 1792×1024</span>
+              </div>
+              <div class="param-item">
+                <span class="param-label">Kosten</span>
+                <span class="param-value">$0.04–0.12/Bild</span>
+              </div>
+              <div class="param-item">
+                <span class="param-label">Kommerzielle Nutzung</span>
+                <span class="param-value" style="color: var(--green);">✅ Erlaubt</span>
+              </div>
+            </div>
+            
+            <div class="info-box">
+              <strong>💡 Integration möglich:</strong><br>
+              Können wir via OpenAI API integrieren wenn gewünscht.<br>
+              Vorteil: Sehr konsistente Qualität, kein GPU-Management.<br>
+              Nachteil: Höhere Kosten, keine Fine-Tuning-Kontrolle, externe Abhängigkeit.
+            </div>
+          </div>
+        </details>
+        
+        <!-- Midjourney -->
+        <details>
+          <summary style="font-size: 0.95rem; padding: 0.75rem 0;">
+            <span class="folder-icon">🎨</span>
+            <span>Midjourney</span>
+          </summary>
+          <div class="model-card">
+            <div class="model-header">
+              <span class="model-name">Midjourney</span>
+              <span class="license-badge license-warn">🔒 Nur Discord</span>
+            </div>
+            <div class="model-description">
+              <strong>Bekannt für künstlerische, hochwertige Bilder.</strong><br>
+              Keine offizielle API — nur Discord-Bot-Nutzung.
+              Exzellente Ästhetik, aber schwer zu automatisieren.
+            </div>
+            
+            <div class="param-grid">
+              <div class="param-item">
+                <span class="param-label">Verfügbarkeit</span>
+                <span class="param-value">Discord Bot (manuell)</span>
+              </div>
+              <div class="param-item">
+                <span class="param-label">API</span>
+                <span class="param-value" style="color: var(--red);">❌ Keine offizielle API</span>
+              </div>
+              <div class="param-item">
+                <span class="param-label">Lizenz</span>
+                <span class="param-value">Abo: $10–96/Monat</span>
+              </div>
+              <div class="param-item">
+                <span class="param-label">Kommerzielle Nutzung</span>
+                <span class="param-value">✅ Ab $10/Mo Abo</span>
+              </div>
+            </div>
+            
+            <div class="info-box" style="background: #78350f; border-color: var(--yellow); color: #fde68a;">
+              <strong>⚠️ Nicht automatisierbar:</strong><br>
+              Für Batch-Production ungeeignet (nur Discord-Bot).<br>
+              Kann für Konzept-Phase manuell genutzt werden, aber nicht in Pipeline integrierbar.
+            </div>
+          </div>
+        </details>
+        
+        <!-- Adobe Firefly -->
+        <details>
+          <summary style="font-size: 0.95rem; padding: 0.75rem 0;">
+            <span class="folder-icon">🔥</span>
+            <span>Adobe Firefly</span>
+          </summary>
+          <div class="model-card">
+            <div class="model-header">
+              <span class="model-name">Adobe Firefly</span>
+              <span class="license-badge license-ok">✅ Kommerziell</span>
+            </div>
+            <div class="model-description">
+              <strong>Adobe's eigenes Diffusion-Modell — nur auf Stock-Bildern trainiert.</strong><br>
+              Rechtssicher für kommerzielle Nutzung (kein Copyright-Risiko).
+              API verfügbar für Adobe-Kunden.
+            </div>
+            
+            <div class="param-grid">
+              <div class="param-item">
+                <span class="param-label">Verfügbarkeit</span>
+                <span class="param-value">Adobe Cloud / API</span>
+              </div>
+              <div class="param-item">
+                <span class="param-label">Lizenz</span>
+                <span class="param-value">Adobe Creative Cloud Abo</span>
+              </div>
+              <div class="param-item">
+                <span class="param-label">Copyright-Safe</span>
+                <span class="param-value" style="color: var(--green);">✅ 100%</span>
+              </div>
+              <div class="param-item">
+                <span class="param-label">Kosten</span>
+                <span class="param-value">Ab €60/Mo (CC Abo)</span>
+              </div>
+            </div>
+            
+            <div class="info-box">
+              <strong>💡 Vorteil: Rechtssicherheit</strong><br>
+              Adobe garantiert dass Firefly nur auf lizenziertem Material trainiert wurde.<br>
+              Interessant für Enterprise-Kunden mit hohen Copyright-Anforderungen.
+            </div>
+          </div>
+        </details>
+        
+      </div>
+    </details>
+    
+    <!-- Pipeline-Typen -->
+    <details>
+      <summary>
+        <span class="folder-icon">🔧</span>
+        <span>Pipeline-Typen — Was auf GPU-Servern möglich ist</span>
+      </summary>
+      <div class="folder-content">
+        
+        <!-- Text-to-Image -->
+        <details open>
+          <summary style="font-size: 0.95rem; padding: 0.75rem 0;">
+            <span class="folder-icon">📝</span>
+            <span>Text-to-Image (Standard)</span>
+          </summary>
+          <div class="model-card">
+            <div class="model-name" style="margin-bottom: 0.75rem;">Text-to-Image</div>
+            <div class="model-description">
+              <strong>Der Standard-Workflow: Prompt → Bild</strong><br>
+              Das Modell startet mit purem Rauschen und generiert ein neues Bild basierend nur auf dem Text-Prompt.
+            </div>
+            
+            <div class="example-prompts">
+              <div class="example-title">✅ Aktueller Status</div>
+              <div class="example-prompt" style="border-color: var(--green);">
+                ✅ Voll implementiert in PrintBuddy<br>
+                Modelle: FLUX Schnell, SDXL, FLUX Dev<br>
+                Route: Studio → Wizard → Job → RunPod → Preview
+              </div>
+            </div>
+            
+            <div class="info-box">
+              <strong>Verwendung:</strong><br>
+              • Produkt-Designs (T-Shirts, Poster, Sticker)<br>
+              • Galerie-Bilder<br>
+              • Marketing-Material<br>
+              • Konzept-Art
+            </div>
+          </div>
+        </details>
+        
+        <!-- Image-to-Image -->
+        <details>
+          <summary style="font-size: 0.95rem; padding: 0.75rem 0;">
+            <span class="folder-icon">🖼️</span>
+            <span>Image-to-Image (Img2Img)</span>
+          </summary>
+          <div class="model-card">
+            <div class="model-name" style="margin-bottom: 0.75rem;">Image-to-Image</div>
+            <div class="model-description">
+              <strong>Referenzbild + Prompt → variiertes neues Bild</strong><br>
+              Das Modell startet nicht mit Rauschen, sondern mit einem Upload-Bild und variiert es basierend auf dem Prompt.<br>
+              <strong>Strength-Parameter:</strong> 0.3 = nah am Original, 0.9 = stark verändert
+            </div>
+            
+            <div class="param-grid">
+              <div class="param-item">
+                <span class="param-label">Strength</span>
+                <span class="param-value">0.3–0.9</span>
+              </div>
+              <div class="param-item">
+                <span class="param-label">Use Cases</span>
+                <span class="param-value">Style-Transfer, Variations</span>
+              </div>
+            </div>
+            
+            <div class="example-prompts">
+              <div class="example-title">🟡 Status</div>
+              <div class="example-prompt" style="border-color: var(--yellow);">
+                🔧 In Planung (Phase 6.5 Priority 3)<br>
+                Job.reference_image Feld existiert schon im Model<br>
+                GPU-Task muss base64-Encoding + Strength-Parameter bekommen
+              </div>
+            </div>
+            
+            <div class="info-box">
+              <strong>Anwendungen:</strong><br>
+              • Foto-Upload → Kunstwerk<br>
+              • Produktfoto → Illustrierter Stil<br>
+              • Sketch → Detailliertes Bild<br>
+              • Logo-Redesign mit neuem Stil
+            </div>
+          </div>
+        </details>
+        
+        <!-- Inpainting -->
+        <details>
+          <summary style="font-size: 0.95rem; padding: 0.75rem 0;">
+            <span class="folder-icon">🎨</span>
+            <span>Inpainting (Mask Editing)</span>
+          </summary>
+          <div class="model-card">
+            <div class="model-name" style="margin-bottom: 0.75rem;">Inpainting</div>
+            <div class="model-description">
+              <strong>Bild + Maske + Prompt → Selektive Bearbeitung</strong><br>
+              Nur der maskierte Bereich wird neu generiert, Rest bleibt unverändert.<br>
+              Benötigt: Original-Bild + Schwarz/Weiß-Maske (weiß = bearbeiten, schwarz = behalten)
+            </div>
+            
+            <div class="example-prompts">
+              <div class="example-title">🔴 Status</div>
+              <div class="example-prompt" style="border-color: var(--red);">
+                ❌ Noch nicht implementiert (Phase 6.5 Priority 3.4)<br>
+                Benötigt Canvas-Editor im Studio für Masken-Zeichnung<br>
+                GPU-Task muss Image + Mask + Prompt unterstützen
+              </div>
+            </div>
+            
+            <div class="info-box">
+              <strong>Anwendungen:</strong><br>
+              • Objekt-Entfernung (Person aus Foto löschen)<br>
+              • Objekt-Ersetzung (Pullover-Farbe ändern)<br>
+              • Hintergrund-Austausch<br>
+              • Produkt-Variationen (T-Shirt mit anderem Motiv)
+            </div>
+          </div>
+        </details>
+        
+        <!-- ControlNet -->
+        <details>
+          <summary style="font-size: 0.95rem; padding: 0.75rem 0;">
+            <span class="folder-icon">🎮</span>
+            <span>ControlNet (Guided Generation)</span>
+          </summary>
+          <div class="model-card">
+            <div class="model-name" style="margin-bottom: 0.75rem;">ControlNet</div>
+            <div class="model-description">
+              <strong>Zusätzliche Steuerung via Kanten/Pose/Tiefe</strong><br>
+              Das Modell folgt einer Struktur-Vorgabe (z.B. Pose eines Menschen, Kanten eines Objekts).<br>
+              <strong>Typen:</strong> Canny Edge, Depth Map, OpenPose, Scribble, Normal Map
+            </div>
+            
+            <div class="param-grid">
+              <div class="param-item">
+                <span class="param-label">Canny Edge</span>
+                <span class="param-value">Kantenerkennung</span>
+              </div>
+              <div class="param-item">
+                <span class="param-label">OpenPose</span>
+                <span class="param-value">Körper-Pose</span>
+              </div>
+              <div class="param-item">
+                <span class="param-label">Depth</span>
+                <span class="param-value">Tiefenkarte</span>
+              </div>
+              <div class="param-item">
+                <span class="param-label">Scribble</span>
+                <span class="param-value">Freihand-Sketch</span>
+              </div>
+            </div>
+            
+            <div class="example-prompts">
+              <div class="example-title">🔴 Status</div>
+              <div class="example-prompt" style="border-color: var(--red);">
+                ❌ Nicht implementiert (Future Feature)<br>
+                Benötigt ControlNet-Modelle auf RunPod<br>
+                Komplexe UI für Pose-Editor / Edge-Detection
+              </div>
+            </div>
+            
+            <div class="info-box">
+              <strong>Use Cases:</strong><br>
+              • Produkt-Foto nachstellen mit gleichem Layout<br>
+              • Charakter in bestimmter Pose generieren<br>
+              • Architektur-Rendering aus Grundriss<br>
+              • Fashion: Kleidung auf spezifische Körperhaltung anpassen
+            </div>
+          </div>
+        </details>
+        
+        <!-- Compositing -->
+        <details>
+          <summary style="font-size: 0.95rem; padding: 0.75rem 0;">
+            <span class="folder-icon">🧩</span>
+            <span>Multi-Image Compositing</span>
+          </summary>
+          <div class="model-card">
+            <div class="model-name" style="margin-bottom: 0.75rem;">Multi-Image Compositing</div>
+            <div class="model-description">
+              <strong>2+ Bilder + Prompt → Vereintes neues Bild</strong><br>
+              Kombiniert mehrere Input-Bilder zu einer kohärenten Komposition.<br>
+              Nicht natives Diffusion-Feature — benötigt Multi-Pass oder spezielle Modelle.
+            </div>
+            
+            <div class="example-prompts">
+              <div class="example-title">🟡 Status</div>
+              <div class="example-prompt" style="border-color: var(--yellow);">
+                🔧 In Planung (Phase 6.5 Priority 3.3)<br>
+                Workflow: Img2Img mit mehreren Referenzen sequenziell<br>
+                Oder: IP-Adapter für Multi-Image-Conditioning
+              </div>
+            </div>
+            
+            <div class="info-box">
+              <strong>Anwendungen:</strong><br>
+              • Produktfoto + Kunstwerk → Hybrid<br>
+              • Person aus Foto A + Hintergrund aus Foto B<br>
+              • Logo + Texture → Branded Design<br>
+              • Collage-Stil mit AI-Blending
+            </div>
+          </div>
+        </details>
+        
+        <!-- Upscaling -->
+        <details>
+          <summary style="font-size: 0.95rem; padding: 0.75rem 0;">
+            <span class="folder-icon">🔍</span>
+            <span>Upscaling (Resolution Enhancement)</span>
+          </summary>
+          <div class="model-card">
+            <div class="model-name" style="margin-bottom: 0.75rem;">Upscaling</div>
+            <div class="model-description">
+              <strong>AI-basierte Auflösungs-Erhöhung</strong><br>
+              <strong>Real-ESRGAN:</strong> 4x Upscale, gut für General-Purpose<br>
+              <strong>SD Upscale:</strong> Diffusion-basiert, fügt Details hinzu (nicht nur Interpolation)
+            </div>
+            
+            <div class="param-grid">
+              <div class="param-item">
+                <span class="param-label">Real-ESRGAN</span>
+                <span class="param-value">4x, schnell</span>
+              </div>
+              <div class="param-item">
+                <span class="param-label">SD Upscale</span>
+                <span class="param-value">Diffusion, detaillierter</span>
+              </div>
+            </div>
+            
+            <div class="example-prompts">
+              <div class="example-title">✅ Status</div>
+              <div class="example-prompt" style="border-color: var(--green);">
+                ✅ Real-ESRGAN voll implementiert<br>
+                RunPod Endpoint vorhanden, optional Step in Pipeline<br>
+                SD Upscale: Noch nicht integriert
+              </div>
+            </div>
+            
+            <div class="info-box">
+              <strong>Wann verwenden:</strong><br>
+              • Offset-Druck (A2, A3 Poster benötigen hohe Auflösung)<br>
+              • Große Format-Drucke<br>
+              • Detail-Enhancement für Web-Galerie<br>
+              Real-ESRGAN: ~15s auf RunPod, ~€0.02 extra
+            </div>
+          </div>
+        </details>
+        
+        <!-- Video -->
+        <details>
+          <summary style="font-size: 0.95rem; padding: 0.75rem 0;">
+            <span class="folder-icon">🎬</span>
+            <span>Video-Generierung (AnimateDiff, SVD)</span>
+          </summary>
+          <div class="model-card">
+            <div class="model-name" style="margin-bottom: 0.75rem;">Video-Generierung</div>
+            <div class="model-description">
+              <strong>Animierte Sequenzen aus Prompts oder Bildern</strong><br>
+              <strong>AnimateDiff:</strong> SD1.5/SDXL Motion Module (2-4s Clips)<br>
+              <strong>Stable Video Diffusion (SVD):</strong> Image → Video (14-25 Frames)
+            </div>
+            
+            <div class="param-grid">
+              <div class="param-item">
+                <span class="param-label">AnimateDiff</span>
+                <span class="param-value">Prompt → Video</span>
+              </div>
+              <div class="param-item">
+                <span class="param-label">SVD</span>
+                <span class="param-value">Image → Motion</span>
+              </div>
+              <div class="param-item">
+                <span class="param-label">Länge</span>
+                <span class="param-value">2-4 Sekunden</span>
+              </div>
+              <div class="param-item">
+                <span class="param-label">Kosten</span>
+                <span class="param-value">~€0.50–2.00/Clip</span>
+              </div>
+            </div>
+            
+            <div class="example-prompts">
+              <div class="example-title">🔴 Status</div>
+              <div class="example-prompt" style="border-color: var(--red);">
+                ❌ Nicht implementiert (Future Roadmap)<br>
+                Sehr rechenintensiv (25 Frames = 25 Generationen)<br>
+                Benötigt separate RunPod-Endpoints
+              </div>
+            </div>
+            
+            <div class="info-box">
+              <strong>Mögliche Use Cases:</strong><br>
+              • Animierte Social-Media-Ads<br>
+              • Produkt-Präsentations-Videos<br>
+              • GIF-Exports für Web<br>
+              • TikTok/Instagram Reels Content<br>
+              ⚠️ Sehr teuer und zeitaufwändig — erst bei konkretem Bedarf
+            </div>
+          </div>
+        </details>
+        
+        <!-- 3D -->
+        <details>
+          <summary style="font-size: 0.95rem; padding: 0.75rem 0;">
+            <span class="folder-icon">🗿</span>
+            <span>3D-Generierung (Shap-E, Point-E)</span>
+          </summary>
+          <div class="model-card">
+            <div class="model-name" style="margin-bottom: 0.75rem;">3D-Modell-Generierung</div>
+            <div class="model-description">
+              <strong>Text/Bild → 3D-Mesh</strong><br>
+              <strong>Shap-E:</strong> OpenAI's 3D-Modell (Prompt → Mesh)<br>
+              <strong>Point-E:</strong> Text → Point Cloud → Mesh<br>
+              Output: .obj, .ply, .glb Formate
+            </div>
+            
+            <div class="param-grid">
+              <div class="param-item">
+                <span class="param-label">Shap-E</span>
+                <span class="param-value">Prompt → 3D Mesh</span>
+              </div>
+              <div class="param-item">
+                <span class="param-label">Output</span>
+                <span class="param-value">.obj, .glb, .ply</span>
+              </div>
+              <div class="param-item">
+                <span class="param-label">Qualität</span>
+                <span class="param-value">Low-Poly (experimentell)</span>
+              </div>
+              <div class="param-item">
+                <span class="param-label">Kosten</span>
+                <span class="param-value">~€0.10–0.30/Model</span>
+              </div>
+            </div>
+            
+            <div class="example-prompts">
+              <div class="example-title">🔴 Status</div>
+              <div class="example-prompt" style="border-color: var(--red);">
+                ❌ Nicht implementiert (Research Phase)<br>
+                3D-Diffusion noch nicht production-ready<br>
+                Qualität deutlich unter manuellen 3D-Artists
+              </div>
+            </div>
+            
+            <div class="info-box">
+              <strong>Futures-Szenario:</strong><br>
+              • 3D-Printable Merch (Figuren, Skulpturen)<br>
+              • AR/VR Assets<br>
+              • Game Asset-Prototyping<br>
+              ⚠️ Technologie noch nicht ausgereift für Produktions-Qualität
+            </div>
+          </div>
+        </details>
+        
+      </div>
+    </details>
+    
+    <!-- Prompt Engineering -->
+    <details>
+      <summary>
+        <span class="folder-icon">📝</span>
+        <span>Prompt Engineering — Best Practices</span>
+      </summary>
+      <div class="folder-content">
+        
+        <div class="model-card">
+          <div class="model-name" style="margin-bottom: 0.75rem;">Aufbau eines guten Prompts</div>
+          <div class="model-description">
+            <strong>Struktur (optional, aber hilfreich):</strong><br>
+            [Hauptmotiv] + [Stil] + [Details] + [Beleuchtung] + [Qualität]
+          </div>
+          
+          <div class="example-prompts">
+            <div class="example-title">Beispiel: Produkt-Design</div>
+            <div class="example-prompt">
+              <strong>[Hauptmotiv]</strong> A vintage coffee poster<br>
+              <strong>[Stil]</strong> 1960s advertisement style, retro aesthetic<br>
+              <strong>[Details]</strong> illustrated coffee beans and steam, typography "FRESH BREW"<br>
+              <strong>[Beleuchtung]</strong> warm lighting<br>
+              <strong>[Qualität]</strong> high detail, professional design
+            </div>
+          </div>
+        </div>
+        
+        <div class="model-card">
+          <div class="model-name" style="margin-bottom: 0.75rem;">Dos & Don'ts</div>
+          <div class="model-description">
+            <strong style="color: var(--green);">✅ DO:</strong><br>
+            • Konkret und spezifisch sein<br>
+            • Stil/Ästhetik explizit nennen<br>
+            • Art-Keywords nutzen ("illustration", "vector", "watercolor")<br>
+            • Für POD: "centered composition", "isolated subject"<br>
+            <br>
+            <strong style="color: var(--red);">❌ DON'T:</strong><br>
+            • Zu viele widersprüchliche Begriffe<br>
+            • Vage Formulierungen ("schön", "gut")<br>
+            • Übermäßig lange Prompts (>200 Wörter meist kontraproduktiv)
+          </div>
+        </div>
+        
+        <div class="info-box">
+          <strong>💡 Pro-Tipp:</strong><br>
+          Bei POD-Produkten IMMER "centered composition" und "isolated subject" 
+          im Prompt verwenden. Erleichtert später das Freistellen und Mockup-Generierung.
+        </div>
+        
+      </div>
+    </details>
+    
+  </div>
+  
+</div>
+{% endblock %}

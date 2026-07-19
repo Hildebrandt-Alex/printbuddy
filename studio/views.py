@@ -600,3 +600,30 @@ def wizard_confirm(request):
         "height": height,
         "details": details,
     })
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Knowledge Base — Modelle (Ordnerverzeichnis-Struktur)
+# ─────────────────────────────────────────────────────────────────────────────
+
+@studio_required
+def knowledge_models(request):
+    """
+    Knowledge Base: AI-Modelle mit aufklappbarer Ordnerstruktur.
+    Erklärt Diffusion, Parameter, Lizenzen, Best Practices.
+    """
+    return render(request, "studio/knowledge_models.html")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Knowledge IT — Technische System-Dokumentation
+# ─────────────────────────────────────────────────────────────────────────────
+
+@studio_required
+def knowledge_it(request):
+    """
+    Knowledge Base IT: Komponenten, Ordnerstruktur, Tailscale, Konten.
+    Wo was geändert werden muss für Frontend/Backend/Server/Homeserver.
+    Vergleiche und Upgrade-Szenarien.
+    """
+    return render(request, "studio/knowledge_it.html")
