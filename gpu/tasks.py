@@ -255,8 +255,10 @@ def generate_image(self, job_id: str):
 
             logger.info("[RunPod] Job gestartet: %s", run_id)
 
-            # Auf Ergebnis warten (Polling, max 300s)
-            deadline = time.time() + 300
+            # Auf Ergebnis warten (Polling)
+            # SDXL + Refiner braucht länger als FLUX
+            timeout_seconds = 900 if is_sdxl else 300  # 15min für SDXL, 5min für FLUX
+            deadline = time.time() + timeout_seconds
             result   = None
             while time.time() < deadline:
                 status_resp = req.get(
@@ -280,7 +282,7 @@ def generate_image(self, job_id: str):
                     time.sleep(3)
 
             if result is None:
-                raise ValueError(f"RunPod Timeout nach 300s (Job {run_id})")
+                raise ValueError(f"RunPod Timeout nach {timeout_seconds}s (Job {run_id})")
 
             # Bild dekodieren + speichern
             output_dir = _get_output_dir("raw")
