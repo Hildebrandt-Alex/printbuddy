@@ -176,12 +176,18 @@ def generate_image(self, job_id: str):
                     if scheduler_match: scheduler = scheduler_match.group(1)
                     if noise_match: high_noise_frac = float(noise_match.group(1))
                 
+                # SDXL Worker: Auflösung limitieren (Worker-Bug: große Outputs → 400 beim Upload)
+                sdxl_width = min(width, 768)
+                sdxl_height = min(height, 768)
+                if width > 768 or height > 768:
+                    logger.warning(f"[SDXL] Auflösung reduziert: {width}x{height} → {sdxl_width}x{sdxl_height}")
+                
                 # SDXL Worker erwartet "input"-Wrapper mit spezifischen Keys
                 input_payload = {
                     "prompt": prompt,
                     "negative_prompt": negative_prompt,
-                    "width": width,
-                    "height": height,
+                    "width": sdxl_width,
+                    "height": sdxl_height,
                     "num_inference_steps": steps,
                     "refiner_inference_steps": refiner_steps,
                     "guidance_scale": float(guidance),
@@ -189,7 +195,7 @@ def generate_image(self, job_id: str):
                     "scheduler": scheduler,
                     "seed": seed if seed else -1,  # -1 = random für SDXL
                     "num_images": num_images,
-                    "refine": "expert_ensemble_refiner",  # SDXL Refiner-Modus
+                    # ACHTUNG: "refine" gibt "Unexpected input" Error → entfernt
                 }
                 logger.info(f"[RunPod/SDXL] Payload Keys: {list(input_payload.keys())}")
             else:
