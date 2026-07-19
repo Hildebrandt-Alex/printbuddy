@@ -524,6 +524,20 @@ def _wizard_clear(request):
     request.session.modified = True
 
 
+def _enrich_model_meta_with_endpoints(models_dict: dict) -> dict:
+    """Fügt endpoint_configured Key zu jedem Modell hinzu (basierend auf Django Settings).
+    Gibt neues Dict zurück ohne Original zu mutieren.
+    """
+    from django.conf import settings as djsettings
+    enriched = {}
+    for key, meta in models_dict.items():
+        meta_copy = meta.copy()
+        env_var = meta.get("endpoint_var", "")
+        meta_copy["endpoint_configured"] = bool(getattr(djsettings, env_var, ""))
+        enriched[key] = meta_copy
+    return enriched
+
+
 def _get_or_create_template(output_type: str, model: str) -> PipelineTemplate:
     """Sucht passendes Template oder legt es automatisch an.
     WICHTIG: Steps/Guidance werden immer modell-spezifisch gesetzt — nie am falschen Template wiederverwenden.
@@ -578,14 +592,9 @@ def wizard_step1(request):
         return redirect("studio:wizard_step2")
 
     _wizard_clear(request)
-    # Modell-Verfügbarkeit aus Settings prüfen (welche Endpoints konfiguriert sind)
-    from django.conf import settings as djsettings
-    for key, meta in MODEL_META.items():
-        env_var = meta.get("endpoint_var", "")
-        meta["endpoint_configured"] = bool(getattr(djsettings, env_var, ""))
     return render(request, "studio/wizard/step1.html", {
         "output_types": OUTPUT_TYPES,
-        "model_meta": MODEL_META,
+        "model_meta": _enrich_model_meta_with_endpoints(MODEL_META),
     })
 
 
@@ -601,11 +610,14 @@ def wizard_step2(request):
     otype_meta  = OUTPUT_TYPES[output_type]
     is_img2img  = (output_type == "img2img")
 
+    # Modell-Meta mit Endpoint-Status anreichern
+    enriched_models = _enrich_model_meta_with_endpoints(MODEL_META)
+    
     # Bei Img2Img: nur Modelle die img2img_support=True haben
     if is_img2img:
-        allowed = {k: MODEL_META[k] for k in otype_meta["allowed_models"] if MODEL_META[k].get("img2img_support")}
+        allowed = {k: enriched_models[k] for k in otype_meta["allowed_models"] if enriched_models[k].get("img2img_support")}
     else:
-        allowed = {k: MODEL_META[k] for k in otype_meta["allowed_models"]}
+        allowed = {k: enriched_models[k] for k in otype_meta["allowed_models"]}
 
     prompts     = PromptTemplate.objects.filter(is_public=True).order_by("category", "title")
 
