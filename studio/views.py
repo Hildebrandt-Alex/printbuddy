@@ -348,6 +348,7 @@ def asset_select(request, job_id):
         category=category,
         cta_type=cta_type,
         file_path=f"exports/preview/{preview_filename}",
+        thumb_path=f"exports/preview/{preview_filename}",  # Preview ist bereits klein — kein Pillow-Open auf NAS
         is_public=False,  # Admin gibt explizit frei
         source_job_id=job.id,
         project=job.project,  # Projekt vom Job erben

@@ -47,7 +47,11 @@ class GalleryImage(models.Model):
         """600x600 JPEG Thumbnail via Pillow."""
         if not self.file_path:
             return
-        img = PilImage.open(self.file_path)
+        try:
+            img = PilImage.open(self.file_path)
+        except (FileNotFoundError, OSError):
+            # Datei liegt auf NAS oder ist noch nicht vorhanden — Thumbnail wird übersprungen
+            return
         img = img.convert('RGB')
         img.thumbnail((600, 600), PilImage.LANCZOS)
         buf = io.BytesIO()
