@@ -504,3 +504,105 @@ def upscale_image(self, job_id: str):
         logger.error("[upscale_image] Job %s fehlgeschlagen: %s", job_id, exc)
         _save_step(job_id, "upscale", "failed", error_msg=str(exc))
         raise self.retry(exc=exc)
+
+
+@shared_task(bind=True, max_retries=3, default_retry_delay=30, queue="gpu_queue")
+def face_swap_image(self, job_id: str):
+    """
+    Face Swap: Ersetzt Gesicht im generierten Bild mit User-Gesicht aus reference_image.
+    Läuft NACH Generation, VOR Upscale für optimale Qualität.
+    Endpoint: ashleykleynhans/runpod-worker-inswapper
+    """
+    import base64
+    import runpod
+
+    from jobs.models import Job, JobStep
+
+    try:
+        job = Job.objects.get(id=job_id)
+        _save_step(job_id, "face_swap", "running")
+        logger.info("[face_swap_image] Job %s gestartet", job_id)
+
+        # Hole generiertes Bild (Preview-Asset)
+        preview_step = JobStep.objects.filter(
+            job=job, 
+            step_type="generate", 
+            status="done"
+        ).exclude(output_asset_id__isnull=True).first()
+
+        if not preview_step:
+            raise ValueError("Kein generiertes Bild gefunden (generate step fehlt)")
+
+        target_filename = f"{preview_step.output_asset_id}.png"
+        target_path = _get_output_dir("raw") / target_filename
+
+        if not target_path.exists():
+            raise FileNotFoundError(f"Generiertes Bild nicht gefunden: {target_path}")
+
+        # Hole User-Gesicht (reference_image)
+        if not job.reference_image:
+            raise ValueError("Kein reference_image hochgeladen für Face Swap")
+
+        source_image_path = Path(settings.MEDIA_ROOT) / job.reference_image.name
+        if not source_image_path.exists():
+            raise FileNotFoundError(f"Reference Image nicht gefunden: {source_image_path}")
+
+        # Bilder als Base64 laden
+        with open(source_image_path, "rb") as f:
+            source_b64 = base64.b64encode(f.read()).decode('utf-8')
+
+        with open(target_path, "rb") as f:
+            target_b64 = base64.b64encode(f.read()).decode('utf-8')
+
+        logger.info("[face_swap_image] Source: %s, Target: %s", source_image_path.name, target_filename)
+
+        # RunPod Face Swap Endpoint
+        endpoint_id = os.environ.get("RUNPOD_FACESWAP_ENDPOINT_ID")
+        if not endpoint_id:
+            raise ValueError("RUNPOD_FACESWAP_ENDPOINT_ID nicht gesetzt")
+
+        runpod.api_key = os.environ.get("RUNPOD_API_KEY")
+        endpoint = runpod.Endpoint(endpoint_id)
+
+        payload = {
+            "input": {
+                "source_image": source_b64,
+                "target_image": target_b64,
+                "face_swapper_model": "inswapper_128",  # Balanced quality/speed
+                "face_restore": True,  # CodeFormer Enhancement
+                "face_upsample": True,
+                "background_enhance": False,  # Upscale step kommt danach
+                "upscale": 1,  # Kein Upscale hier (separater Step)
+                "output_format": "PNG",
+            }
+        }
+
+        logger.info("[face_swap_image] RunPod Request gesendet")
+        result = endpoint.run_sync(payload, timeout=600)
+
+        if result.get("status") == "FAILED":
+            raise RuntimeError(f"RunPod Face Swap fehlgeschlagen: {result.get('error')}")
+
+        output = result.get("output", {})
+        if "image" not in output:
+            raise ValueError("RunPod Response enthält kein 'image' Feld")
+
+        # Ergebnis speichern
+        result_b64 = output["image"]
+        result_bytes = base64.b64decode(result_b64)
+
+        asset_id = uuid.uuid4()
+        output_filename = f"{asset_id}.png"
+        output_path = _get_output_dir("raw") / output_filename
+
+        with open(output_path, "wb") as f:
+            f.write(result_bytes)
+
+        logger.info("[face_swap_image] Face Swap erfolgreich: %s", output_filename)
+        _save_step(job_id, "face_swap", "done", asset_id=asset_id)
+        return str(asset_id)
+
+    except Exception as exc:
+        logger.error("[face_swap_image] Job %s fehlgeschlagen: %s", job_id, exc, exc_info=True)
+        _save_step(job_id, "face_swap", "failed", error_msg=str(exc))
+        raise self.retry(exc=exc)

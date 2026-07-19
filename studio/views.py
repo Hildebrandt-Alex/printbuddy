@@ -159,12 +159,18 @@ def job_list(request):
 
 @studio_required
 def job_create(request):
+    import json
+    from jobs.model_info import MODEL_DESCRIPTIONS, get_model_info
+    
     templates = PipelineTemplate.objects.filter(is_active=True).order_by("name")
     prompt_templates = PromptTemplate.objects.filter(is_public=True).order_by("category", "title")
     # Projekte immer laden — wird in allen Returns benötigt
     projects = Project.objects.filter(
         models.Q(created_by=request.user) | models.Q(team_members=request.user)
     ).distinct().order_by('title')
+    
+    # Model Descriptions als JSON für Template
+    model_descriptions_json = json.dumps(MODEL_DESCRIPTIONS)
 
     if request.method == "POST":
         title          = request.POST.get("title", "").strip()
@@ -195,6 +201,7 @@ def job_create(request):
                 "prompt_templates": prompt_templates,
                 "projects": projects,
                 "post": request.POST,
+                "model_descriptions": model_descriptions_json,
             })
 
         try:
@@ -206,6 +213,7 @@ def job_create(request):
                 "prompt_templates": prompt_templates,
                 "projects": projects,
                 "post": request.POST,
+                "model_descriptions": model_descriptions_json,
             })
 
         project_id = request.POST.get('project_id', '').strip()
@@ -233,6 +241,12 @@ def job_create(request):
             status='draft',
             created_by=request.user,
         )
+        
+        # Reference Image für Face Swap (falls hochgeladen)
+        if 'reference_image' in request.FILES:
+            job.reference_image = request.FILES['reference_image']
+            job.save(update_fields=['reference_image'])
+            logger.info("[job_create] Reference Image hochgeladen für Job %s", job.id)
 
         messages.success(request, f"Job '{job.title}' angelegt. Admin muss ihn starten.")
         return redirect("studio:job_detail", job_id=job.id)
@@ -242,6 +256,7 @@ def job_create(request):
         'prompt_templates': prompt_templates,
         'projects': projects,
         'post': {},
+        'model_descriptions': model_descriptions_json,
     })
 
 

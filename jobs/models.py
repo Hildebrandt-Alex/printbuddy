@@ -70,6 +70,7 @@ class PipelineTemplate(models.Model):
     category         = models.CharField(max_length=30, choices=Category.choices)
     # Pipeline Steps
     step_generate    = models.BooleanField(default=True)
+    step_face_swap   = models.BooleanField(default=False, help_text="Gesicht aus reference_image auf generiertes Bild übertragen")
     step_upscale     = models.BooleanField(default=True)
     step_vectorize   = models.BooleanField(default=False)
     step_cmyk        = models.BooleanField(default=False)

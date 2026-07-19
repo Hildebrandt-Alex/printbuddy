@@ -12,6 +12,7 @@ def build_pipeline_chain(job_id: str):
 
     Reihenfolge (bindend laut ADR-03):
         generate_image
+        → face_swap_image     (wenn step_face_swap UND reference_image vorhanden)
         → upscale_image       (wenn step_upscale)
         → vectorize_image     (wenn step_vectorize)
         → cmyk_export         (wenn step_cmyk)
@@ -25,7 +26,7 @@ def build_pipeline_chain(job_id: str):
     Nur UUIDs als Argumente — kein ORM-Objekt serialisieren.
     """
     from jobs.models import Job, JobStep
-    from gpu.tasks import generate_image, upscale_image
+    from gpu.tasks import generate_image, upscale_image, face_swap_image
     from postprocess.tasks import (
         vectorize_image,
         cmyk_export,
@@ -46,6 +47,12 @@ def build_pipeline_chain(job_id: str):
 
     # Pflicht: generate
     step_definitions.append(("generate", True))
+    
+    # Face Swap NACH Generation, VOR Upscale (wenn aktiviert + reference_image vorhanden)
+    if t.step_face_swap and job.reference_image:
+        step_definitions.append(("face_swap", True))
+        logger.info("[build_pipeline_chain] Face Swap aktiviert für Job %s", job_id)
+    
     if t.step_upscale:
         step_definitions.append(("upscale", True))
     if t.step_vectorize:
@@ -79,6 +86,7 @@ def build_pipeline_chain(job_id: str):
     # Celery Chain aufbauen
     task_map = {
         "generate": generate_image.si(job_id),
+        "face_swap": face_swap_image.si(job_id),
         "upscale": upscale_image.si(job_id),
         "vectorize": vectorize_image.si(job_id),
         "cmyk_export": cmyk_export.si(job_id),

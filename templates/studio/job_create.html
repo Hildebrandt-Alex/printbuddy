@@ -30,7 +30,7 @@
 <div class="grid-2" style="align-items:start;gap:1.5rem">
 
   <!-- Formular -->
-  <form method="post">
+  <form method="post" enctype="multipart/form-data">
     {% csrf_token %}
 
     <div class="card" style="margin-bottom:1rem">
@@ -82,6 +82,42 @@
         <input type="number" id="id_num_images" name="num_images" value="{{ post.num_images|default:'1' }}" min="1" max="10">
         <div class="form-hint">1–10 Bilder pro Job</div>
       </div>
+
+      <div class="form-group">
+        <label for="id_model">KI-Modell *</label>
+        <select id="id_model" name="model" required onchange="updateModelDescription(this)">
+          <option value="">— Modell wählen —</option>
+          <option value="flux_schnell" {% if post.model == 'flux_schnell' %}selected{% endif %}>
+            FLUX Schnell ⚡⚡⚡ (Apache 2.0 ✅)
+          </option>
+          <option value="sdxl" {% if post.model == 'sdxl' %}selected{% endif %}>
+            SDXL 1.0 (CreativeML ✅)
+          </option>
+          <option value="flux_dev" {% if post.model == 'flux_dev' %}selected{% endif %}>
+            FLUX Dev ⚠️ (Nur Tests - NICHT für Verkauf!)
+          </option>
+        </select>
+        <div id="model-description" style="margin-top:.75rem;font-size:.85rem;padding:.75rem;background:var(--surface2);border-radius:6px;display:none">
+          <!-- Dynamisch via JavaScript befüllt -->
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:1rem">
+      <div class="card-title">Personalisierung (Optional)</div>
+      <div class="form-group">
+        <label for="id_reference_image">
+          <input type="checkbox" id="enable_face_swap" onchange="toggleFaceSwap(this)" style="margin-right:.5rem">
+          Face Swap aktivieren (Gesicht auf generiertes Bild übertragen)
+        </label>
+        <div id="face_swap_upload" style="display:none;margin-top:.75rem;padding:.75rem;background:var(--surface2);border-radius:6px">
+          <label for="id_reference_image" style="font-size:.85rem;font-weight:600">Dein Gesicht hochladen</label>
+          <input type="file" id="id_reference_image" name="reference_image" accept="image/*" style="margin-top:.5rem">
+          <div class="form-hint" style="margin-top:.5rem">
+            📸 Hochauflösendes Foto mit sichtbarem Gesicht. Wird nach Generation auf KI-Bild übertragen.
+          </div>
+        </div>
+      </div>
     </div>
 
     <div class="card" style="margin-bottom:1rem">
@@ -131,16 +167,6 @@
             <label>Seed (leer = zufällig)</label>
             <input type="number" name="seed" value="{{ post.seed|default:'' }}" placeholder="z.B. 42">
           </div>
-          <div class="form-group">
-            <label>Modell Override</label>
-            <select name="model">
-              <option value="">— Template-Default —</option>
-              <option value="flux_schnell" {% if post.model == 'flux_schnell' %}selected{% endif %}>flux_schnell (Apache 2.0 ✅)</option>
-              <option value="sdxl" {% if post.model == 'sdxl' %}selected{% endif %}>sdxl (CreativeML ✅)</option>
-              <option value="flux_dev" {% if post.model == 'flux_dev' %}selected{% endif %}>flux_dev (⚠️ nicht kommerziell)</option>
-              <option value="custom_lora" {% if post.model == 'custom_lora' %}selected{% endif %}>custom_lora (⚠️ Lizenz prüfen)</option>
-            </select>
-          </div>
         </div>
       </div>
     </div>
@@ -173,6 +199,9 @@
 </div>
 
 <script>
+// Model Descriptions als JSON (von Backend)
+const MODEL_DESCRIPTIONS = {{ model_descriptions|safe }};
+
 function toggleCollapsible() {
   const el = document.getElementById('advanced');
   const btn = document.querySelector('.collapsible-toggle');
@@ -185,6 +214,97 @@ function toggleCollapsible() {
 function insertPrompt(text) {
   const ta = document.getElementById('id_prompt');
   if (ta) { ta.value = text; ta.focus(); }
+}
+
+function toggleFaceSwap(checkbox) {
+  const uploadDiv = document.getElementById('face_swap_upload');
+  uploadDiv.style.display = checkbox.checked ? 'block' : 'none';
+}
+
+function updateModelDescription(select) {
+  const modelKey = select.value;
+  const descDiv = document.getElementById('model-description');
+  const promptField = document.getElementById('id_prompt');
+  const negPromptField = document.getElementById('id_negative_prompt');
+  
+  if (!modelKey || !MODEL_DESCRIPTIONS[modelKey]) {
+    descDiv.style.display = 'none';
+    return;
+  }
+  
+  const info = MODEL_DESCRIPTIONS[modelKey];
+  descDiv.style.display = 'block';
+  
+  // License Badge
+  let licenseBadge = '';
+  if (info.license.includes('Kommerziell OK')) {
+    licenseBadge = '<span class="license-ok">✅ Kommerziell</span>';
+  } else if (info.license.includes('NICHT')) {
+    licenseBadge = '<span class="license-no">❌ Nur Tests</span>';
+  } else {
+    licenseBadge = '<span class="license-warn">⚠️ Lizenz prüfen</span>';
+  }
+  
+  let html = `
+    <div style="margin-bottom:.75rem">
+      <strong style="font-size:.95rem">${info.name}</strong> ${licenseBadge}
+      <div style="margin-top:.3rem;color:var(--text-muted)">${info.license}</div>
+    </div>
+    
+    <div style="margin-bottom:.75rem">
+      <strong>📋 Anwendungsfall:</strong><br>
+      ${info.use_case}
+    </div>
+    
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-bottom:.75rem">
+      <div><strong>⚡ Geschwindigkeit:</strong> ${info.speed}</div>
+      <div><strong>★ Qualität:</strong> ${info.quality}</div>
+    </div>
+    
+    <div style="margin-bottom:.75rem">
+      <strong>🎯 Optimal für:</strong><br>
+      <span style="color:var(--text-muted)">${info.best_for.join(', ')}</span>
+    </div>
+    
+    <details style="margin-top:.75rem">
+      <summary style="cursor:pointer;font-weight:600;margin-bottom:.5rem">📊 Parameter-Impact</summary>
+      <div style="font-size:.8rem;color:var(--text-muted);margin-top:.5rem">
+        <div style="margin-bottom:.4rem"><strong>Steps:</strong> ${info.param_impact.steps}</div>
+        <div style="margin-bottom:.4rem"><strong>Guidance:</strong> ${info.param_impact.guidance}</div>
+        <div><strong>Auflösung:</strong> ${info.param_impact.size}</div>
+      </div>
+    </details>
+    
+    <details style="margin-top:.75rem">
+      <summary style="cursor:pointer;font-weight:600;margin-bottom:.5rem">💡 Beispiel-Prompts</summary>
+      <div style="font-size:.8rem;margin-top:.5rem">
+        <div style="margin-bottom:.75rem">
+          <strong style="color:var(--accent2)">Positiv:</strong><br>
+          <div style="color:var(--text-muted);margin-top:.3rem">${info.example_prompt}</div>
+          <button type="button" onclick="document.getElementById('id_prompt').value='${info.example_prompt.replace(/'/g, "\\'")}'" 
+            style="margin-top:.4rem;padding:.25rem .5rem;font-size:.75rem;background:var(--accent2);color:white;border:none;border-radius:4px;cursor:pointer">
+            In Prompt einfügen
+          </button>
+        </div>
+        <div>
+          <strong style="color:var(--red)">Negativ:</strong><br>
+          <div style="color:var(--text-muted);margin-top:.3rem">${info.example_negative}</div>
+          <button type="button" onclick="document.getElementById('id_negative_prompt').value='${info.example_negative.replace(/'/g, "\\'")}'" 
+            style="margin-top:.4rem;padding:.25rem .5rem;font-size:.75rem;background:var(--red);color:white;border:none;border-radius:4px;cursor:pointer">
+            In Negativ-Prompt einfügen
+          </button>
+        </div>
+      </div>
+    </details>
+  `;
+  
+  if (info.warning) {
+    html += `<div style="margin-top:.75rem;padding:.75rem;background:#7c2d12;border-left:3px solid #f87171;border-radius:4px">
+      <strong>⚠️ Wichtig:</strong> ${info.warning}
+    </div>`;
+  }
+  
+  descDiv.innerHTML = html;
 }
 
 function updateTemplateInfo(sel) {
@@ -201,5 +321,13 @@ function updateTemplateInfo(sel) {
   info.innerHTML = `Modell: <strong>${model}</strong> &nbsp;|&nbsp; ${licMap[model] || ''}
     &nbsp;|&nbsp; ${opt.dataset.w}×${opt.dataset.h}px, ${opt.dataset.steps} Steps, Guidance ${opt.dataset.guidance}`;
 }
+
+// Auto-update wenn Seite lädt und Model schon gewählt ist
+document.addEventListener('DOMContentLoaded', function() {
+  const modelSelect = document.getElementById('id_model');
+  if (modelSelect && modelSelect.value) {
+    updateModelDescription(modelSelect);
+  }
+});
 </script>
 {% endblock %}
