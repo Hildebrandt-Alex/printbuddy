@@ -131,8 +131,12 @@ PRINTFUL_API_KEY = env('PRINTFUL_API_KEY', default='')
 
 # RunPod
 RUNPOD_API_KEY = env('RUNPOD_API_KEY', default='')
-RUNPOD_ENDPOINT_ID = env('RUNPOD_ENDPOINT_ID', default='')
+RUNPOD_ENDPOINT_ID = env('RUNPOD_ENDPOINT_ID', default='')  # FLUX Schnell/Dev
+RUNPOD_SDXL_ENDPOINT_ID = env('RUNPOD_SDXL_ENDPOINT_ID', default='')  # SDXL 1.0
 RUNPOD_UPSCALE_ENDPOINT = env('RUNPOD_UPSCALE_ENDPOINT', default='')
+
+# Media-URL für externe API-Zugriffe (z.B. RunPod Img2Img)
+MEDIA_URL_EXTERNAL = env('MEDIA_URL_EXTERNAL', default='https://datemyhobby.com/media')
 
 # Vast.ai
 VASTAI_API_KEY = env('VASTAI_API_KEY', default='')
