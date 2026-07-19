@@ -1,6 +1,4 @@
 import uuid
-from pathlib import Path
-
 from django.db import models
 from PIL import Image as PilImage
 import io
@@ -23,6 +21,8 @@ class GalleryImage(models.Model):
     title       = models.CharField(max_length=120)
     slug        = models.SlugField(unique=True)
     description = models.TextField(blank=True)
+    project     = models.ForeignKey('jobs.Project', on_delete=models.SET_NULL, null=True, blank=True,
+                                    related_name='gallery_images', help_text="Projekt-Zuordnung (optional)")
     file_path   = models.ImageField(upload_to='gallery/full/')
     thumb_path  = models.ImageField(upload_to='gallery/thumbs/', blank=True)
     category    = models.CharField(max_length=20, choices=Category.choices)
@@ -44,15 +44,8 @@ class GalleryImage(models.Model):
         return self.title
 
     def _generate_thumbnail(self):
-        """600x600 JPEG Thumbnail via Pillow. Nur wenn Datei lokal in MEDIA_ROOT liegt."""
-        from django.conf import settings
+        """600x600 JPEG Thumbnail via Pillow."""
         if not self.file_path:
-            return
-        # NAS-Pfade (exports/, gallery/) können nicht über Django Storage geöffnet werden
-        # Nginx serviert das Originalbild direkt — Thumbnail wird übersprungen
-        nas_base = getattr(settings, 'NAS_BASE_PATH', '/mnt/agency_nas')
-        abs_path = Path(nas_base) / str(self.file_path)
-        if not abs_path.exists() or str(self.file_path).startswith(('exports/', 'gallery/')):
             return
         img = PilImage.open(self.file_path)
         img = img.convert('RGB')
@@ -65,9 +58,6 @@ class GalleryImage(models.Model):
     def save(self, *args, **kwargs):
         generating_thumb = bool(self.file_path and not self.thumb_path)
         if generating_thumb:
-            try:
-                self._generate_thumbnail()
-            except (FileNotFoundError, OSError, Exception):
-                pass  # NAS-Datei nicht über Django-Storage erreichbar — kein Thumbnail
+            self._generate_thumbnail()
         super().save(*args, **kwargs)
 

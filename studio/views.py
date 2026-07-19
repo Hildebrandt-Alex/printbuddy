@@ -6,11 +6,12 @@ from pathlib import Path
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.db import models
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.text import slugify
 from django.views.decorators.http import require_POST
 
-from jobs.models import Job, PipelineTemplate, PromptTemplate
+from jobs.models import Job, PipelineTemplate, PromptTemplate, Project
 
 logger = logging.getLogger(__name__)
 
@@ -53,23 +54,102 @@ def dashboard(request):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Projekt-System
+# ─────────────────────────────────────────────────────────────────────────────
+
+@studio_required
+def project_list(request):
+    """Alle Projekte des Users (erstellt oder Mitglied)."""
+    projects = (
+        Project.objects.filter(
+            models.Q(created_by=request.user) | models.Q(team_members=request.user)
+        )
+        .distinct()
+        .prefetch_related('jobs', 'gallery_images')
+        .order_by('-updated_at')
+    )
+    return render(request, 'studio/project_list.html', {'projects': projects})
+
+
+@studio_required
+def project_detail(request, slug):
+    """Projekt-Detailansicht: alle Jobs + Assets des Projekts."""
+    project = get_object_or_404(
+        Project.objects.filter(
+            models.Q(created_by=request.user) | models.Q(team_members=request.user)
+        ),
+        slug=slug
+    )
+    jobs = project.jobs.select_related('pipeline_template').order_by('-created_at')
+    assets = project.gallery_images.order_by('-created_at')
+    return render(request, 'studio/project_detail.html', {
+        'project': project,
+        'jobs': jobs,
+        'assets': assets,
+    })
+
+
+@studio_required
+def project_create(request):
+    """Neues Projekt anlegen."""
+    if request.method == 'POST':
+        title = request.POST.get('title', '').strip()
+        description = request.POST.get('description', '').strip()
+        if not title:
+            messages.error(request, 'Projekttitel ist erforderlich.')
+            return render(request, 'studio/project_create.html', {'post': request.POST})
+        project = Project.objects.create(
+            title=title,
+            description=description,
+            created_by=request.user,
+        )
+        messages.success(request, f"Projekt '{project.title}' erstellt.")
+        return redirect('studio:project_detail', slug=project.slug)
+    return render(request, 'studio/project_create.html', {'post': {}})
+
+
+@require_POST
+@studio_required
+def project_move_job(request, job_id):
+    """Job in anderes Projekt verschieben (HTMX-kompatibel)."""
+    job = get_object_or_404(Job, id=job_id, created_by=request.user)
+    project_id = request.POST.get('project_id', '').strip()
+    if project_id:
+        project = get_object_or_404(Project, id=project_id)
+        job.project = project
+    else:
+        job.project = None
+    job.save(update_fields=['project'])
+    messages.success(request, f"Job in Projekt '{job.project}' verschoben.")
+    return redirect(request.POST.get('next', 'studio:job_list'))
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Job-Liste
 # ─────────────────────────────────────────────────────────────────────────────
 
 @studio_required
 def job_list(request):
-    status_filter = request.GET.get("status", "")
+    status_filter  = request.GET.get('status', '')
+    project_filter = request.GET.get('project', '')
     jobs = (
         Job.objects.filter(created_by=request.user)
-        .select_related("pipeline_template")
-        .order_by("-created_at")
+        .select_related('pipeline_template', 'project')
+        .order_by('-created_at')
     )
     if status_filter:
         jobs = jobs.filter(status=status_filter)
-    return render(request, "studio/job_list.html", {
-        "jobs": jobs,
-        "status_filter": status_filter,
-        "status_choices": Job.Status.choices,
+    if project_filter:
+        jobs = jobs.filter(project__slug=project_filter)
+    projects = Project.objects.filter(
+        models.Q(created_by=request.user) | models.Q(team_members=request.user)
+    ).distinct().order_by('title')
+    return render(request, 'studio/job_list.html', {
+        'jobs': jobs,
+        'status_filter': status_filter,
+        'project_filter': project_filter,
+        'status_choices': Job.Status.choices,
+        'projects': projects,
     })
 
 
@@ -122,9 +202,18 @@ def job_create(request):
                 "post": request.POST,
             })
 
+        project_id = request.POST.get('project_id', '').strip()
+        project = None
+        if project_id:
+            try:
+                project = Project.objects.get(id=project_id)
+            except Project.DoesNotExist:
+                pass
+
         job = Job.objects.create(
             title=title,
             pipeline_template=template,
+            project=project,
             prompt=prompt,
             negative_prompt=negative_prompt,
             notes=notes,
@@ -135,17 +224,21 @@ def job_create(request):
             guidance=float(guidance) if guidance else None,
             seed=int(seed) if seed else None,
             num_images=num_images,
-            status="draft",
+            status='draft',
             created_by=request.user,
         )
 
         messages.success(request, f"Job '{job.title}' angelegt. Admin muss ihn starten.")
         return redirect("studio:job_detail", job_id=job.id)
 
-    return render(request, "studio/job_create.html", {
-        "templates": templates,
-        "prompt_templates": prompt_templates,
-        "post": {},
+    projects = Project.objects.filter(
+        models.Q(created_by=request.user) | models.Q(team_members=request.user)
+    ).distinct().order_by('title')
+    return render(request, 'studio/job_create.html', {
+        'templates': templates,
+        'prompt_templates': prompt_templates,
+        'projects': projects,
+        'post': {},
     })
 
 

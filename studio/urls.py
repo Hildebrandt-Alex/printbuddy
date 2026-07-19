@@ -6,6 +6,13 @@ app_name = "studio"
 
 urlpatterns = [
     path("",                              views.dashboard,           name="dashboard"),
+
+    # Projekte
+    path("projects/",                     views.project_list,        name="project_list"),
+    path("projects/new/",                 views.project_create,      name="project_create"),
+    path("projects/<slug:slug>/",         views.project_detail,      name="project_detail"),
+    path("jobs/<uuid:job_id>/move/",      views.project_move_job,    name="project_move_job"),
+
     path("jobs/",                         views.job_list,            name="job_list"),
     path("jobs/<uuid:job_id>/",           views.job_detail,          name="job_detail"),
     path("jobs/<uuid:job_id>/status/",    views.job_status_partial,  name="job_status"),

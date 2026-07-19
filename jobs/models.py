@@ -1,8 +1,53 @@
 import uuid
 from django.db import models
 from django.contrib.auth import get_user_model
+from django.utils.text import slugify
 
 User = get_user_model()
+
+
+class Project(models.Model):
+    """
+    Organisiert Jobs und Assets in Projekten für bessere Übersicht.
+    Ermöglicht Team-Kollaboration und Asset-Management.
+    """
+    id            = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    title         = models.CharField(max_length=120)
+    slug          = models.SlugField(unique=True, max_length=140)
+    description   = models.TextField(blank=True, help_text="Projekt-Beschreibung, Ziel, Notizen")
+    created_by    = models.ForeignKey(User, on_delete=models.PROTECT, related_name='created_projects')
+    team_members  = models.ManyToManyField(User, related_name='projects', blank=True, 
+                                           help_text="Teammitglieder die Projekt sehen können")
+    is_active     = models.BooleanField(default=True, help_text="Inaktive Projekte archiviert")
+    created_at    = models.DateTimeField(auto_now_add=True)
+    updated_at    = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-updated_at']
+        verbose_name = 'Projekt'
+        verbose_name_plural = 'Projekte'
+
+    def __str__(self):
+        return self.title
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            base_slug = slugify(self.title)
+            slug = base_slug
+            counter = 1
+            while Project.objects.filter(slug=slug).exists():
+                slug = f"{base_slug}-{counter}"
+                counter += 1
+            self.slug = slug
+        super().save(*args, **kwargs)
+
+    def get_job_count(self):
+        """Anzahl Jobs in diesem Projekt."""
+        return self.jobs.count()
+
+    def get_asset_count(self):
+        """Anzahl Gallery-Images in diesem Projekt."""
+        return self.gallery_images.count()
 
 
 class PipelineTemplate(models.Model):
@@ -63,6 +108,8 @@ class Job(models.Model):
     title             = models.CharField(max_length=150)
     status            = models.CharField(max_length=20, choices=Status.choices, default=Status.DRAFT)
     pipeline_template = models.ForeignKey(PipelineTemplate, on_delete=models.PROTECT)
+    project           = models.ForeignKey('Project', on_delete=models.SET_NULL, null=True, blank=True,
+                                          related_name='jobs', help_text="Projekt-Zuordnung (optional)")
     prompt            = models.TextField()
     negative_prompt   = models.TextField(blank=True)
     reference_image   = models.ImageField(upload_to='jobs/refs/', blank=True)

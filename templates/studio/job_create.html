@@ -41,6 +41,19 @@
         <input type="text" id="id_title" name="title" value="{{ post.title|default:'' }}" required placeholder="z.B. Herbst-Poster Set blau">
       </div>
 
+      {% if projects %}
+      <div class="form-group">
+        <label for="id_project">Projekt (optional)</label>
+        <select id="id_project" name="project_id"
+          style="width:100%;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:.5rem .75rem">
+          <option value="">— Kein Projekt —</option>
+          {% for p in projects %}
+          <option value="{{ p.id }}" {% if post.project_id == p.id|stringformat:"s" %}selected{% endif %}>{{ p.title }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      {% endif %}
+
       <div class="form-group">
         <label for="id_template">Pipeline Template *</label>
         {% if not templates %}

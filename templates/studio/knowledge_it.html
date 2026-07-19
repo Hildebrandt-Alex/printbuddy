@@ -495,7 +495,7 @@
           <br>
           <strong>Beispiel: Navigation erweitern</strong><br>
           <code>templates/studio/base.html</code> → <code>&lt;nav&gt;</code> Block<br>
-          Link hinzufügen: <code>&lt;a href="{% url 'studio:neue_view' %}"&gt;Label&lt;/a&gt;</code>
+          Link hinzufügen: <code>&lt;a href="{% verbatim %}{% url 'studio:neue_view' %}{% endverbatim %}"&gt;Label&lt;/a&gt;</code>
         </div>
         
         <div class="info-card">

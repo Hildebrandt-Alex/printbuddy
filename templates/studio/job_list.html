@@ -4,15 +4,25 @@
 {% block content %}
 <div class="page-header">
   <h1>Meine Jobs</h1>
-  <a href="{% url 'studio:job_create' %}" class="btn btn-primary">+ Neuer Job</a>
+  <a href="{% url 'studio:wizard_step1' %}" class="btn btn-primary">+ Neuer Job</a>
 </div>
 
 <!-- Filter -->
-<div style="display:flex;gap:.5rem;margin-bottom:1.25rem">
-  <a href="{% url 'studio:job_list' %}" class="btn btn-secondary btn-sm {% if not status_filter %}active{% endif %}" style="{% if not status_filter %}background:var(--accent);color:#fff{% endif %}">Alle</a>
+<div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:1.25rem;align-items:center">
+  <a href="{% url 'studio:job_list' %}" class="btn btn-secondary btn-sm" style="{% if not status_filter and not project_filter %}background:var(--accent);color:#fff{% endif %}">Alle</a>
   {% for val, label in status_choices %}
-  <a href="?status={{ val }}" class="btn btn-secondary btn-sm" style="{% if status_filter == val %}background:var(--accent);color:#fff{% endif %}">{{ label }}</a>
+  <a href="?status={{ val }}{% if project_filter %}&project={{ project_filter }}{% endif %}" class="btn btn-secondary btn-sm" style="{% if status_filter == val %}background:var(--accent);color:#fff{% endif %}">{{ label }}</a>
   {% endfor %}
+  {% if projects %}
+  <span style="color:var(--text-muted);margin-left:.5rem;font-size:.85rem">|</span>
+  <select onchange="window.location='?{% if status_filter %}status={{ status_filter }}&{% endif %}project='+this.value"
+          style="background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:.25rem .5rem;font-size:.85rem">
+    <option value="" {% if not project_filter %}selected{% endif %}>📁 Alle Projekte</option>
+    {% for p in projects %}
+    <option value="{{ p.slug }}" {% if project_filter == p.slug %}selected{% endif %}>{{ p.title }}</option>
+    {% endfor %}
+  </select>
+  {% endif %}
 </div>
 
 <div class="card">
@@ -21,6 +31,7 @@
     <thead>
       <tr>
         <th>Titel</th>
+        <th>Projekt</th>
         <th>Template</th>
         <th>Bilder</th>
         <th>Status</th>
@@ -32,6 +43,11 @@
     {% for job in jobs %}
       <tr>
         <td>{{ job.title }}</td>
+        <td>
+          {% if job.project %}
+          <a href="{% url 'studio:project_detail' job.project.slug %}" style="color:var(--accent2);font-size:.85rem">📁 {{ job.project.title }}</a>
+          {% else %}<span style="color:var(--text-muted);font-size:.85rem">—</span>{% endif %}
+        </td>
         <td style="color:var(--text-muted)">{{ job.pipeline_template.name }}</td>
         <td style="color:var(--text-muted)">{{ job.num_images }}</td>
         <td><span class="badge badge-{{ job.status }}">{{ job.get_status_display }}</span></td>

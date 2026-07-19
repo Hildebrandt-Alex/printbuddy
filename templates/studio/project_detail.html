@@ -1,0 +1,103 @@
+{% extends "studio/base.html" %}
+{% block title %}{{ project.title }}{% endblock %}
+
+{% block content %}
+<div class="page-header" style="margin-bottom:1.5rem">
+  <div>
+    <div style="font-size:.85rem;color:var(--text-muted);margin-bottom:.25rem">
+      <a href="{% url 'studio:project_list' %}" style="color:var(--accent2)">Projekte</a> /
+    </div>
+    <h1>📁 {{ project.title }}</h1>
+    {% if project.description %}
+    <p style="color:var(--text-muted);margin-top:.4rem">{{ project.description }}</p>
+    {% endif %}
+  </div>
+  <a href="{% url 'studio:wizard_step1' %}" class="btn btn-primary">+ Job für dieses Projekt</a>
+</div>
+
+<!-- Stats -->
+<div style="display:flex;gap:1rem;margin-bottom:1.5rem;flex-wrap:wrap">
+  <div class="card" style="padding:.75rem 1.25rem;min-width:120px;text-align:center">
+    <div style="font-size:1.5rem;font-weight:700;color:var(--accent2)">{{ jobs|length }}</div>
+    <div style="font-size:.8rem;color:var(--text-muted)">Jobs</div>
+  </div>
+  <div class="card" style="padding:.75rem 1.25rem;min-width:120px;text-align:center">
+    <div style="font-size:1.5rem;font-weight:700;color:var(--green)">{{ assets|length }}</div>
+    <div style="font-size:.8rem;color:var(--text-muted)">Assets</div>
+  </div>
+  <div class="card" style="padding:.75rem 1.25rem;min-width:120px;text-align:center">
+    <div style="font-size:.8rem;color:var(--text-muted)">Erstellt von</div>
+    <div style="font-size:.9rem;color:var(--text)">{{ project.created_by.username }}</div>
+  </div>
+  <div class="card" style="padding:.75rem 1.25rem;min-width:120px;text-align:center">
+    <div style="font-size:.8rem;color:var(--text-muted)">Zuletzt aktiv</div>
+    <div style="font-size:.9rem;color:var(--text)">{{ project.updated_at|date:"d.m.Y" }}</div>
+  </div>
+</div>
+
+<!-- Jobs -->
+<div class="card" style="margin-bottom:1.5rem">
+  <div style="padding:1rem 1.25rem;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+    <h2 style="font-size:1rem">🎬 Jobs</h2>
+    <a href="{% url 'studio:job_list' %}?project={{ project.slug }}" style="font-size:.85rem;color:var(--accent2)">Alle ansehen →</a>
+  </div>
+  {% if jobs %}
+  <table>
+    <thead>
+      <tr>
+        <th>Titel</th>
+        <th>Template</th>
+        <th>Status</th>
+        <th>Erstellt</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for job in jobs|slice:":10" %}
+      <tr>
+        <td>{{ job.title }}</td>
+        <td style="color:var(--text-muted);font-size:.85rem">{{ job.pipeline_template.name }}</td>
+        <td><span class="badge badge-{{ job.status }}">{{ job.get_status_display }}</span></td>
+        <td style="color:var(--text-muted);font-size:.85rem">{{ job.created_at|date:"d.m. H:i" }}</td>
+        <td>
+          {% if job.status == "done" %}
+            <a href="{% url 'studio:job_results' job.id %}" class="btn btn-secondary btn-sm">Ergebnisse</a>
+          {% else %}
+            <a href="{% url 'studio:job_detail' job.id %}" class="btn btn-secondary btn-sm">Details</a>
+          {% endif %}
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% if jobs|length > 10 %}
+  <div style="padding:.75rem 1.25rem;text-align:center;border-top:1px solid var(--border)">
+    <a href="{% url 'studio:job_list' %}?project={{ project.slug }}" style="color:var(--accent2);font-size:.85rem">+ {{ jobs|length|add:"-10" }} weitere Jobs anzeigen</a>
+  </div>
+  {% endif %}
+  {% else %}
+  <p style="padding:1.25rem;color:var(--text-muted)">Noch keine Jobs in diesem Projekt. <a href="{% url 'studio:wizard_step1' %}" style="color:var(--accent2)">Job erstellen →</a></p>
+  {% endif %}
+</div>
+
+<!-- Assets -->
+{% if assets %}
+<div class="card">
+  <div style="padding:1rem 1.25rem;border-bottom:1px solid var(--border)">
+    <h2 style="font-size:1rem">🖼 Assets ({{ assets|length }})</h2>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:.75rem;padding:1rem">
+    {% for asset in assets|slice:":12" %}
+    <div style="border-radius:8px;overflow:hidden;border:1px solid var(--border)">
+      {% if asset.thumb_path %}
+      <img src="{{ asset.thumb_path.url }}" alt="{{ asset.title }}" style="width:100%;aspect-ratio:1;object-fit:cover">
+      {% else %}
+      <div style="width:100%;aspect-ratio:1;background:var(--surface2);display:flex;align-items:center;justify-content:center;color:var(--text-muted);font-size:2rem">🖼</div>
+      {% endif %}
+      <div style="padding:.4rem .5rem;font-size:.75rem;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ asset.title }}</div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+{% endblock %}

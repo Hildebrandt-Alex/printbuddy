@@ -1,0 +1,35 @@
+{% extends "studio/base.html" %}
+{% block title %}Neues Projekt{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <div style="font-size:.85rem;color:var(--text-muted);margin-bottom:.25rem">
+      <a href="{% url 'studio:project_list' %}" style="color:var(--accent2)">Projekte</a> /
+    </div>
+    <h1>Neues Projekt</h1>
+  </div>
+</div>
+
+<div class="card" style="max-width:560px;padding:2rem">
+  <form method="post">
+    {% csrf_token %}
+    <div style="margin-bottom:1.25rem">
+      <label style="display:block;font-size:.9rem;color:var(--text-muted);margin-bottom:.4rem">Projekttitel *</label>
+      <input type="text" name="title" value="{{ post.title|default:'' }}" required autofocus
+        style="width:100%;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:.6rem .75rem;font-size:.95rem"
+        placeholder="z.B. Sommer-Kollektion 2026">
+    </div>
+    <div style="margin-bottom:1.75rem">
+      <label style="display:block;font-size:.9rem;color:var(--text-muted);margin-bottom:.4rem">Beschreibung (optional)</label>
+      <textarea name="description" rows="3"
+        style="width:100%;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:.6rem .75rem;font-size:.95rem;resize:vertical"
+        placeholder="Ziel des Projekts, Thema, Notizen ...">{{ post.description|default:'' }}</textarea>
+    </div>
+    <div style="display:flex;gap:.75rem">
+      <button type="submit" class="btn btn-primary">Projekt erstellen</button>
+      <a href="{% url 'studio:project_list' %}" class="btn btn-secondary">Abbrechen</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

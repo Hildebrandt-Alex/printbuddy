@@ -1,0 +1,39 @@
+{% extends "studio/base.html" %}
+{% block title %}Projekte{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>📁 Projekte</h1>
+  <a href="{% url 'studio:project_create' %}" class="btn btn-primary">+ Neues Projekt</a>
+</div>
+
+{% if projects %}
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:1rem">
+  {% for project in projects %}
+  <a href="{% url 'studio:project_detail' project.slug %}" style="text-decoration:none">
+    <div class="card" style="padding:1.25rem;transition:border-color .2s;border:1px solid var(--border)" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:.75rem">
+        <h3 style="color:var(--text);font-size:1.05rem">{{ project.title }}</h3>
+        {% if not project.is_active %}
+        <span style="background:var(--surface2);color:var(--text-muted);font-size:.75rem;padding:.2rem .5rem;border-radius:4px">archiviert</span>
+        {% endif %}
+      </div>
+      {% if project.description %}
+      <p style="color:var(--text-muted);font-size:.85rem;margin-bottom:.75rem;line-height:1.4">{{ project.description|truncatechars:100 }}</p>
+      {% endif %}
+      <div style="display:flex;gap:1rem;font-size:.85rem;color:var(--text-muted)">
+        <span>🎬 {{ project.get_job_count }} Jobs</span>
+        <span>🖼 {{ project.get_asset_count }} Assets</span>
+        <span style="margin-left:auto">{{ project.updated_at|date:"d.m.Y" }}</span>
+      </div>
+    </div>
+  </a>
+  {% endfor %}
+</div>
+{% else %}
+<div class="card" style="text-align:center;padding:3rem">
+  <p style="color:var(--text-muted);margin-bottom:1rem">Noch keine Projekte angelegt.</p>
+  <a href="{% url 'studio:project_create' %}" class="btn btn-primary">Erstes Projekt erstellen</a>
+</div>
+{% endif %}
+{% endblock %}
