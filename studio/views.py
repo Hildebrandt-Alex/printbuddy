@@ -635,293 +635,33 @@ def _get_or_create_template(output_type: str, model: str) -> PipelineTemplate:
 
 @studio_required
 def wizard_step1(request):
-    if request.method == "POST":
-        output_type = request.POST.get("output_type")
-        if output_type not in OUTPUT_TYPES:
-            messages.error(request, "Bitte einen Output-Typ wählen.")
-            return redirect("studio:wizard_step1")
-        _wizard_set(request, {"output_type": output_type})
-        return redirect("studio:wizard_step2")
-
-    _wizard_clear(request)
-    return render(request, "studio/wizard/step1.html", {
-        "output_types": OUTPUT_TYPES,
-        "model_meta": _enrich_model_meta_with_endpoints(MODEL_META),
-    })
+    """REDIRECT: Alter Wizard → Neue Single-Page Job-Erstellung"""
+    messages.info(request, "🔄 Der Wizard wurde durch ein verbessertes Formular ersetzt")
+    return redirect("studio:job_create")
 
 
 # ── Step 2: Modell + Prompt (+ Referenzfoto bei Img2Img) ─────────────────
 
 @studio_required
 def wizard_step2(request):
-    wizard = _wizard_get(request)
-    if not wizard.get("output_type"):
-        return redirect("studio:wizard_step1")
-
-    output_type = wizard["output_type"]
-    otype_meta  = OUTPUT_TYPES[output_type]
-    is_img2img  = (output_type == "img2img")
-
-    # Modell-Meta mit Endpoint-Status anreichern
-    enriched_models = _enrich_model_meta_with_endpoints(MODEL_META)
-    
-    # Bei Img2Img: nur Modelle die img2img_support=True haben
-    if is_img2img:
-        allowed = {k: enriched_models[k] for k in otype_meta["allowed_models"] if enriched_models[k].get("img2img_support")}
-    else:
-        allowed = {k: enriched_models[k] for k in otype_meta["allowed_models"]}
-
-    prompts     = PromptTemplate.objects.filter(is_public=True).order_by("category", "title")
-
-    if request.method == "POST":
-        model          = request.POST.get("model", "").strip()
-        prompt         = request.POST.get("prompt", "").strip()
-        negative_prompt = request.POST.get("negative_prompt", "").strip()
-        num_images     = int(request.POST.get("num_images") or 1)
-        seed           = request.POST.get("seed") or None
-        strength       = float(request.POST.get("strength") or 0.75)  # Img2Img Stärke
-
-        # Modell-spezifische Parameter auslesen
-        model_params = {}
-        if model in ("flux_schnell", "flux_dev"):
-            model_params["steps"] = int(request.POST.get("flux_steps") or 4)
-            model_params["guidance"] = float(request.POST.get("flux_guidance") or 0.0)
-        elif model == "sdxl":
-            model_params["steps"] = int(request.POST.get("sdxl_steps") or 30)
-            model_params["refiner_steps"] = int(request.POST.get("sdxl_refiner_steps") or 50)
-            model_params["guidance"] = float(request.POST.get("sdxl_guidance") or 7.5)
-            model_params["scheduler"] = request.POST.get("sdxl_scheduler") or "K_EULER"
-            model_params["high_noise_frac"] = float(request.POST.get("sdxl_high_noise_frac") or 0.8)
-
-        errors = []
-        if model not in allowed:
-            errors.append("Bitte ein Modell wählen.")
-        if not prompt:
-            errors.append("Prompt ist erforderlich.")
-
-        # Referenzfoto bei Img2Img verarbeiten
-        reference_image_path = None
-        if is_img2img:
-            ref_file = request.FILES.get("reference_image")
-            if not ref_file:
-                errors.append("Bitte ein Referenzfoto hochladen.")
-            else:
-                # Bild validieren (nur echte Bilder)
-                try:
-                    from PIL import Image as PilImage
-                    import io as _io
-                    PilImage.open(_io.BytesIO(ref_file.read())).verify()
-                    ref_file.seek(0)
-                except Exception:
-                    errors.append("Referenzfoto ist kein gültiges Bild (JPG/PNG erwartet).")
-                    ref_file = None
-
-                if ref_file and not errors:
-                    from django.core.files.storage import default_storage
-                    import uuid as _uuid
-                    ext = ref_file.name.rsplit(".", 1)[-1].lower() if "." in ref_file.name else "jpg"
-                    safe_ext = ext if ext in ("jpg", "jpeg", "png", "webp") else "jpg"
-                    ref_filename = f"jobs/refs/{_uuid.uuid4()}.{safe_ext}"
-                    default_storage.save(ref_filename, ref_file)
-                    reference_image_path = ref_filename
-
-        if errors:
-            for e in errors:
-                messages.error(request, e)
-            return render(request, "studio/wizard/step2.html", {
-                "output_type": output_type, "otype_meta": otype_meta, "is_img2img": is_img2img,
-                "allowed_models": allowed, "prompts": prompts, "post": request.POST,
-            })
-
-        _wizard_set(request, {
-            "model": model,
-            "prompt": prompt,
-            "negative_prompt": negative_prompt,
-            "num_images": num_images,
-            "seed": int(seed) if seed else None,
-            "reference_image": reference_image_path,
-            "img2img_strength": strength if is_img2img else None,
-            "model_params": model_params,  # Modell-spezifische Parameter
-        })
-        return redirect("studio:wizard_step3")
-
-    return render(request, "studio/wizard/step2.html", {
-        "output_type": output_type,
-        "otype_meta": otype_meta,
-        "is_img2img": is_img2img,
-        "allowed_models": allowed,
-        "prompts": prompts,
-        "post": wizard,
-    })
+    """REDIRECT: Alter Wizard → Neue Single-Page Job-Erstellung"""
+    return redirect("studio:job_create")
 
 
 # ── Step 3: Output-Details ────────────────────────────────────────────────
 
 @studio_required
 def wizard_step3(request):
-    wizard = _wizard_get(request)
-    if not wizard.get("model"):
-        return redirect("studio:wizard_step2")
-
-    output_type = wizard["output_type"]
-    otype_meta  = OUTPUT_TYPES[output_type]
-
-    # Kontext für POD: verfügbare Produkte + Sales-Channels
-    from shop.models import Product
-    from channels.models import SalesChannel
-    products  = Product.objects.filter(is_active=True).order_by("name") if output_type == "pod" else []
-    channels  = SalesChannel.objects.filter(is_active=True).order_by("name")
-
-    if request.method == "POST":
-        details = {}
-
-        if output_type == "preview":
-            details["aspect_ratio"] = request.POST.get("aspect_ratio", "1:1")
-            details["category"]     = request.POST.get("category", "art")
-            details["tags"]         = request.POST.get("tags", "").strip()
-
-        elif output_type == "pod":
-            product_id = request.POST.get("product_id", "").strip()
-            if not product_id:
-                messages.error(request, "Bitte ein Produkt wählen.")
-                return render(request, "studio/wizard/step3.html", {
-                    "output_type": output_type, "otype_meta": otype_meta,
-                    "products": products, "channels": channels,
-                    "aspect_ratios": ASPECT_RATIOS, "post": request.POST,
-                })
-            details["product_id"]  = product_id
-            details["aspect_ratio"] = request.POST.get("aspect_ratio", "1:1")
-            details["channel_id"]  = request.POST.get("channel_id", "")
-
-        elif output_type == "offset":
-            details["print_format"]  = request.POST.get("print_format", "A3")
-            details["dpi"]           = int(request.POST.get("dpi") or 300)
-            details["bleed_mm"]      = int(request.POST.get("bleed_mm") or 3)
-            details["channel_id"]    = request.POST.get("channel_id", "")
-
-        _wizard_set(request, {"details": details})
-        return redirect("studio:wizard_confirm")
-
-    return render(request, "studio/wizard/step3.html", {
-        "output_type": output_type,
-        "otype_meta": otype_meta,
-        "products": products,
-        "channels": channels,
-        "aspect_ratios": ASPECT_RATIOS,
-        "print_formats": PRINT_FORMATS,
-        "post": wizard.get("details", {}),
-    })
+    """REDIRECT: Alter Wizard → Neue Single-Page Job-Erstellung"""
+    return redirect("studio:job_create")
 
 
 # ── Confirm + Job anlegen ─────────────────────────────────────────────────
 
 @studio_required
 def wizard_confirm(request):
-    wizard = _wizard_get(request)
-    if not wizard.get("details") is not None and not wizard.get("output_type"):
-        return redirect("studio:wizard_step1")
-
-    output_type = wizard["output_type"]
-    model       = wizard["model"]
-    details     = wizard.get("details", {})
-
-    # Größe aus Seitenverhältnis / Druckformat ableiten
-    if output_type == "offset":
-        fmt = PRINT_FORMATS.get(details.get("print_format", "A3"), PRINT_FORMATS["A3"])
-        width, height = fmt["width"], fmt["height"]
-    else:
-        ratio = details.get("aspect_ratio", "1:1")
-        width, height = ASPECT_RATIOS.get(ratio, (1024, 1024))
-
-    # Projekte für Auswahl in Confirm-Form
-    user_projects = Project.objects.filter(
-        models.Q(created_by=request.user) | models.Q(team_members=request.user)
-    ).distinct().order_by('title')
-
-    def _get_default_project():
-        """'Allgemein'-Projekt als Fallback — wird in Data-Migration erstellt."""
-        return Project.objects.filter(slug='allgemein').first()
-
-    if request.method == "POST":
-        title = request.POST.get("title", f"{OUTPUT_TYPES[output_type]['label']} — {wizard['prompt'][:40]}").strip()
-
-        # Projekt zuordnen — Auswahl oder "Allgemein" als Default
-        project_id = request.POST.get("project_id", "").strip()
-        project = None
-        if project_id:
-            try:
-                project = Project.objects.get(id=project_id)
-            except Project.DoesNotExist:
-                pass
-        if project is None:
-            project = _get_default_project()
-
-        try:
-            template = _get_or_create_template(output_type, model)
-        except Exception as exc:
-            messages.error(request, f"Template-Fehler: {exc}")
-            return redirect("studio:wizard_step1")
-
-        notes_parts = []
-        if details.get("tags"):        notes_parts.append(f"Tags: {details['tags']}")
-        if details.get("product_id"):  notes_parts.append(f"Produkt-ID: {details['product_id']}")
-        if details.get("channel_id"):  notes_parts.append(f"Channel-ID: {details['channel_id']}")
-        if details.get("print_format"):notes_parts.append(f"Format: {details['print_format']}, {details.get('dpi')}dpi, Bleed {details.get('bleed_mm')}mm")
-        if wizard.get("img2img_strength"):
-            notes_parts.append(f"Img2Img Stärke: {wizard['img2img_strength']}")
-
-        meta = MODEL_META[model]
-        
-        # Modell-spezifische Parameter: Wizard-Overrides oder Template-Defaults
-        model_params = wizard.get("model_params", {})
-        num_steps = model_params.get("steps", meta["steps"])
-        guidance = model_params.get("guidance", meta["guidance"])
-        
-        # SDXL-spezifische Parameter in notes speichern (werden von gpu/tasks.py gelesen)
-        sdxl_params = {}
-        if model == "sdxl":
-            sdxl_params = {
-                "refiner_steps": model_params.get("refiner_steps", 50),
-                "scheduler": model_params.get("scheduler", "K_EULER"),
-                "high_noise_frac": model_params.get("high_noise_frac", 0.8),
-            }
-            notes_parts.append(f"SDXL: Refiner={sdxl_params['refiner_steps']} Scheduler={sdxl_params['scheduler']} HighNoise={sdxl_params['high_noise_frac']}")
-        
-        job = Job.objects.create(
-            title=title,
-            pipeline_template=template,
-            project=project,
-            prompt=wizard["prompt"],
-            negative_prompt=wizard.get("negative_prompt", ""),
-            reference_image=wizard.get("reference_image") or "",
-            model=model,
-            width=width,
-            height=height,
-            num_steps=num_steps,
-            guidance=guidance,
-            num_images=wizard.get("num_images", 1),
-            seed=wizard.get("seed"),
-            notes="\n".join(notes_parts),
-            status="draft",
-            created_by=request.user,
-        )
-
-        _wizard_clear(request)
-        messages.success(request, f"Job '{job.title}' angelegt. Admin muss ihn starten.")
-        return redirect("studio:job_detail", job_id=job.id)
-
-    return render(request, "studio/wizard/confirm.html", {
-        "wizard": wizard,
-        "output_type": output_type,
-        "otype_meta": OUTPUT_TYPES[output_type],
-        "model_meta": MODEL_META[model],
-        "width": width,
-        "height": height,
-        "details": details,
-        "user_projects": user_projects,
-        "default_project": _get_default_project(),
-        "is_img2img": (output_type == "img2img"),
-    })
+    """REDIRECT: Alter Wizard → Neue Single-Page Job-Erstellung"""
+    return redirect("studio:job_create")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
