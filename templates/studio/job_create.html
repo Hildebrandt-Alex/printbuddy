@@ -1,332 +1,398 @@
 {% extends "studio/base.html" %}
-{% block title %}Neuer Job{% endblock %}
+{% block title %}Neues Bild erstellen{% endblock %}
 
 {% block extra_head %}
 <style>
-  .collapsible-toggle { background: none; border: none; color: var(--accent2); cursor: pointer; font-size: .85rem; padding: .25rem 0; }
-  .collapsible { display: none; }
-  .collapsible.open { display: block; }
-  .prompt-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: .75rem; max-height: 320px; overflow-y: auto; padding-right: .25rem; }
-  .prompt-card { background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; padding: .75rem; cursor: pointer; transition: border-color .15s; }
-  .prompt-card:hover { border-color: var(--accent); }
-  .prompt-card .pcat { font-size: .7rem; color: var(--text-muted); text-transform: uppercase; margin-bottom: .3rem; }
-  .prompt-card .ptitle { font-size: .85rem; font-weight: 600; margin-bottom: .4rem; }
-  .prompt-card .ptext { font-size: .78rem; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-
-  /* Model Lizenz-Warnung */
-  .license-badge { display: inline-block; padding: .2rem .5rem; border-radius: 4px; font-size: .75rem; font-weight: 600; }
-  .license-ok   { background:#14532d; color:#86efac; }
-  .license-warn { background:#7c2d12; color:#fdba74; }
-  .license-no   { background:#7f1d1d; color:#fca5a5; }
+  /* 2-Column Layout */
+  .wizard-layout { display: grid; grid-template-columns: 1fr 420px; gap: 2rem; align-items: start; }
+  @media (max-width: 1200px) { .wizard-layout { grid-template-columns: 1fr; } }
+  
+  /* Form Styles */
+  .form-section { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding:1.5rem; margin-bottom:1rem; }
+  .form-section-title { font-size: 1rem; font-weight: 700; margin-bottom: 1.25rem; color: var(--text); }
+  
+  /* Model Selection Cards */
+  .model-grid { display: grid; gap: .75rem; }
+  .model-option { background: var(--surface2); border: 2px solid var(--border); border-radius: 8px; padding: 1rem; cursor: pointer; transition: all .2s; position: relative; }
+  .model-option:hover { border-color: var(--accent); background: var(--surface3); }
+  .model-option input[type="radio"] { position: absolute; opacity: 0; }
+  .model-option input[type="radio"]:checked + .model-content { }
+  .model-option input[type="radio"]:checked ~ .model-check { display: block; }
+  .model-option.selected { border-color: var(--accent); background: rgba(var(--accent-rgb), 0.1); }
+  
+  .model-name { font-size: .95rem; font-weight: 700; margin-bottom: .25rem; }
+  .model-meta { font-size: .75rem; color: var(--text-muted); margin-bottom: .5rem; }
+  .model-license { display: inline-block; padding: .15rem .4rem; border-radius: 4px; font-size: .7rem; font-weight: 600; margin-top: .25rem; }
+  .license-ok { background: #14532d; color: #86efac; }
+  .license-warn { background: #7c2d12; color: #fdba74; }
+  
+  /* Info Panel (rechts, sticky) */
+  .info-panel { position: sticky; top: 2rem; max-height: calc(100vh - 4rem); overflow-y: auto; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 1.5rem; }
+  .info-panel h3 { font-size: 1rem; font-weight: 700; margin-bottom: .75rem; }
+  .info-panel p { font-size: .85rem; line-height: 1.5; margin-bottom: .75rem; color: var(--text-muted); }
+  .info-stat { display: flex; justify-content: space-between; font-size: .85rem; margin-bottom: .5rem; }
+  .info-stat-label { color: var(--text-muted); }
+  .info-stat-value { font-weight: 600; }
+  
+  .example-prompts { margin-top: 1rem; }
+  .example-prompt { background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; padding: .75rem; margin-bottom: .5rem; position: relative; }
+  .example-prompt-text { font-size: .8rem; line-height: 1.4; color: var(--text-muted); margin-bottom: .5rem; }
+  .example-prompt-btn { background: var(--accent); color: white; border: none; padding: .35rem .75rem; border-radius: 4px; font-size: .75rem; cursor: pointer; transition: opacity .2s; }
+  .example-prompt-btn:hover { opacity: 0.8; }
+  
+  .param-impact { margin-top: 1rem; padding: .75rem; background: var(--surface2); border-radius: 6px; font-size: .8rem; line-height: 1.4; color: var(--text-muted); }
+  
+  /* Reference Image Upload */
+  .upload-zone { border: 2px dashed var(--border); border-radius: 8px; padding: 1.5rem; text-align: center; background: var(--surface2); transition: border-color .2s; }
+  .upload-zone:hover { border-color: var(--accent); }
+  .upload-zone input[type="file"] { display: none; }
+  .upload-label { cursor: pointer; color: var(--accent2); }
+  .upload-preview { margin-top: .75rem; max-width: 100%; border-radius: 6px; }
+  
+  /* Advanced Section */
+  .advanced-toggle { background: none; border: none; color: var(--accent2); cursor: pointer; font-size: .85rem; padding: .5rem 0; }
+  .advanced-content { display: none; margin-top: 1rem; }
+  .advanced-content.open { display: block; }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="page-header">
-  <h1>Neuer Job</h1>
+  <h1>Neues Bild erstellen</h1>
   <a href="{% url 'studio:job_list' %}" class="btn btn-secondary">← Jobs</a>
 </div>
 
-<div class="grid-2" style="align-items:start;gap:1.5rem">
+<div class="wizard-layout">
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <!-- LINKE SPALTE: FORMULAR -->
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <div class="form-column">
+    <form method="post" enctype="multipart/form-data" id="jobForm">
+      {% csrf_token %}
 
-  <!-- Formular -->
-  <form method="post" enctype="multipart/form-data">
-    {% csrf_token %}
+      <!-- SECTION: Basis -->
+      <div class="form-section">
+        <div class="form-section-title">Basis-Einstellungen</div>
 
-    <div class="card" style="margin-bottom:1rem">
-      <div class="card-title">Basis</div>
+        <div class="form-group">
+          <label for="id_title">Job-Titel *</label>
+          <input type="text" id="id_title" name="title" value="{{ post.title|default:'' }}" required 
+                 placeholder="z.B. Fantasy-Landschaft mit Drachen">
+          <div class="form-hint">Beschreibender Name für den Job</div>
+        </div>
 
-      <div class="form-group">
-        <label for="id_title">Titel *</label>
-        <input type="text" id="id_title" name="title" value="{{ post.title|default:'' }}" required placeholder="z.B. Herbst-Poster Set blau">
-      </div>
-
-      {% if projects %}
-      <div class="form-group">
-        <label for="id_project">Projekt (optional)</label>
-        <select id="id_project" name="project_id"
-          style="width:100%;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:.5rem .75rem">
-          <option value="">— Kein Projekt —</option>
-          {% for p in projects %}
-          <option value="{{ p.id }}" {% if post.project_id == p.id|stringformat:"s" %}selected{% endif %}>{{ p.title }}</option>
-          {% endfor %}
-        </select>
-      </div>
-      {% endif %}
-
-      <div class="form-group">
-        <label for="id_template">Pipeline Template *</label>
-        {% if not templates %}
-        <p style="color:var(--yellow);font-size:.85rem;padding:.5rem;background:#78350f;border-radius:6px">
-          ⚠️ Noch keine aktiven Pipeline-Templates vorhanden. Im <a href="/pb-manage/" style="color:#fde68a">Admin</a> anlegen.
-        </p>
-        {% else %}
-        <select id="id_template" name="pipeline_template" required onchange="updateTemplateInfo(this)">
-          <option value="">— Template wählen —</option>
-          {% for t in templates %}
-          <option value="{{ t.id }}"
-            data-model="{{ t.default_model }}"
-            data-w="{{ t.default_width }}" data-h="{{ t.default_height }}"
-            data-steps="{{ t.default_steps }}" data-guidance="{{ t.default_guidance }}"
-            {% if post.pipeline_template == t.id|stringformat:"s" %}selected{% endif %}>
-            {{ t.name }}
-          </option>
-          {% endfor %}
-        </select>
-        <div id="template-info" class="form-hint" style="margin-top:.5rem"></div>
+        {% if projects %}
+        <div class="form-group">
+          <label for="id_project">Projekt (optional)</label>
+          <select id="id_project" name="project_id">
+            <option value="">— Kein Projekt —</option>
+            {% for p in projects %}
+            <option value="{{ p.id }}" {% if post.project_id == p.id|stringformat:"s" %}selected{% endif %}>
+              {{ p.title }}
+            </option>
+            {% endfor %}
+          </select>
+          <div class="form-hint">Zur Organisation mehrerer Jobs</div>
+        </div>
         {% endif %}
-      </div>
 
-      <div class="form-group">
-        <label for="id_num_images">Anzahl Bilder</label>
-        <input type="number" id="id_num_images" name="num_images" value="{{ post.num_images|default:'1' }}" min="1" max="10">
-        <div class="form-hint">1–10 Bilder pro Job</div>
-      </div>
-
-      <div class="form-group">
-        <label for="id_model">KI-Modell *</label>
-        <select id="id_model" name="model" required onchange="updateModelDescription(this)">
-          <option value="">— Modell wählen —</option>
-          <option value="flux_schnell" {% if post.model == 'flux_schnell' %}selected{% endif %}>
-            FLUX Schnell ⚡⚡⚡ (Apache 2.0 ✅)
-          </option>
-          <option value="sdxl" {% if post.model == 'sdxl' %}selected{% endif %}>
-            SDXL 1.0 (CreativeML ✅)
-          </option>
-          <option value="flux_dev" {% if post.model == 'flux_dev' %}selected{% endif %}>
-            FLUX Dev ⚠️ (Nur Tests - NICHT für Verkauf!)
-          </option>
-        </select>
-        <div id="model-description" style="margin-top:.75rem;font-size:.85rem;padding:.75rem;background:var(--surface2);border-radius:6px;display:none">
-          <!-- Dynamisch via JavaScript befüllt -->
+        <div class="form-group">
+          <label for="id_num_images">Anzahl Bilder</label>
+          <input type="number" id="id_num_images" name="num_images" value="{{ post.num_images|default:'1' }}" 
+                 min="1" max="10" style="width:100px">
+          <div class="form-hint">1–10 Bilder werden generiert</div>
         </div>
       </div>
-    </div>
 
-    <div class="card" style="margin-bottom:1rem">
-      <div class="card-title">Personalisierung (Optional)</div>
-      <div class="form-group">
-        <label for="id_reference_image">
-          <input type="checkbox" id="enable_face_swap" onchange="toggleFaceSwap(this)" style="margin-right:.5rem">
-          Face Swap aktivieren (Gesicht auf generiertes Bild übertragen)
-        </label>
-        <div id="face_swap_upload" style="display:none;margin-top:.75rem;padding:.75rem;background:var(--surface2);border-radius:6px">
-          <label for="id_reference_image" style="font-size:.85rem;font-weight:600">Dein Gesicht hochladen</label>
-          <input type="file" id="id_reference_image" name="reference_image" accept="image/*" style="margin-top:.5rem">
+      <!-- SECTION: Modell-Auswahl -->
+      <div class="form-section">
+        <div class="form-section-title">KI-Modell wählen *</div>
+
+        <div class="model-grid">
+          <!-- FLUX Schnell -->
+          <label class="model-option" onclick="selectModel('flux_schnell')">
+            <input type="radio" name="model" value="flux_schnell" 
+                   {% if post.model == 'flux_schnell' %}checked{% endif %}
+                   required>
+            <div class="model-content">
+              <div class="model-name">⚡ FLUX Schnell</div>
+              <div class="model-meta">Ultra-Fast (4-8 Steps) · ★★★★☆</div>
+              <div class="model-license license-ok">Apache 2.0 ✅ Kommerziell OK</div>
+            </div>
+          </label>
+
+          <!-- SDXL -->
+          <label class="model-option" onclick="selectModel('sdxl')">
+            <input type="radio" name="model" value="sdxl"
+                   {% if post.model == 'sdxl' %}checked{% endif %}>
+            <div class="model-content">
+              <div class="model-name">🎨 SDXL 1.0</div>
+              <div class="model-meta">High Quality (30-50 Steps) · ★★★★★</div>
+              <div class="model-license license-ok">CreativeML ✅ Kommerziell OK</div>
+            </div>
+          </label>
+
+          <!-- FLUX Dev -->
+          <label class="model-option" onclick="selectModel('flux_dev')">
+            <input type="radio" name="model" value="flux_dev"
+                   {% if post.model == 'flux_dev' %}checked{% endif %}>
+            <div class="model-content">
+              <div class="model-name">🧪 FLUX Dev</div>
+              <div class="model-meta">Premium Quality (20-30 Steps) · ★★★★★</div>
+              <div class="model-license license-warn">⚠️ Nur Tests - NICHT verkaufen!</div>
+            </div>
+          </label>
+        </div>
+      </div>
+
+      <!-- SECTION: Prompt -->
+      <div class="form-section">
+        <div class="form-section-title">Prompt</div>
+
+        <div class="form-group">
+          <label for="id_prompt">Positiver Prompt *</label>
+          <textarea id="id_prompt" name="prompt" required rows="5" 
+                    placeholder="A majestic lion wearing a golden crown...">{{ post.prompt|default:'' }}</textarea>
+          <div class="form-hint">Beschreibe was du sehen möchtest</div>
+        </div>
+
+        <div class="form-group">
+          <label for="id_negative_prompt">Negativer Prompt (optional)</label>
+          <textarea id="id_negative_prompt" name="negative_prompt" rows="3"
+                    placeholder="blurry, low quality, watermark...">{{ post.negative_prompt|default:'' }}</textarea>
+          <div class="form-hint">Was NICHT im Bild sein soll</div>
+        </div>
+      </div>
+
+      <!-- SECTION: Reference Image (Img2Img / Face Swap) -->
+      <div class="form-section">
+        <div class="form-section-title">Reference Image (optional)</div>
+        
+        <div class="upload-zone" id="uploadZone">
+          <input type="file" id="id_reference_image" name="reference_image" accept="image/*" 
+                 onchange="previewImage(this)">
+          <label for="id_reference_image" class="upload-label">
+            📸 Klicken um Bild hochzuladen
+          </label>
           <div class="form-hint" style="margin-top:.5rem">
-            📸 Hochauflösendes Foto mit sichtbarem Gesicht. Wird nach Generation auf KI-Bild übertragen.
+            Für Img2Img (SDXL) oder Face Swap
+          </div>
+          <img id="imagePreview" class="upload-preview" style="display:none">
+        </div>
+      </div>
+
+      <!-- SECTION: Erweiterte Parameter -->
+      <div class="form-section">
+        <button type="button" class="advanced-toggle" onclick="toggleAdvanced()">
+          ▶ Erweiterte Parameter
+        </button>
+        
+        <div class="advanced-content" id="advancedParams">
+          <div class="form-group">
+            <label for="id_steps">Steps (Generation-Schritte)</label>
+            <input type="number" id="id_steps" name="steps" value="{{ post.steps|default:'' }}"
+                   placeholder="Auto (modell-abhängig)" min="1" max="100">
+            <div class="form-hint" id="steps-hint">Leer = Modell-Default</div>
+          </div>
+
+          <div class="form-group">
+            <label for="id_guidance">Guidance Scale</label>
+            <input type="number" id="id_guidance" name="guidance" step="0.1" value="{{ post.guidance|default:'' }}"
+                   placeholder="Auto" min="0" max="20">
+            <div class="form-hint" id="guidance-hint">Leer = Modell-Default</div>
+          </div>
+
+          <div class="form-group">
+            <label for="id_seed">Seed (optional)</label>
+            <input type="number" id="id_seed" name="seed" value="{{ post.seed|default:'' }}"
+                   placeholder="Random" min="0">
+            <div class="form-hint">Für reproduzierbare Ergebnisse</div>
+          </div>
+
+          <div style="display:grid; grid-template-columns: 1fr 1fr; gap:1rem">
+            <div class="form-group">
+              <label for="id_width">Breite (px)</label>
+              <input type="number" id="id_width" name="width" value="{{ post.width|default:'' }}"
+                     placeholder="1024" step="64">
+            </div>
+            <div class="form-group">
+              <label for="id_height">Höhe (px)</label>
+              <input type="number" id="id_height" name="height" value="{{ post.height|default:'' }}"
+                     placeholder="1024" step="64">
+            </div>
           </div>
         </div>
       </div>
-    </div>
 
-    <div class="card" style="margin-bottom:1rem">
-      <div class="card-title">Prompt</div>
-
-      <div class="form-group">
-        <label for="id_prompt">Positiver Prompt *</label>
-        <textarea id="id_prompt" name="prompt" required rows="4" placeholder="A vibrant autumn forest poster, warm orange and red tones, cinematic lighting, high detail, 4k...">{{ post.prompt|default:'' }}</textarea>
-      </div>
-
-      <div class="form-group">
-        <label for="id_negative_prompt">Negativer Prompt</label>
-        <textarea id="id_negative_prompt" name="negative_prompt" rows="2" placeholder="blurry, low quality, watermark, text, signature...">{{ post.negative_prompt|default:'' }}</textarea>
-      </div>
-
-      <div class="form-group">
-        <label for="id_notes">Notizen (intern)</label>
-        <textarea id="id_notes" name="notes" rows="2">{{ post.notes|default:'' }}</textarea>
-      </div>
-    </div>
-
-    <!-- Erweiterte Parameter (collapsible) -->
-    <div class="card" style="margin-bottom:1rem">
-      <button type="button" class="collapsible-toggle" onclick="toggleCollapsible()">
-        ▶ Erweiterte Parameter (optional — überschreiben Template-Defaults)
+      <!-- Submit -->
+      <button type="submit" class="btn btn-primary" style="width:100%">
+        🚀 Job erstellen
       </button>
-      <div id="advanced" class="collapsible">
-        <div style="height:.75rem"></div>
-        <div class="grid-2">
-          <div class="form-group">
-            <label>Breite (px)</label>
-            <input type="number" name="width" value="{{ post.width|default:'' }}" placeholder="z.B. 1024" min="512" max="2048" step="64">
-          </div>
-          <div class="form-group">
-            <label>Höhe (px)</label>
-            <input type="number" name="height" value="{{ post.height|default:'' }}" placeholder="z.B. 1024" min="512" max="2048" step="64">
-          </div>
-          <div class="form-group">
-            <label>Steps</label>
-            <input type="number" name="steps" value="{{ post.steps|default:'' }}" placeholder="z.B. 30" min="10" max="100">
-          </div>
-          <div class="form-group">
-            <label>Guidance Scale</label>
-            <input type="number" name="guidance" value="{{ post.guidance|default:'' }}" placeholder="z.B. 7.5" min="1" max="20" step="0.5">
-          </div>
-          <div class="form-group">
-            <label>Seed (leer = zufällig)</label>
-            <input type="number" name="seed" value="{{ post.seed|default:'' }}" placeholder="z.B. 42">
-          </div>
-        </div>
-      </div>
-    </div>
+    </form>
+  </div>
 
-    <button type="submit" class="btn btn-primary" style="width:100%">Job anlegen (Draft)</button>
-    <p style="font-size:.78rem;color:var(--text-muted);text-align:center;margin-top:.5rem">
-      Der Job startet nicht automatisch — ein Admin muss ihn freigeben.
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <!-- RECHTE SPALTE: MODEL INFO (Sticky) -->
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <div class="info-panel" id="modelInfo">
+    <h3>Modell-Information</h3>
+    <p style="color:var(--text-muted);font-size:.85rem">
+      Wähle ein Modell um Details zu sehen
     </p>
-  </form>
-
-  <!-- Prompt-Bibliothek Sidebar -->
-  <div>
-    <div class="card">
-      <div class="card-title">Prompt-Bibliothek (Klick = Einfügen)</div>
-      {% if prompt_templates %}
-      <div class="prompt-cards">
-        {% for pt in prompt_templates %}
-        <div class="prompt-card" onclick="insertPrompt({{ pt.base_text|escapejs|default:'' }})">
-          <div class="pcat">{{ pt.category }}</div>
-          <div class="ptitle">{{ pt.title }}</div>
-          <div class="ptext">{{ pt.base_text }}</div>
-        </div>
-        {% endfor %}
-      </div>
-      {% else %}
-      <p style="color:var(--text-muted);font-size:.85rem">Noch keine Prompt-Templates vorhanden.</p>
-      {% endif %}
-    </div>
   </div>
 </div>
 
 <script>
-// Model Descriptions als JSON (von Backend)
+// Model Descriptions (vom Backend)
 const MODEL_DESCRIPTIONS = {{ model_descriptions|safe }};
 
-function toggleCollapsible() {
-  const el = document.getElementById('advanced');
-  const btn = document.querySelector('.collapsible-toggle');
-  el.classList.toggle('open');
-  btn.textContent = el.classList.contains('open')
-    ? '▼ Erweiterte Parameter (optional — überschreiben Template-Defaults)'
-    : '▶ Erweiterte Parameter (optional — überschreiben Template-Defaults)';
-}
-
-function insertPrompt(text) {
-  const ta = document.getElementById('id_prompt');
-  if (ta) { ta.value = text; ta.focus(); }
-}
-
-function toggleFaceSwap(checkbox) {
-  const uploadDiv = document.getElementById('face_swap_upload');
-  uploadDiv.style.display = checkbox.checked ? 'block' : 'none';
-}
-
-function updateModelDescription(select) {
-  const modelKey = select.value;
-  const descDiv = document.getElementById('model-description');
-  const promptField = document.getElementById('id_prompt');
-  const negPromptField = document.getElementById('id_negative_prompt');
+// Model Selection Handler
+function selectModel(modelKey) {
+  // Update Radio Button
+  document.querySelector(`input[value="${modelKey}"]`).checked = true;
   
-  if (!modelKey || !MODEL_DESCRIPTIONS[modelKey]) {
-    descDiv.style.display = 'none';
-    return;
-  }
+  // Update UI (visuelle Selektion)
+  document.querySelectorAll('.model-option').forEach(el => el.classList.remove('selected'));
+  event.currentTarget.classList.add('selected');
   
+  // Update Info Panel
+  updateModelInfo(modelKey);
+}
+
+// Update Model Info Panel (rechts)
+function updateModelInfo(modelKey) {
   const info = MODEL_DESCRIPTIONS[modelKey];
-  descDiv.style.display = 'block';
+  if (!info) return;
   
-  // License Badge
+  const panel = document.getElementById('modelInfo');
+  
+  // License Badge Color
   let licenseBadge = '';
-  if (info.license.includes('Kommerziell OK')) {
-    licenseBadge = '<span class="license-ok">✅ Kommerziell</span>';
-  } else if (info.license.includes('NICHT')) {
-    licenseBadge = '<span class="license-no">❌ Nur Tests</span>';
+  if (info.license.includes('✅') || info.license.includes('OK')) {
+    licenseBadge = '<span class="model-license license-ok">' + info.license + '</span>';
   } else {
-    licenseBadge = '<span class="license-warn">⚠️ Lizenz prüfen</span>';
+    licenseBadge = '<span class="model-license license-warn">' + info.license + '</span>';
   }
   
+  // Build HTML
   let html = `
-    <div style="margin-bottom:.75rem">
-      <strong style="font-size:.95rem">${info.name}</strong> ${licenseBadge}
-      <div style="margin-top:.3rem;color:var(--text-muted)">${info.license}</div>
-    </div>
+    <h3>${info.name}</h3>
+    ${licenseBadge}
     
-    <div style="margin-bottom:.75rem">
-      <strong>📋 Anwendungsfall:</strong><br>
-      ${info.use_case}
-    </div>
-    
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-bottom:.75rem">
-      <div><strong>⚡ Geschwindigkeit:</strong> ${info.speed}</div>
-      <div><strong>★ Qualität:</strong> ${info.quality}</div>
-    </div>
-    
-    <div style="margin-bottom:.75rem">
-      <strong>🎯 Optimal für:</strong><br>
-      <span style="color:var(--text-muted)">${info.best_for.join(', ')}</span>
-    </div>
-    
-    <details style="margin-top:.75rem">
-      <summary style="cursor:pointer;font-weight:600;margin-bottom:.5rem">📊 Parameter-Impact</summary>
-      <div style="font-size:.8rem;color:var(--text-muted);margin-top:.5rem">
-        <div style="margin-bottom:.4rem"><strong>Steps:</strong> ${info.param_impact.steps}</div>
-        <div style="margin-bottom:.4rem"><strong>Guidance:</strong> ${info.param_impact.guidance}</div>
-        <div><strong>Auflösung:</strong> ${info.param_impact.size}</div>
+    <div style="margin-top:1rem">
+      <div class="info-stat">
+        <span class="info-stat-label">Geschwindigkeit:</span>
+        <span class="info-stat-value">${info.speed}</span>
       </div>
-    </details>
+      <div class="info-stat">
+        <span class="info-stat-label">Qualität:</span>
+        <span class="info-stat-value">${info.quality}</span>
+      </div>
+    </div>
     
-    <details style="margin-top:.75rem">
-      <summary style="cursor:pointer;font-weight:600;margin-bottom:.5rem">💡 Beispiel-Prompts</summary>
-      <div style="font-size:.8rem;margin-top:.5rem">
-        <div style="margin-bottom:.75rem">
-          <strong style="color:var(--accent2)">Positiv:</strong><br>
-          <div style="color:var(--text-muted);margin-top:.3rem">${info.example_prompt}</div>
-          <button type="button" onclick="document.getElementById('id_prompt').value='${info.example_prompt.replace(/'/g, "\\'")}'" 
-            style="margin-top:.4rem;padding:.25rem .5rem;font-size:.75rem;background:var(--accent2);color:white;border:none;border-radius:4px;cursor:pointer">
-            In Prompt einfügen
+    <p style="margin-top:1rem">${info.use_case}</p>
+    
+    <div class="example-prompts">
+      <strong style="font-size:.85rem">Beispiel-Prompts:</strong>
+      <div class="example-prompt">
+        <div class="example-prompt-text">${info.example_prompt}</div>
+        <button type="button" class="example-prompt-btn" onclick="insertPrompt('${escapeHtml(info.example_prompt)}', 'positive')">
+          In Prompt einfügen
+        </button>
+      </div>
+      ${info.example_negative ? `
+        <div class="example-prompt">
+          <div class="example-prompt-text">${info.example_negative}</div>
+          <button type="button" class="example-prompt-btn" onclick="insertPrompt('${escapeHtml(info.example_negative)}', 'negative')">
+            In Negative-Prompt einfügen
           </button>
         </div>
-        <div>
-          <strong style="color:var(--red)">Negativ:</strong><br>
-          <div style="color:var(--text-muted);margin-top:.3rem">${info.example_negative}</div>
-          <button type="button" onclick="document.getElementById('id_negative_prompt').value='${info.example_negative.replace(/'/g, "\\'")}'" 
-            style="margin-top:.4rem;padding:.25rem .5rem;font-size:.75rem;background:var(--red);color:white;border:none;border-radius:4px;cursor:pointer">
-            In Negativ-Prompt einfügen
-          </button>
-        </div>
+      ` : ''}
+    </div>
+    
+    ${info.param_impact ? `
+      <div class="param-impact">
+        <strong style="display:block;margin-bottom:.5rem">Parameter-Empfehlungen:</strong>
+        ${info.param_impact.steps ? '<div><strong>Steps:</strong> ' + info.param_impact.steps + '</div>' : ''}
+        ${info.param_impact.guidance ? '<div style="margin-top:.25rem"><strong>Guidance:</strong> ' + info.param_impact.guidance + '</div>' : ''}
+        ${info.param_impact.size ? '<div style="margin-top:.25rem"><strong>Größe:</strong> ' + info.param_impact.size + '</div>' : ''}
       </div>
-    </details>
+    ` : ''}
+    
+    ${info.warning ? `
+      <div style="margin-top:1rem;padding:.75rem;background:#7c2d12;border-radius:6px;color:#fdba74;font-size:.8rem">
+        ${info.warning}
+      </div>
+    ` : ''}
   `;
   
-  if (info.warning) {
-    html += `<div style="margin-top:.75rem;padding:.75rem;background:#7c2d12;border-left:3px solid #f87171;border-radius:4px">
-      <strong>⚠️ Wichtig:</strong> ${info.warning}
-    </div>`;
-  }
+  panel.innerHTML = html;
   
-  descDiv.innerHTML = html;
+  // Update Parameter Hints
+  if (info.recommended_params) {
+    const stepsHint = document.getElementById('steps-hint');
+    const guidanceHint = document.getElementById('guidance-hint');
+    
+    if (stepsHint && info.recommended_params.steps) {
+      stepsHint.textContent = `Empfohlen: ${info.recommended_params.steps} Steps`;
+    }
+    if (guidanceHint && info.recommended_params.guidance) {
+      guidanceHint.textContent = `Empfohlen: ${info.recommended_params.guidance}`;
+    }
+  }
 }
 
-function updateTemplateInfo(sel) {
-  const opt = sel.options[sel.selectedIndex];
-  const info = document.getElementById('template-info');
-  if (!opt.value) { info.textContent = ''; return; }
-  const model = opt.dataset.model;
-  const licMap = {
-    flux_schnell: '✅ Apache 2.0 — kommerziell erlaubt',
-    sdxl:         '✅ CreativeML Open Rail+M — kommerziell erlaubt',
-    custom_lora:  '⚠️ custom_lora — Lizenz vor Produktion prüfen',
-    flux_dev:     '❌ flux_dev — NICHT für Verkauf verwenden',
-  };
-  info.innerHTML = `Modell: <strong>${model}</strong> &nbsp;|&nbsp; ${licMap[model] || ''}
-    &nbsp;|&nbsp; ${opt.dataset.w}×${opt.dataset.h}px, ${opt.dataset.steps} Steps, Guidance ${opt.dataset.guidance}`;
+// Insert Prompt into Textarea
+function insertPrompt(text, type) {
+  const target = type === 'positive' ? document.getElementById('id_prompt') : document.getElementById('id_negative_prompt');
+  if (target.value.trim()) {
+    target.value += '\n' + text;
+  } else {
+    target.value = text;
+  }
+  target.focus();
 }
 
-// Auto-update wenn Seite lädt und Model schon gewählt ist
+// Image Preview
+function previewImage(input) {
+  const preview = document.getElementById('imagePreview');
+  if (input.files && input.files[0]) {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      preview.src = e.target.result;
+      preview.style.display = 'block';
+    };
+    reader.readAsDataURL(input.files[0]);
+  }
+}
+
+// Toggle Advanced Parameters
+function toggleAdvanced() {
+  const content = document.getElementById('advancedParams');
+  const btn = event.currentTarget;
+  content.classList.toggle('open');
+  btn.textContent = content.classList.contains('open') ? '▼ Erweiterte Parameter' : '▶ Erweiterte Parameter';
+}
+
+// HTML Escape Helper
+function escapeHtml(text) {
+  return text.replace(/'/g, "\\'").replace(/"/g, '\\"').replace(/\n/g, ' ');
+}
+
+// Init: Select first model if none selected
 document.addEventListener('DOMContentLoaded', function() {
-  const modelSelect = document.getElementById('id_model');
-  if (modelSelect && modelSelect.value) {
-    updateModelDescription(modelSelect);
+  const selectedModel = document.querySelector('input[name="model"]:checked');
+  if (selectedModel) {
+    updateModelInfo(selectedModel.value);
+    selectedModel.closest('.model-option').classList.add('selected');
+  } else {
+    // Auto-select FLUX Schnell
+    const fluxSchnell = document.querySelector('input[value="flux_schnell"]');
+    if (fluxSchnell) {
+      fluxSchnell.checked = true;
+      fluxSchnell.closest('.model-option').classList.add('selected');
+      updateModelInfo('flux_schnell');
+    }
   }
 });
 </script>

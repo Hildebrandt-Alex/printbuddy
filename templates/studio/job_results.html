@@ -12,6 +12,28 @@
   <a href="{% url 'studio:job_detail' job.id %}" class="btn btn-secondary">← Job-Details</a>
 </div>
 
+<!-- Product Wizard Button (nur wenn noch kein Produkt zugewiesen) -->
+{% if job.status == 'done' and not job.pipeline_template %}
+<div style="background:linear-gradient(135deg, rgba(var(--accent-rgb), 0.1), rgba(var(--accent-rgb), 0.05));border:2px solid var(--accent);border-radius:12px;padding:1.5rem;margin-bottom:2rem;text-align:center">
+  <div style="font-size:2rem;margin-bottom:.75rem">🎯</div>
+  <h3 style="font-size:1.15rem;font-weight:700;margin-bottom:.5rem">Bilder generiert!</h3>
+  <p style="color:var(--text-muted);font-size:.85rem;margin-bottom:1.25rem">
+    Wähle jetzt aus wie diese Bilder verwendet werden sollen (T-Shirt, Poster, Grußkarte, etc.)
+  </p>
+  <a href="{% url 'studio:product_wizard' job_id=job.id %}" class="btn btn-primary" style="padding:.75rem 2rem;font-size:1rem">
+    Weiter zu Produkt-Auswahl →
+  </a>
+</div>
+{% elif job.pipeline_template %}
+<div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:1rem;margin-bottom:1.5rem;display:flex;align-items:center;gap:1rem">
+  <span style="font-size:1.5rem">✅</span>
+  <div>
+    <strong style="font-size:.9rem">Produkt zugewiesen:</strong>
+    <span style="color:var(--text-muted);font-size:.85rem">{{ job.pipeline_template.name }}</span>
+  </div>
+</div>
+{% endif %}
+
 {% if assets %}
 <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1rem">
   {% for asset in assets %}

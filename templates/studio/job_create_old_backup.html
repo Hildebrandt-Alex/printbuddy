@@ -1,0 +1,333 @@
+{% extends "studio/base.html" %}
+{% block title %}Neuer Job{% endblock %}
+
+{% block extra_head %}
+<style>
+  .collapsible-toggle { background: none; border: none; color: var(--accent2); cursor: pointer; font-size: .85rem; padding: .25rem 0; }
+  .collapsible { display: none; }
+  .collapsible.open { display: block; }
+  .prompt-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: .75rem; max-height: 320px; overflow-y: auto; padding-right: .25rem; }
+  .prompt-card { background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; padding: .75rem; cursor: pointer; transition: border-color .15s; }
+  .prompt-card:hover { border-color: var(--accent); }
+  .prompt-card .pcat { font-size: .7rem; color: var(--text-muted); text-transform: uppercase; margin-bottom: .3rem; }
+  .prompt-card .ptitle { font-size: .85rem; font-weight: 600; margin-bottom: .4rem; }
+  .prompt-card .ptext { font-size: .78rem; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  /* Model Lizenz-Warnung */
+  .license-badge { display: inline-block; padding: .2rem .5rem; border-radius: 4px; font-size: .75rem; font-weight: 600; }
+  .license-ok   { background:#14532d; color:#86efac; }
+  .license-warn { background:#7c2d12; color:#fdba74; }
+  .license-no   { background:#7f1d1d; color:#fca5a5; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>Neuer Job</h1>
+  <a href="{% url 'studio:job_list' %}" class="btn btn-secondary">← Jobs</a>
+</div>
+
+<div class="grid-2" style="align-items:start;gap:1.5rem">
+
+  <!-- Formular -->
+  <form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+
+    <div class="card" style="margin-bottom:1rem">
+      <div class="card-title">Basis</div>
+
+      <div class="form-group">
+        <label for="id_title">Titel *</label>
+        <input type="text" id="id_title" name="title" value="{{ post.title|default:'' }}" required placeholder="z.B. Herbst-Poster Set blau">
+      </div>
+
+      {% if projects %}
+      <div class="form-group">
+        <label for="id_project">Projekt (optional)</label>
+        <select id="id_project" name="project_id"
+          style="width:100%;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:.5rem .75rem">
+          <option value="">— Kein Projekt —</option>
+          {% for p in projects %}
+          <option value="{{ p.id }}" {% if post.project_id == p.id|stringformat:"s" %}selected{% endif %}>{{ p.title }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      {% endif %}
+
+      <div class="form-group">
+        <label for="id_template">Pipeline Template *</label>
+        {% if not templates %}
+        <p style="color:var(--yellow);font-size:.85rem;padding:.5rem;background:#78350f;border-radius:6px">
+          ⚠️ Noch keine aktiven Pipeline-Templates vorhanden. Im <a href="/pb-manage/" style="color:#fde68a">Admin</a> anlegen.
+        </p>
+        {% else %}
+        <select id="id_template" name="pipeline_template" required onchange="updateTemplateInfo(this)">
+          <option value="">— Template wählen —</option>
+          {% for t in templates %}
+          <option value="{{ t.id }}"
+            data-model="{{ t.default_model }}"
+            data-w="{{ t.default_width }}" data-h="{{ t.default_height }}"
+            data-steps="{{ t.default_steps }}" data-guidance="{{ t.default_guidance }}"
+            {% if post.pipeline_template == t.id|stringformat:"s" %}selected{% endif %}>
+            {{ t.name }}
+          </option>
+          {% endfor %}
+        </select>
+        <div id="template-info" class="form-hint" style="margin-top:.5rem"></div>
+        {% endif %}
+      </div>
+
+      <div class="form-group">
+        <label for="id_num_images">Anzahl Bilder</label>
+        <input type="number" id="id_num_images" name="num_images" value="{{ post.num_images|default:'1' }}" min="1" max="10">
+        <div class="form-hint">1–10 Bilder pro Job</div>
+      </div>
+
+      <div class="form-group">
+        <label for="id_model">KI-Modell *</label>
+        <select id="id_model" name="model" required onchange="updateModelDescription(this)">
+          <option value="">— Modell wählen —</option>
+          <option value="flux_schnell" {% if post.model == 'flux_schnell' %}selected{% endif %}>
+            FLUX Schnell ⚡⚡⚡ (Apache 2.0 ✅)
+          </option>
+          <option value="sdxl" {% if post.model == 'sdxl' %}selected{% endif %}>
+            SDXL 1.0 (CreativeML ✅)
+          </option>
+          <option value="flux_dev" {% if post.model == 'flux_dev' %}selected{% endif %}>
+            FLUX Dev ⚠️ (Nur Tests - NICHT für Verkauf!)
+          </option>
+        </select>
+        <div id="model-description" style="margin-top:.75rem;font-size:.85rem;padding:.75rem;background:var(--surface2);border-radius:6px;display:none">
+          <!-- Dynamisch via JavaScript befüllt -->
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:1rem">
+      <div class="card-title">Personalisierung (Optional)</div>
+      <div class="form-group">
+        <label for="id_reference_image">
+          <input type="checkbox" id="enable_face_swap" onchange="toggleFaceSwap(this)" style="margin-right:.5rem">
+          Face Swap aktivieren (Gesicht auf generiertes Bild übertragen)
+        </label>
+        <div id="face_swap_upload" style="display:none;margin-top:.75rem;padding:.75rem;background:var(--surface2);border-radius:6px">
+          <label for="id_reference_image" style="font-size:.85rem;font-weight:600">Dein Gesicht hochladen</label>
+          <input type="file" id="id_reference_image" name="reference_image" accept="image/*" style="margin-top:.5rem">
+          <div class="form-hint" style="margin-top:.5rem">
+            📸 Hochauflösendes Foto mit sichtbarem Gesicht. Wird nach Generation auf KI-Bild übertragen.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:1rem">
+      <div class="card-title">Prompt</div>
+
+      <div class="form-group">
+        <label for="id_prompt">Positiver Prompt *</label>
+        <textarea id="id_prompt" name="prompt" required rows="4" placeholder="A vibrant autumn forest poster, warm orange and red tones, cinematic lighting, high detail, 4k...">{{ post.prompt|default:'' }}</textarea>
+      </div>
+
+      <div class="form-group">
+        <label for="id_negative_prompt">Negativer Prompt</label>
+        <textarea id="id_negative_prompt" name="negative_prompt" rows="2" placeholder="blurry, low quality, watermark, text, signature...">{{ post.negative_prompt|default:'' }}</textarea>
+      </div>
+
+      <div class="form-group">
+        <label for="id_notes">Notizen (intern)</label>
+        <textarea id="id_notes" name="notes" rows="2">{{ post.notes|default:'' }}</textarea>
+      </div>
+    </div>
+
+    <!-- Erweiterte Parameter (collapsible) -->
+    <div class="card" style="margin-bottom:1rem">
+      <button type="button" class="collapsible-toggle" onclick="toggleCollapsible()">
+        ▶ Erweiterte Parameter (optional — überschreiben Template-Defaults)
+      </button>
+      <div id="advanced" class="collapsible">
+        <div style="height:.75rem"></div>
+        <div class="grid-2">
+          <div class="form-group">
+            <label>Breite (px)</label>
+            <input type="number" name="width" value="{{ post.width|default:'' }}" placeholder="z.B. 1024" min="512" max="2048" step="64">
+          </div>
+          <div class="form-group">
+            <label>Höhe (px)</label>
+            <input type="number" name="height" value="{{ post.height|default:'' }}" placeholder="z.B. 1024" min="512" max="2048" step="64">
+          </div>
+          <div class="form-group">
+            <label>Steps</label>
+            <input type="number" name="steps" value="{{ post.steps|default:'' }}" placeholder="z.B. 30" min="10" max="100">
+          </div>
+          <div class="form-group">
+            <label>Guidance Scale</label>
+            <input type="number" name="guidance" value="{{ post.guidance|default:'' }}" placeholder="z.B. 7.5" min="1" max="20" step="0.5">
+          </div>
+          <div class="form-group">
+            <label>Seed (leer = zufällig)</label>
+            <input type="number" name="seed" value="{{ post.seed|default:'' }}" placeholder="z.B. 42">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <button type="submit" class="btn btn-primary" style="width:100%">Job anlegen (Draft)</button>
+    <p style="font-size:.78rem;color:var(--text-muted);text-align:center;margin-top:.5rem">
+      Der Job startet nicht automatisch — ein Admin muss ihn freigeben.
+    </p>
+  </form>
+
+  <!-- Prompt-Bibliothek Sidebar -->
+  <div>
+    <div class="card">
+      <div class="card-title">Prompt-Bibliothek (Klick = Einfügen)</div>
+      {% if prompt_templates %}
+      <div class="prompt-cards">
+        {% for pt in prompt_templates %}
+        <div class="prompt-card" onclick="insertPrompt({{ pt.base_text|escapejs|default:'' }})">
+          <div class="pcat">{{ pt.category }}</div>
+          <div class="ptitle">{{ pt.title }}</div>
+          <div class="ptext">{{ pt.base_text }}</div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <p style="color:var(--text-muted);font-size:.85rem">Noch keine Prompt-Templates vorhanden.</p>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<script>
+// Model Descriptions als JSON (von Backend)
+const MODEL_DESCRIPTIONS = {{ model_descriptions|safe }};
+
+function toggleCollapsible() {
+  const el = document.getElementById('advanced');
+  const btn = document.querySelector('.collapsible-toggle');
+  el.classList.toggle('open');
+  btn.textContent = el.classList.contains('open')
+    ? '▼ Erweiterte Parameter (optional — überschreiben Template-Defaults)'
+    : '▶ Erweiterte Parameter (optional — überschreiben Template-Defaults)';
+}
+
+function insertPrompt(text) {
+  const ta = document.getElementById('id_prompt');
+  if (ta) { ta.value = text; ta.focus(); }
+}
+
+function toggleFaceSwap(checkbox) {
+  const uploadDiv = document.getElementById('face_swap_upload');
+  uploadDiv.style.display = checkbox.checked ? 'block' : 'none';
+}
+
+function updateModelDescription(select) {
+  const modelKey = select.value;
+  const descDiv = document.getElementById('model-description');
+  const promptField = document.getElementById('id_prompt');
+  const negPromptField = document.getElementById('id_negative_prompt');
+  
+  if (!modelKey || !MODEL_DESCRIPTIONS[modelKey]) {
+    descDiv.style.display = 'none';
+    return;
+  }
+  
+  const info = MODEL_DESCRIPTIONS[modelKey];
+  descDiv.style.display = 'block';
+  
+  // License Badge
+  let licenseBadge = '';
+  if (info.license.includes('Kommerziell OK')) {
+    licenseBadge = '<span class="license-ok">✅ Kommerziell</span>';
+  } else if (info.license.includes('NICHT')) {
+    licenseBadge = '<span class="license-no">❌ Nur Tests</span>';
+  } else {
+    licenseBadge = '<span class="license-warn">⚠️ Lizenz prüfen</span>';
+  }
+  
+  let html = `
+    <div style="margin-bottom:.75rem">
+      <strong style="font-size:.95rem">${info.name}</strong> ${licenseBadge}
+      <div style="margin-top:.3rem;color:var(--text-muted)">${info.license}</div>
+    </div>
+    
+    <div style="margin-bottom:.75rem">
+      <strong>📋 Anwendungsfall:</strong><br>
+      ${info.use_case}
+    </div>
+    
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-bottom:.75rem">
+      <div><strong>⚡ Geschwindigkeit:</strong> ${info.speed}</div>
+      <div><strong>★ Qualität:</strong> ${info.quality}</div>
+    </div>
+    
+    <div style="margin-bottom:.75rem">
+      <strong>🎯 Optimal für:</strong><br>
+      <span style="color:var(--text-muted)">${info.best_for.join(', ')}</span>
+    </div>
+    
+    <details style="margin-top:.75rem">
+      <summary style="cursor:pointer;font-weight:600;margin-bottom:.5rem">📊 Parameter-Impact</summary>
+      <div style="font-size:.8rem;color:var(--text-muted);margin-top:.5rem">
+        <div style="margin-bottom:.4rem"><strong>Steps:</strong> ${info.param_impact.steps}</div>
+        <div style="margin-bottom:.4rem"><strong>Guidance:</strong> ${info.param_impact.guidance}</div>
+        <div><strong>Auflösung:</strong> ${info.param_impact.size}</div>
+      </div>
+    </details>
+    
+    <details style="margin-top:.75rem">
+      <summary style="cursor:pointer;font-weight:600;margin-bottom:.5rem">💡 Beispiel-Prompts</summary>
+      <div style="font-size:.8rem;margin-top:.5rem">
+        <div style="margin-bottom:.75rem">
+          <strong style="color:var(--accent2)">Positiv:</strong><br>
+          <div style="color:var(--text-muted);margin-top:.3rem">${info.example_prompt}</div>
+          <button type="button" onclick="document.getElementById('id_prompt').value='${info.example_prompt.replace(/'/g, "\\'")}'" 
+            style="margin-top:.4rem;padding:.25rem .5rem;font-size:.75rem;background:var(--accent2);color:white;border:none;border-radius:4px;cursor:pointer">
+            In Prompt einfügen
+          </button>
+        </div>
+        <div>
+          <strong style="color:var(--red)">Negativ:</strong><br>
+          <div style="color:var(--text-muted);margin-top:.3rem">${info.example_negative}</div>
+          <button type="button" onclick="document.getElementById('id_negative_prompt').value='${info.example_negative.replace(/'/g, "\\'")}'" 
+            style="margin-top:.4rem;padding:.25rem .5rem;font-size:.75rem;background:var(--red);color:white;border:none;border-radius:4px;cursor:pointer">
+            In Negativ-Prompt einfügen
+          </button>
+        </div>
+      </div>
+    </details>
+  `;
+  
+  if (info.warning) {
+    html += `<div style="margin-top:.75rem;padding:.75rem;background:#7c2d12;border-left:3px solid #f87171;border-radius:4px">
+      <strong>⚠️ Wichtig:</strong> ${info.warning}
+    </div>`;
+  }
+  
+  descDiv.innerHTML = html;
+}
+
+function updateTemplateInfo(sel) {
+  const opt = sel.options[sel.selectedIndex];
+  const info = document.getElementById('template-info');
+  if (!opt.value) { info.textContent = ''; return; }
+  const model = opt.dataset.model;
+  const licMap = {
+    flux_schnell: '✅ Apache 2.0 — kommerziell erlaubt',
+    sdxl:         '✅ CreativeML Open Rail+M — kommerziell erlaubt',
+    custom_lora:  '⚠️ custom_lora — Lizenz vor Produktion prüfen',
+    flux_dev:     '❌ flux_dev — NICHT für Verkauf verwenden',
+  };
+  info.innerHTML = `Modell: <strong>${model}</strong> &nbsp;|&nbsp; ${licMap[model] || ''}
+    &nbsp;|&nbsp; ${opt.dataset.w}×${opt.dataset.h}px, ${opt.dataset.steps} Steps, Guidance ${opt.dataset.guidance}`;
+}
+
+// Auto-update wenn Seite lädt und Model schon gewählt ist
+document.addEventListener('DOMContentLoaded', function() {
+  const modelSelect = document.getElementById('id_model');
+  if (modelSelect && modelSelect.value) {
+    updateModelDescription(modelSelect);
+  }
+});
+</script>
+{% endblock %}

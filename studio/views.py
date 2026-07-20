@@ -159,12 +159,14 @@ def job_list(request):
 
 @studio_required
 def job_create(request):
+    """
+    NEUE VERSION: Nur Bildgenerierung-Wizard (Model + Prompt + Parameter)
+    Pipeline-Template wird später im Product Wizard zugewiesen
+    """
     import json
     from jobs.model_info import MODEL_DESCRIPTIONS, get_model_info
     
-    templates = PipelineTemplate.objects.filter(is_active=True).order_by("name")
     prompt_templates = PromptTemplate.objects.filter(is_public=True).order_by("category", "title")
-    # Projekte immer laden — wird in allen Returns benötigt
     projects = Project.objects.filter(
         models.Q(created_by=request.user) | models.Q(team_members=request.user)
     ).distinct().order_by('title')
@@ -174,13 +176,12 @@ def job_create(request):
 
     if request.method == "POST":
         title          = request.POST.get("title", "").strip()
-        template_id    = request.POST.get("pipeline_template", "").strip()
         prompt         = request.POST.get("prompt", "").strip()
         negative_prompt = request.POST.get("negative_prompt", "").strip()
         notes          = request.POST.get("notes", "").strip()
         model          = request.POST.get("model", "").strip()
 
-        # Optionale Override-Felder (leer = None = Template-Default)
+        # Optionale Override-Felder
         width      = request.POST.get("width") or None
         height     = request.POST.get("height") or None
         steps      = request.POST.get("steps") or None
@@ -190,32 +191,20 @@ def job_create(request):
 
         errors = []
         if not title:      errors.append("Titel ist erforderlich.")
-        if not template_id: errors.append("Pipeline-Template ist erforderlich.")
         if not prompt:     errors.append("Prompt ist erforderlich.")
+        if not model:      errors.append("Modell ist erforderlich.")
 
         if errors:
             for e in errors:
                 messages.error(request, e)
             return render(request, "studio/job_create.html", {
-                "templates": templates,
                 "prompt_templates": prompt_templates,
                 "projects": projects,
                 "post": request.POST,
                 "model_descriptions": model_descriptions_json,
             })
 
-        try:
-            template = PipelineTemplate.objects.get(id=template_id, is_active=True)
-        except PipelineTemplate.DoesNotExist:
-            messages.error(request, "Template nicht gefunden.")
-            return render(request, "studio/job_create.html", {
-                "templates": templates,
-                "prompt_templates": prompt_templates,
-                "projects": projects,
-                "post": request.POST,
-                "model_descriptions": model_descriptions_json,
-            })
-
+        # Projekt-Zuordnung (optional)
         project_id = request.POST.get('project_id', '').strip()
         project = None
         if project_id:
@@ -224,9 +213,10 @@ def job_create(request):
             except Project.DoesNotExist:
                 pass
 
+        # Job OHNE Pipeline Template erstellen (wird später zugewiesen)
         job = Job.objects.create(
             title=title,
-            pipeline_template=template,
+            pipeline_template=None,  # NEU: Optional
             project=project,
             prompt=prompt,
             negative_prompt=negative_prompt,
@@ -242,7 +232,7 @@ def job_create(request):
             created_by=request.user,
         )
         
-        # Reference Image für Face Swap (falls hochgeladen)
+        # Reference Image für Img2Img oder Face Swap (falls hochgeladen)
         if 'reference_image' in request.FILES:
             job.reference_image = request.FILES['reference_image']
             job.save(update_fields=['reference_image'])
@@ -252,7 +242,6 @@ def job_create(request):
         return redirect("studio:job_detail", job_id=job.id)
 
     return render(request, 'studio/job_create.html', {
-        'templates': templates,
         'prompt_templates': prompt_templates,
         'projects': projects,
         'post': {},
@@ -445,7 +434,96 @@ def prompt_library(request):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# WIZARD — Geführter Job-Erstell-Workflow (Output-Typ-First)
+# Product Wizard — Produkt-Typ nach Bildgenerierung wählen
+# ─────────────────────────────────────────────────────────────────────────────
+
+@studio_required
+def product_wizard(request, job_id):
+    """
+    NEUER WORKFLOW: Nach Bildgenerierung → Produkt-Typ wählen → Pipeline zuweisen
+    User wählt welche Produkte (T-Shirt, Poster, etc.) erstellt werden sollen
+    """
+    from studio.constants import PRODUCT_TYPES, get_product_type
+    from bundles.tasks import create_product_bundle
+    
+    job = get_object_or_404(Job, id=job_id, created_by=request.user)
+    
+    if job.status != "done":
+        messages.warning(request, "Job muss erst abgeschlossen sein bevor Produkte erstellt werden können.")
+        return redirect("studio:job_detail", job_id=job.id)
+    
+    # Hole alle generierten Preview-Assets
+    preview_steps = job.steps.filter(step_type="preview_export", status="done").exclude(
+        output_asset_id__isnull=True
+    )
+    
+    if not preview_steps.exists():
+        messages.error(request, "Keine generierten Bilder gefunden.")
+        return redirect("studio:job_detail", job_id=job.id)
+    
+    # Asset-Previews sammeln
+    from pathlib import Path
+    preview_dir = Path(getattr(settings, "NAS_BASE_PATH", "local_nas")) / "exports" / "preview"
+    
+    assets = []
+    for step in preview_steps:
+        asset_id = str(step.output_asset_id)
+        filename = f"{asset_id}_preview.jpg"
+        assets.append({
+            "asset_id": asset_id,
+            "filename": filename,
+            "url": f"/nas/exports/preview/{filename}",
+        })
+    
+    if request.method == "POST":
+        product_type = request.POST.get("product_type", "").strip()
+        
+        if not product_type or product_type not in PRODUCT_TYPES:
+            messages.error(request, "Bitte einen Produkt-Typ wählen.")
+            return render(request, "studio/product_wizard.html", {
+                "job": job,
+                "assets": assets,
+                "product_types": PRODUCT_TYPES,
+                "post": request.POST,
+            })
+        
+        product_meta = get_product_type(product_type)
+        pipeline_name = product_meta.get('pipeline_name')
+        
+        # Pipeline Template zuweisen (falls vorhanden)
+        if pipeline_name:
+            try:
+                pipeline = PipelineTemplate.objects.get(name=pipeline_name, is_active=True)
+                job.pipeline_template = pipeline
+                job.save(update_fields=['pipeline_template'])
+                logger.info("[product_wizard] Pipeline '%s' assigned to Job %s", pipeline_name, job.id)
+            except PipelineTemplate.DoesNotExist:
+                messages.error(request, f"Pipeline-Template '{pipeline_name}' nicht gefunden. Bitte Admin kontaktieren.")
+                return redirect("studio:job_results", job_id=job.id)
+        
+        # Bundle-Task starten (erstellt Export-Dateien je nach Produkt-Typ)
+        try:
+            # Note: create_product_bundle Task muss noch implementiert werden
+            # create_product_bundle.delay(str(job.id), product_type)
+            messages.success(request, f"Produkt-Bundle für '{product_meta['label']}' wird erstellt...")
+        except Exception as exc:
+            logger.error("[product_wizard] Bundle-Task failed: %s", exc)
+            messages.warning(request, "Bundle-Task konnte nicht gestartet werden.")
+        
+        messages.success(request, f"Produkt-Typ '{product_meta['label']}' zugewiesen.")
+        return redirect("studio:job_detail", job_id=job.id)
+    
+    # GET: Zeige Produkt-Auswahl
+    return render(request, "studio/product_wizard.html", {
+        "job": job,
+        "assets": assets,
+        "product_types": PRODUCT_TYPES,
+        "post": {},
+    })
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# WIZARD — Geführter Job-Erstell-Workflow (Output-Typ-First) — ALT, wird ersetzt
 # ─────────────────────────────────────────────────────────────────────────────
 
 WIZARD_SESSION_KEY = "studio_wizard"

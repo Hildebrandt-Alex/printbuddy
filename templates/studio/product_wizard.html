@@ -1,0 +1,179 @@
+{% extends "studio/base.html" %}
+{% block title %}Produkt-Erstellung · {{ job.title }}{% endblock %}
+
+{% block extra_head %}
+<style>
+  .wizard-header { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 1.5rem; margin-bottom: 2rem; }
+  .wizard-header h1 { font-size: 1.5rem; margin-bottom: .5rem; }
+  .wizard-header-meta { font-size: .85rem; color: var(--text-muted); }
+  
+  /* Preview Grid */
+  .preview-section { margin-bottom: 2rem; }
+  .preview-section h2 { font-size: 1.15rem; font-weight: 700; margin-bottom: 1rem; }
+  .preview-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem; }
+  .preview-card { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+  .preview-card img { width: 100%; height: 200px; object-fit: cover; }
+  .preview-card-info { padding: .75rem; font-size: .8rem; color: var(--text-muted); }
+  
+  /* Product Type Cards */
+  .product-section { margin-bottom: 2rem; }
+  .product-section h2 { font-size: 1.15rem; font-weight: 700; margin-bottom: 1rem; }
+  .product-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; }
+  
+  .product-card { background: var(--surface); border: 2px solid var(--border); border-radius: 12px; padding: 1.5rem; cursor: pointer; transition: all .2s; position: relative; }
+  .product-card:hover { border-color: var(--accent); transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+  .product-card input[type="radio"] { position: absolute; opacity: 0; }
+  .product-card input[type="radio"]:checked ~ .product-content { }
+  .product-card.selected { border-color: var(--accent); background: rgba(var(--accent-rgb), 0.05); }
+  .product-card.selected::after { content: '✓'; position: absolute; top: 1rem; right: 1rem; background: var(--accent); color: white; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1rem; }
+  
+  .product-icon { font-size: 2.5rem; margin-bottom: .75rem; }
+  .product-title { font-size: 1.1rem; font-weight: 700; margin-bottom: .5rem; }
+  .product-desc { font-size: .85rem; color: var(--text-muted); margin-bottom: 1rem; line-height: 1.5; }
+  
+  .product-meta { display: flex; flex-direction: column; gap: .5rem; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border); }
+  .product-meta-item { display: flex; align-items: flex-start; gap: .5rem; font-size: .8rem; }
+  .product-meta-label { font-weight: 600; color: var(--text); white-space: nowrap; }
+  .product-meta-value { color: var(--text-muted); }
+  
+  .product-exports { display: flex; flex-wrap: wrap; gap: .3rem; }
+  .export-badge { background: var(--surface3); padding: .2rem .5rem; border-radius: 4px; font-size: .7rem; font-weight: 600; border: 1px solid var(--border); }
+  
+  /* Submit Area */
+  .submit-area { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 1.5rem; margin-top: 2rem; text-align: center; }
+  .submit-help { font-size: .85rem; color: var(--text-muted); margin-bottom: 1rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Header -->
+<div class="wizard-header">
+  <h1>🎯 Produkt-Erstellung</h1>
+  <div class="wizard-header-meta">
+    Job: <strong>{{ job.title }}</strong> · 
+    Status: <strong>{{ job.get_status_display }}</strong> · 
+    Erstellt: {{ job.created_at|date:"d.m.Y H:i" }}
+  </div>
+</div>
+
+<!-- Messages -->
+{% if messages %}
+<div style="margin-bottom:1.5rem">
+  {% for message in messages %}
+  <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<!-- Preview Assets -->
+{% if preview_assets %}
+<div class="preview-section">
+  <h2>📸 Generierte Bilder ({{ preview_assets|length }})</h2>
+  <div class="preview-grid">
+    {% for asset in preview_assets %}
+    <div class="preview-card">
+      <img src="{{ asset.file_url }}" alt="Preview {{ forloop.counter }}">
+      <div class="preview-card-info">
+        {{ asset.file_name }}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<!-- Product Type Selection Form -->
+<form method="post" id="productForm">
+  {% csrf_token %}
+  
+  <div class="product-section">
+    <h2>🛍️ Produkt-Typ auswählen</h2>
+    <p style="font-size:.9rem;color:var(--text-muted);margin-bottom:1.5rem">
+      Wähle aus wie dieses Bild verwendet werden soll. Die richtige Pipeline und Export-Formate werden automatisch zugewiesen.
+    </p>
+    
+    <div class="product-grid">
+      {% for key, product in product_types.items %}
+      <label class="product-card" onclick="selectProduct('{{ key }}')">
+        <input type="radio" name="product_type" value="{{ key }}" required>
+        <div class="product-content">
+          <div class="product-icon">{{ product.icon }}</div>
+          <div class="product-title">{{ product.label }}</div>
+          <div class="product-desc">{{ product.description }}</div>
+          
+          <div class="product-meta">
+            <div class="product-meta-item">
+              <span class="product-meta-label">Pipeline:</span>
+              <span class="product-meta-value">{{ product.pipeline_name }}</span>
+            </div>
+            
+            <div class="product-meta-item">
+              <span class="product-meta-label">Kategorie:</span>
+              <span class="product-meta-value">{{ product.category }}</span>
+            </div>
+            
+            {% if product.exports %}
+            <div class="product-meta-item">
+              <span class="product-meta-label">Exports:</span>
+              <div class="product-exports">
+                {% for export in product.exports %}
+                <span class="export-badge">{{ export|upper }}</span>
+                {% endfor %}
+              </div>
+            </div>
+            {% endif %}
+            
+            {% if product.mockup %}
+            <div class="product-meta-item">
+              <span class="product-meta-label">Features:</span>
+              <span class="product-meta-value">✅ Mockup-Generierung</span>
+            </div>
+            {% endif %}
+            
+            {% if product.help_text %}
+            <div class="product-meta-item" style="margin-top:.5rem;font-style:italic">
+              <span class="product-meta-value">💡 {{ product.help_text }}</span>
+            </div>
+            {% endif %}
+          </div>
+        </div>
+      </label>
+      {% endfor %}
+    </div>
+  </div>
+  
+  <!-- Submit Area -->
+  <div class="submit-area">
+    <div class="submit-help">
+      Nach der Auswahl wird die passende Pipeline zugewiesen und das Bundle erstellt.
+    </div>
+    <div style="display:flex;gap:1rem;justify-content:center;align-items:center">
+      <a href="{% url 'studio:job_results' job_id=job.id %}" class="btn btn-secondary">
+        ← Zurück zu Results
+      </a>
+      <button type="submit" class="btn btn-primary" style="min-width:200px">
+        🚀 Bundle erstellen
+      </button>
+    </div>
+  </div>
+</form>
+
+<script>
+function selectProduct(productKey) {
+  // Update Radio Button
+  document.querySelector(`input[value="${productKey}"]`).checked = true;
+  
+  // Update Visual Selection
+  document.querySelectorAll('.product-card').forEach(el => el.classList.remove('selected'));
+  event.currentTarget.classList.add('selected');
+}
+
+// Auto-select if coming back with POST data
+document.addEventListener('DOMContentLoaded', function() {
+  const selectedRadio = document.querySelector('input[name="product_type"]:checked');
+  if (selectedRadio) {
+    selectedRadio.closest('.product-card').classList.add('selected');
+  }
+});
+</script>
+{% endblock %}

@@ -108,7 +108,8 @@ class Job(models.Model):
     id                = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     title             = models.CharField(max_length=150)
     status            = models.CharField(max_length=20, choices=Status.choices, default=Status.DRAFT)
-    pipeline_template = models.ForeignKey(PipelineTemplate, on_delete=models.PROTECT)
+    pipeline_template = models.ForeignKey(PipelineTemplate, on_delete=models.PROTECT, null=True, blank=True,
+                                          help_text="Pipeline wird nach Bildgenerierung im Produkt-Wizard zugewiesen")
     project           = models.ForeignKey('Project', on_delete=models.SET_NULL, null=True, blank=True,
                                           related_name='jobs', help_text="Projekt-Zuordnung (optional)")
     prompt            = models.TextField()
