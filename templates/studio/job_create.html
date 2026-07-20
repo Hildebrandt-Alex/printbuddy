@@ -126,8 +126,8 @@
             <input type="radio" name="model" value="sdxl"
                    {% if post.model == 'sdxl' %}checked{% endif %}>
             <div class="model-content">
-              <div class="model-name">🎨 SDXL 1.0</div>
-              <div class="model-meta">High Quality (30-50 Steps) · ★★★★★</div>
+              <div class="model-name">🎨 SDXL 2.1.1</div>
+              <div class="model-meta">High Quality (25-50 Steps) · ★★★★★</div>
               <div class="model-license license-ok">CreativeML ✅ Kommerziell OK</div>
             </div>
           </label>
@@ -142,16 +142,27 @@
               <div class="model-license license-warn">⚠️ Nur Tests - NICHT verkaufen!</div>
             </div>
           </label>
+          
+          <!-- Face Swap -->
+          <label class="model-option" onclick="selectModel('face_swap')">
+            <input type="radio" name="model" value="face_swap"
+                   {% if post.model == 'face_swap' %}checked{% endif %}>
+            <div class="model-content">
+              <div class="model-name">😊 Face Swap</div>
+              <div class="model-meta">Instant (Kein Training) · ★★★★☆</div>
+              <div class="model-license license-ok">Apache 2.0 ✅ Kommerziell OK</div>
+            </div>
+          </label>
         </div>
       </div>
 
-      <!-- SECTION: Prompt -->
-      <div class="form-section">
+      <!-- SECTION: Prompt (nur wenn NICHT Face Swap) -->
+      <div class="form-section" id="promptSection">
         <div class="form-section-title">Prompt</div>
 
         <div class="form-group">
-          <label for="id_prompt">Positiver Prompt *</label>
-          <textarea id="id_prompt" name="prompt" required rows="5" 
+          <label for="id_prompt">Positiver Prompt</label>
+          <textarea id="id_prompt" name="prompt" rows="5" 
                     placeholder="A majestic lion wearing a golden crown...">{{ post.prompt|default:'' }}</textarea>
           <div class="form-hint">Beschreibe was du sehen möchtest</div>
         </div>
@@ -164,20 +175,40 @@
         </div>
       </div>
 
-      <!-- SECTION: Reference Image (Img2Img / Face Swap) -->
-      <div class="form-section">
-        <div class="form-section-title">Reference Image (optional)</div>
+      <!-- SECTION: Reference Images (Img2Img / Face Swap) -->
+      <div class="form-section" id="referenceSection" style="display:none">
+        <div class="form-section-title">Reference Images (optional)</div>
         
-        <div class="upload-zone" id="uploadZone">
-          <input type="file" id="id_reference_image" name="reference_image" accept="image/*" 
-                 onchange="previewImage(this)">
-          <label for="id_reference_image" class="upload-label">
-            📸 Klicken um Bild hochzuladen
-          </label>
-          <div class="form-hint" style="margin-top:.5rem">
-            Für Img2Img (SDXL) oder Face Swap
+        <!-- Face Image (für Face Swap) -->
+        <div id="faceImageSection" style="display:none;margin-bottom:1rem">
+          <label style="font-size:.9rem;font-weight:600;margin-bottom:.5rem;display:block">Face Image (Gesicht)</label>
+          <div class="upload-zone">
+            <input type="file" id="id_face_image" name="face_image" accept="image/*" 
+                   onchange="previewImage(this, 'facePreview')">
+            <label for="id_face_image" class="upload-label">
+              😊 Portrait-Bild mit Gesicht hochladen
+            </label>
+            <div class="form-hint" style="margin-top:.5rem">
+              Das Gesicht das übertragen werden soll
+            </div>
+            <img id="facePreview" class="upload-preview" style="display:none;max-width:400px;margin-top:.75rem">
           </div>
-          <img id="imagePreview" class="upload-preview" style="display:none">
+        </div>
+        
+        <!-- Target/Reference Image -->
+        <div id="targetImageSection">
+          <label style="font-size:.9rem;font-weight:600;margin-bottom:.5rem;display:block" id="targetImageLabel">Target Image</label>
+          <div class="upload-zone">
+            <input type="file" id="id_reference_image" name="reference_image" accept="image/*" 
+                   onchange="previewImage(this, 'imagePreview')">
+            <label for="id_reference_image" class="upload-label">
+              📸 Klicken um Bild hochzuladen
+            </label>
+            <div class="form-hint" style="margin-top:.5rem" id="targetImageHint">
+              Für Img2Img (SDXL) oder Zielbild für Face Swap
+            </div>
+            <img id="imagePreview" class="upload-preview" style="display:none;max-width:400px;margin-top:.75rem">
+          </div>
         </div>
       </div>
 
@@ -188,37 +219,121 @@
         </button>
         
         <div class="advanced-content" id="advancedParams">
-          <div class="form-group">
-            <label for="id_steps">Steps (Generation-Schritte)</label>
-            <input type="number" id="id_steps" name="steps" value="{{ post.steps|default:'' }}"
-                   placeholder="Auto (modell-abhängig)" min="1" max="100">
-            <div class="form-hint" id="steps-hint">Leer = Modell-Default</div>
-          </div>
-
-          <div class="form-group">
-            <label for="id_guidance">Guidance Scale</label>
-            <input type="number" id="id_guidance" name="guidance" step="0.1" value="{{ post.guidance|default:'' }}"
-                   placeholder="Auto" min="0" max="20">
-            <div class="form-hint" id="guidance-hint">Leer = Modell-Default</div>
-          </div>
-
-          <div class="form-group">
-            <label for="id_seed">Seed (optional)</label>
-            <input type="number" id="id_seed" name="seed" value="{{ post.seed|default:'' }}"
-                   placeholder="Random" min="0">
-            <div class="form-hint">Für reproduzierbare Ergebnisse</div>
-          </div>
-
-          <div style="display:grid; grid-template-columns: 1fr 1fr; gap:1rem">
+          <!-- Standard Diffusion Parameter (FLUX, SDXL) -->
+          <div id="diffusionParams">
             <div class="form-group">
-              <label for="id_width">Breite (px)</label>
-              <input type="number" id="id_width" name="width" value="{{ post.width|default:'' }}"
-                     placeholder="1024" step="64">
+              <label for="id_steps">Steps (Generation-Schritte)</label>
+              <input type="number" id="id_steps" name="steps" value="{{ post.steps|default:'' }}"
+                     placeholder="Auto (modell-abhängig)" min="1" max="100">
+              <div class="form-hint" id="steps-hint">Leer = Modell-Default</div>
             </div>
+
             <div class="form-group">
-              <label for="id_height">Höhe (px)</label>
-              <input type="number" id="id_height" name="height" value="{{ post.height|default:'' }}"
-                     placeholder="1024" step="64">
+              <label for="id_guidance">Guidance Scale</label>
+              <input type="number" id="id_guidance" name="guidance" step="0.1" value="{{ post.guidance|default:'' }}"
+                     placeholder="Auto" min="0" max="20">
+              <div class="form-hint" id="guidance-hint">Leer = Modell-Default</div>
+            </div>
+
+            <div class="form-group">
+              <label for="id_seed">Seed (optional)</label>
+              <input type="number" id="id_seed" name="seed" value="{{ post.seed|default:'' }}"
+                     placeholder="Random" min="0">
+              <div class="form-hint">Für reproduzierbare Ergebnisse</div>
+            </div>
+
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:1rem">
+              <div class="form-group">
+                <label for="id_width">Breite (px)</label>
+                <input type="number" id="id_width" name="width" value="{{ post.width|default:'' }}"
+                       placeholder="1024" step="64">
+              </div>
+              <div class="form-group">
+                <label for="id_height">Höhe (px)</label>
+                <input type="number" id="id_height" name="height" value="{{ post.height|default:'' }}"
+                       placeholder="1024" step="64">
+              </div>
+            </div>
+            
+            <!-- SDXL-Spezifische Parameter -->
+            <div id="sdxlParams" style="display:none;margin-top:1rem;padding-top:1rem;border-top:1px solid var(--border)">
+              <div class="form-group">
+                <label for="id_refiner_steps">Refiner Steps</label>
+                <input type="number" id="id_refiner_steps" name="refiner_steps" value="{{ post.refiner_steps|default:'' }}"
+                       placeholder="50" min="10" max="100">
+                <div class="form-hint">Detail-Verbesserung nach Base-Model (30-75)</div>
+              </div>
+              
+              <div class="form-group">
+                <label for="id_scheduler">Scheduler</label>
+                <select id="id_scheduler" name="scheduler">
+                  <option value="">Default (K_EULER)</option>
+                  <option value="K_EULER">K_EULER (empfohlen)</option>
+                  <option value="DPM++">DPM++ (schneller)</option>
+                  <option value="DDIM">DDIM (classic)</option>
+                  <option value="PNDM">PNDM</option>
+                </select>
+                <div class="form-hint">Sampling-Algorithmus</div>
+              </div>
+              
+              <div class="form-group">
+                <label for="id_strength">Strength (Img2Img)</label>
+                <input type="number" id="id_strength" name="strength" step="0.05" value="{{ post.strength|default:'' }}"
+                       placeholder="0.3" min="0" max="1">
+                <div class="form-hint">0.3 = nah am Original, 0.8 = starke Änderung</div>
+              </div>
+              
+              <div class="form-group">
+                <label for="id_high_noise_frac">High Noise Fraction</label>
+                <input type="number" id="id_high_noise_frac" name="high_noise_frac" step="0.05" value="{{ post.high_noise_frac|default:'' }}"
+                       placeholder="0.8" min="0" max="1">
+                <div class="form-hint">Wann Refiner aktiviert (0.6-0.9)</div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Face Swap Parameter -->
+          <div id="faceSwapParams" style="display:none">
+            <div class="form-group">
+              <label>
+                <input type="checkbox" id="id_face_restore" name="face_restore" checked>
+                Face Restore (Gesichtsdetails verbessern)
+              </label>
+              <div class="form-hint">Empfohlen für bessere Gesichtsqualität</div>
+            </div>
+            
+            <div class="form-group">
+              <label>
+                <input type="checkbox" id="id_face_upsample" name="face_upsample" checked>
+                Face Upsample (Hochskalierung vor Swap)
+              </label>
+              <div class="form-hint">Verbessert Details im Gesicht</div>
+            </div>
+            
+            <div class="form-group">
+              <label>
+                <input type="checkbox" id="id_background_enhance" name="background_enhance">
+                Background Enhance (Hintergrund schärfen)
+              </label>
+              <div class="form-hint">Optional - kann Artifacts erzeugen</div>
+            </div>
+            
+            <div class="form-group">
+              <label for="id_upscale">Upscale Factor</label>
+              <select id="id_upscale" name="upscale">
+                <option value="1">1x (Original-Größe)</option>
+                <option value="2" selected>2x (doppelte Auflösung)</option>
+                <option value="3">3x</option>
+                <option value="4">4x (sehr langsam)</option>
+              </select>
+              <div class="form-hint">Skalierungsfaktor des Ausgabebildes</div>
+            </div>
+            
+            <div class="form-group">
+              <label for="id_blend_ratio">Blend Ratio</label>
+              <input type="number" id="id_blend_ratio" name="blend_ratio" step="0.05" value="0.75"
+                     min="0.5" max="1.0">
+              <div class="form-hint">0.75 = Natural Blend (empfohlen), 1.0 = Komplett ersetzen</div>
             </div>
           </div>
         </div>
@@ -324,6 +439,17 @@ function updateModelInfo(modelKey) {
         ${info.warning}
       </div>
     ` : ''}
+    
+    <!-- Endpoint Info -->
+    ${info.endpoint_info ? `
+      <div style="margin-top:1rem;padding:.75rem;background:var(--surface2);border:1px solid var(--border);border-radius:6px;font-size:.8rem">
+        <strong style="display:block;margin-bottom:.5rem;color:var(--text)">🔧 Endpoint & Parameter:</strong>
+        <div style="color:var(--text-muted);line-height:1.5">
+          ${info.endpoint_info.endpoint ? '<div><strong>Endpoint:</strong> ' + info.endpoint_info.endpoint + '</div>' : ''}
+          ${info.endpoint_info.parameters ? '<div style="margin-top:.5rem"><strong>Parameter:</strong><br>' + info.endpoint_info.parameters + '</div>' : ''}
+        </div>
+      </div>
+    ` : ''}
   `;
   
   panel.innerHTML = html;
@@ -332,6 +458,8 @@ function updateModelInfo(modelKey) {
   if (info.recommended_params) {
     const stepsHint = document.getElementById('steps-hint');
     const guidanceHint = document.getElementById('guidance-hint');
+    const widthInput = document.getElementById('id_width');
+    const heightInput = document.getElementById('id_height');
     
     if (stepsHint && info.recommended_params.steps) {
       stepsHint.textContent = `Empfohlen: ${info.recommended_params.steps} Steps`;
@@ -339,6 +467,64 @@ function updateModelInfo(modelKey) {
     if (guidanceHint && info.recommended_params.guidance) {
       guidanceHint.textContent = `Empfohlen: ${info.recommended_params.guidance}`;
     }
+    if (widthInput && info.recommended_params.width) {
+      widthInput.placeholder = info.recommended_params.width;
+    }
+    if (heightInput && info.recommended_params.height) {
+      heightInput.placeholder = info.recommended_params.height;
+    }
+  }
+  
+  // Show/Hide Reference Image Section based on model capabilities
+  const refSection = document.getElementById('referenceSection');
+  const faceSection = document.getElementById('faceImageSection');
+  const targetLabel = document.getElementById('targetImageLabel');
+  const targetHint = document.getElementById('targetImageHint');
+  const promptSection = document.getElementById('promptSection');
+  const promptField = document.getElementById('id_prompt');
+  
+  // Show/Hide Parameter Sections
+  const diffusionParams = document.getElementById('diffusionParams');
+  const faceSwapParams = document.getElementById('faceSwapParams');
+  const sdxlParams = document.getElementById('sdxlParams');
+  
+  if (info.face_swap) {
+    // Face Swap: Zwei Bilder, KEIN Prompt, spezielle Parameter
+    refSection.style.display = 'block';
+    faceSection.style.display = 'block';
+    targetLabel.textContent = 'Target Body Image';
+    targetHint.textContent = 'Zielbild (Körper/Kontext) wo das Gesicht eingefügt werden soll';
+    promptSection.style.display = 'none';
+    promptField.removeAttribute('required');
+    
+    // Parameter Sections
+    diffusionParams.style.display = 'none';
+    faceSwapParams.style.display = 'block';
+    
+  } else if (info.img2img && info.img2img.enabled) {
+    // SDXL: Img2Img enabled, Prompt benötigt
+    refSection.style.display = 'block';
+    faceSection.style.display = 'none';
+    targetLabel.textContent = 'Reference Image';
+    targetHint.textContent = 'Basis-Bild für Img2Img Transformation';
+    promptSection.style.display = 'block';
+    promptField.setAttribute('required', 'required');
+    
+    // Parameter Sections
+    diffusionParams.style.display = 'block';
+    faceSwapParams.style.display = 'none';
+    sdxlParams.style.display = 'block';  // SDXL-spezifische Felder
+    
+  } else {
+    // Standard Text2Img: Kein Bild-Upload
+    refSection.style.display = 'none';
+    promptSection.style.display = 'block';
+    promptField.setAttribute('required', 'required');
+    
+    // Parameter Sections
+    diffusionParams.style.display = 'block';
+    faceSwapParams.style.display = 'none';
+    if (sdxlParams) sdxlParams.style.display = 'none';
   }
 }
 
@@ -353,16 +539,23 @@ function insertPrompt(text, type) {
   target.focus();
 }
 
-// Image Preview
-function previewImage(input) {
-  const preview = document.getElementById('imagePreview');
+// Image Preview with resize
+function previewImage(input, previewId) {
+  const preview = document.getElementById(previewId || 'imagePreview');
   if (input.files && input.files[0]) {
+    const file = input.files[0];
+    
+    // Check file size (warn if > 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      alert('⚠️ Bild ist sehr groß (' + Math.round(file.size / 1024 / 1024) + 'MB). Upload kann länger dauern.');
+    }
+    
     const reader = new FileReader();
     reader.onload = function(e) {
       preview.src = e.target.result;
       preview.style.display = 'block';
     };
-    reader.readAsDataURL(input.files[0]);
+    reader.readAsDataURL(file);
   }
 }
 

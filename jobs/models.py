@@ -114,7 +114,10 @@ class Job(models.Model):
                                           related_name='jobs', help_text="Projekt-Zuordnung (optional)")
     prompt            = models.TextField()
     negative_prompt   = models.TextField(blank=True)
-    reference_image   = models.ImageField(upload_to='jobs/refs/', blank=True)
+    reference_image   = models.ImageField(upload_to='jobs/refs/', blank=True, 
+                                          help_text="Für Img2Img (SDXL) oder Target-Bild für Face Swap")
+    face_image        = models.ImageField(upload_to='jobs/faces/', blank=True,
+                                          help_text="Gesichts-Bild für Face Swap (wird auf reference_image übertragen)")
     # Parameter Overrides
     width      = models.PositiveIntegerField(null=True, blank=True)
     height     = models.PositiveIntegerField(null=True, blank=True)

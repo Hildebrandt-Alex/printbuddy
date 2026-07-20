@@ -237,6 +237,12 @@ def job_create(request):
             job.reference_image = request.FILES['reference_image']
             job.save(update_fields=['reference_image'])
             logger.info("[job_create] Reference Image hochgeladen für Job %s", job.id)
+        
+        # Face Image für Face Swap (zweites Bild)
+        if 'face_image' in request.FILES:
+            job.face_image = request.FILES['face_image']
+            job.save(update_fields=['face_image'])
+            logger.info("[job_create] Face Image hochgeladen für Job %s", job.id)
 
         messages.success(request, f"Job '{job.title}' angelegt. Admin muss ihn starten.")
         return redirect("studio:job_detail", job_id=job.id)
