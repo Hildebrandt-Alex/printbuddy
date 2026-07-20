@@ -177,7 +177,10 @@
 
       <!-- SECTION: Reference Images (Img2Img / Face Swap) -->
       <div class="form-section" id="referenceSection" style="display:none">
-        <div class="form-section-title">Reference Images (optional)</div>
+        <div class="form-section-title">Reference Images</div>
+        <div class="form-hint" style="margin-bottom:1rem;color:var(--text-muted);font-size:.85rem">
+          <strong>Optional:</strong> Für Image2Image (FLUX/SDXL) oder Face Swap. Leer lassen = Text2Image.
+        </div>
         
         <!-- Face Image (für Face Swap) -->
         <div id="faceImageSection" style="display:none;margin-bottom:1rem">
@@ -463,9 +466,11 @@ function updateModelInfo(modelKey) {
     
     if (stepsHint && info.recommended_params.steps) {
       stepsHint.textContent = `Empfohlen: ${info.recommended_params.steps} Steps`;
+      document.getElementById('id_steps').placeholder = info.recommended_params.steps;
     }
     if (guidanceHint && info.recommended_params.guidance) {
       guidanceHint.textContent = `Empfohlen: ${info.recommended_params.guidance}`;
+      document.getElementById('id_guidance').placeholder = info.recommended_params.guidance;
     }
     if (widthInput && info.recommended_params.width) {
       widthInput.placeholder = info.recommended_params.width;
@@ -489,7 +494,9 @@ function updateModelInfo(modelKey) {
   const sdxlParams = document.getElementById('sdxlParams');
   
   if (info.face_swap) {
-    // Face Swap: Zwei Bilder, KEIN Prompt, spezielle Parameter
+    // ═══════════════════════════════════════════════════════════════
+    // Face Swap Standalone: Zwei Bilder PFLICHT, KEIN Prompt
+    // ═══════════════════════════════════════════════════════════════
     refSection.style.display = 'block';
     faceSection.style.display = 'block';
     targetLabel.textContent = 'Target Body Image';
@@ -502,11 +509,13 @@ function updateModelInfo(modelKey) {
     faceSwapParams.style.display = 'block';
     
   } else if (info.img2img && info.img2img.enabled) {
-    // SDXL: Img2Img enabled, Prompt benötigt
+    // ═══════════════════════════════════════════════════════════════
+    // SDXL: Image2Image möglich (Prompt + OPTIONAL Reference Image)
+    // ═══════════════════════════════════════════════════════════════
     refSection.style.display = 'block';
     faceSection.style.display = 'none';
-    targetLabel.textContent = 'Reference Image';
-    targetHint.textContent = 'Basis-Bild für Img2Img Transformation';
+    targetLabel.textContent = 'Reference Image (optional für Img2Img)';
+    targetHint.textContent = 'Optional: Basis-Bild für Image2Image Transformation. Leer = Text2Image.';
     promptSection.style.display = 'block';
     promptField.setAttribute('required', 'required');
     
@@ -516,8 +525,13 @@ function updateModelInfo(modelKey) {
     sdxlParams.style.display = 'block';  // SDXL-spezifische Felder
     
   } else {
-    // Standard Text2Img: Kein Bild-Upload
-    refSection.style.display = 'none';
+    // ═══════════════════════════════════════════════════════════════
+    // FLUX Schnell/Dev: Text2Image ODER Image2Image
+    // ═══════════════════════════════════════════════════════════════
+    refSection.style.display = 'block';  // IMMER zeiген für Img2Img Option
+    faceSection.style.display = 'none';
+    targetLabel.textContent = 'Reference Image (optional für Img2Img)';
+    targetHint.textContent = 'Optional: Basis-Bild für Image2Image. Leer lassen = Text2Image (nur Prompt).';
     promptSection.style.display = 'block';
     promptField.setAttribute('required', 'required');
     
