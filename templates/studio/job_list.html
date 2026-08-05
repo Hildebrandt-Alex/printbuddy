@@ -48,7 +48,7 @@
           <a href="{% url 'studio:project_detail' job.project.slug %}" style="color:var(--accent2);font-size:.85rem">📁 {{ job.project.title }}</a>
           {% else %}<span style="color:var(--text-muted);font-size:.85rem">—</span>{% endif %}
         </td>
-        <td style="color:var(--text-muted)">{{ job.pipeline_template.name }}</td>
+        <td style="color:var(--text-muted)">{% if job.pipeline_template %}{{ job.pipeline_template.name }}{% else %}{{ job.model|default:"FLUX Schnell" }}{% endif %}</td>
         <td style="color:var(--text-muted)">{{ job.num_images }}</td>
         <td><span class="badge badge-{{ job.status }}">{{ job.get_status_display }}</span></td>
         <td style="color:var(--text-muted)">{{ job.created_at|date:"d.m.Y H:i" }}</td>

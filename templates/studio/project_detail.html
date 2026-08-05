@@ -56,7 +56,7 @@
     {% for job in jobs|slice:":10" %}
       <tr>
         <td>{{ job.title }}</td>
-        <td style="color:var(--text-muted);font-size:.85rem">{{ job.pipeline_template.name }}</td>
+        <td style="color:var(--text-muted);font-size:.85rem">{% if job.pipeline_template %}{{ job.pipeline_template.name }}{% else %}{{ job.model|default:"FLUX Schnell" }}{% endif %}</td>
         <td><span class="badge badge-{{ job.status }}">{{ job.get_status_display }}</span></td>
         <td style="color:var(--text-muted);font-size:.85rem">{{ job.created_at|date:"d.m. H:i" }}</td>
         <td>

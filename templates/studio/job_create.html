@@ -122,6 +122,12 @@ function selectMediaType(type) {
   });
   event.currentTarget.classList.add('selected');
   
+  // ✅ FIX: Check the actual radio button!
+  const radioButton = event.currentTarget.querySelector('input[type="radio"]');
+  if (radioButton) {
+    radioButton.checked = true;
+  }
+  
   // Check if media type is available
   if (type === 'image') {
     setTimeout(() => showStep(2), 300);

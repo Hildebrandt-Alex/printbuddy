@@ -6,7 +6,7 @@
   <div>
     <h1>{{ job.title }}</h1>
     <p style="color:var(--text-muted);font-size:.85rem;margin-top:.25rem">
-      {{ job.pipeline_template.name }} &nbsp;·&nbsp;
+      {% if job.pipeline_template %}{{ job.pipeline_template.name }} &nbsp;·&nbsp;{% endif %}
       Erstellt {{ job.created_at|date:"d.m.Y H:i" }}
     </p>
   </div>
@@ -35,11 +35,11 @@
     <div class="card" style="margin-bottom:1rem">
       <div class="card-title">Parameter</div>
       <table>
-        <tr><td style="color:var(--text-muted)">Modell</td><td>{{ job.model|default:job.pipeline_template.default_model }}</td></tr>
+        <tr><td style="color:var(--text-muted)">Modell</td><td>{{ job.model|default:"flux_schnell" }}</td></tr>
         <tr><td style="color:var(--text-muted)">Größe</td>
-            <td>{{ job.width|default:job.pipeline_template.default_width }} × {{ job.height|default:job.pipeline_template.default_height }} px</td></tr>
-        <tr><td style="color:var(--text-muted)">Steps</td><td>{{ job.num_steps|default:job.pipeline_template.default_steps }}</td></tr>
-        <tr><td style="color:var(--text-muted)">Guidance</td><td>{{ job.guidance|default:job.pipeline_template.default_guidance }}</td></tr>
+            <td>{{ job.width|default:1024 }} × {{ job.height|default:1024 }} px</td></tr>
+        <tr><td style="color:var(--text-muted)">Steps</td><td>{{ job.num_steps|default:4 }}</td></tr>
+        <tr><td style="color:var(--text-muted)">Guidance</td><td>{{ job.guidance|default:7.0 }}</td></tr>
         <tr><td style="color:var(--text-muted)">Bilder</td><td>{{ job.num_images }}</td></tr>
         {% if job.seed %}<tr><td style="color:var(--text-muted)">Seed</td><td>{{ job.seed }}</td></tr>{% endif %}
       </table>

@@ -15,10 +15,23 @@ env/
 *.log
 local_settings.py
 db.sqlite3
+db.sqlite3*
 db.sqlite3-journal
 media/
 staticfiles/
 local_nas/
+
+# Template Backups (lokal halten)
+*_old_backup.html
+*_backup.html
+
+# Test Scripts & Temp Files
+create_option_*.py
+test_*.py
+Review.pptx
+xgReview.pptx
+*.pptx
+*.docx
 
 # Environment Variables — NIEMALS committen!
 .env
