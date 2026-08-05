@@ -160,39 +160,31 @@ def job_list(request):
 @studio_required
 def job_create(request):
     """
-    NEUE VERSION: Nur Bildgenerierung-Wizard (Model + Prompt + Parameter)
-    Pipeline-Template wird später im Product Wizard zugewiesen
+    VEREINFACHTER WIZARD: Nur FLUX Schnell für Bildgenerierung
+    3 Schritte: Medientyp → Modell → Parameter
     """
-    import json
-    from jobs.model_info import MODEL_DESCRIPTIONS, get_model_info
-    
     prompt_templates = PromptTemplate.objects.filter(is_public=True).order_by("category", "title")
-    projects = Project.objects.filter(
-        models.Q(created_by=request.user) | models.Q(team_members=request.user)
-    ).distinct().order_by('title')
     
-    # Model Descriptions als JSON für Template
-    model_descriptions_json = json.dumps(MODEL_DESCRIPTIONS)
+    # Superuser/Staff sehen ALLE Projekte, normale User nur eigene
+    if request.user.is_superuser or request.user.is_staff:
+        projects = Project.objects.filter(is_active=True).order_by('-updated_at', 'title')
+    else:
+        projects = Project.objects.filter(
+            models.Q(created_by=request.user) | models.Q(team_members=request.user),
+            is_active=True
+        ).distinct().order_by('-updated_at', 'title')
 
     if request.method == "POST":
-        title          = request.POST.get("title", "").strip()
-        prompt         = request.POST.get("prompt", "").strip()
+        title           = request.POST.get("title", "").strip()
+        prompt          = request.POST.get("prompt", "").strip()
         negative_prompt = request.POST.get("negative_prompt", "").strip()
-        notes          = request.POST.get("notes", "").strip()
-        model          = request.POST.get("model", "").strip()
-
-        # Optionale Override-Felder
-        width      = request.POST.get("width") or None
-        height     = request.POST.get("height") or None
-        steps      = request.POST.get("steps") or None
-        guidance   = request.POST.get("guidance") or None
-        seed       = request.POST.get("seed") or None
-        num_images = int(request.POST.get("num_images") or 1)
+        model           = request.POST.get("model", "flux_schnell")  # Default
+        seed            = request.POST.get("seed") or None
+        num_images      = int(request.POST.get("num_images") or 1)
 
         errors = []
-        if not title:      errors.append("Titel ist erforderlich.")
-        if not prompt:     errors.append("Prompt ist erforderlich.")
-        if not model:      errors.append("Modell ist erforderlich.")
+        if not title:  errors.append("Titel ist erforderlich.")
+        if not prompt: errors.append("Prompt ist erforderlich.")
 
         if errors:
             for e in errors:
@@ -201,7 +193,6 @@ def job_create(request):
                 "prompt_templates": prompt_templates,
                 "projects": projects,
                 "post": request.POST,
-                "model_descriptions": model_descriptions_json,
             })
 
         # Projekt-Zuordnung (optional)
@@ -213,45 +204,31 @@ def job_create(request):
             except Project.DoesNotExist:
                 pass
 
-        # Job OHNE Pipeline Template erstellen (wird später zugewiesen)
+        # Job erstellen (ohne Pipeline Template)
         job = Job.objects.create(
             title=title,
-            pipeline_template=None,  # NEU: Optional
+            pipeline_template=None,
             project=project,
             prompt=prompt,
             negative_prompt=negative_prompt,
-            notes=notes,
             model=model,
-            width=int(width) if width else None,
-            height=int(height) if height else None,
-            num_steps=int(steps) if steps else None,
-            guidance=float(guidance) if guidance else None,
+            width=1024,        # FLUX Schnell Standard
+            height=1024,
+            num_steps=4,       # FLUX Schnell optimiert für 4 Steps
+            guidance=7.0,      # FLUX Schnell fixed Guidance
             seed=int(seed) if seed else None,
             num_images=num_images,
             status='draft',
             created_by=request.user,
         )
-        
-        # Reference Image für Img2Img oder Face Swap (falls hochgeladen)
-        if 'reference_image' in request.FILES:
-            job.reference_image = request.FILES['reference_image']
-            job.save(update_fields=['reference_image'])
-            logger.info("[job_create] Reference Image hochgeladen für Job %s", job.id)
-        
-        # Face Image für Face Swap (zweites Bild)
-        if 'face_image' in request.FILES:
-            job.face_image = request.FILES['face_image']
-            job.save(update_fields=['face_image'])
-            logger.info("[job_create] Face Image hochgeladen für Job %s", job.id)
 
-        messages.success(request, f"Job '{job.title}' angelegt. Admin muss ihn starten.")
+        messages.success(request, f"Job '{job.title}' erstellt. Admin muss ihn starten.")
         return redirect("studio:job_detail", job_id=job.id)
 
     return render(request, 'studio/job_create.html', {
         'prompt_templates': prompt_templates,
         'projects': projects,
         'post': {},
-        'model_descriptions': model_descriptions_json,
     })
 
 

@@ -1,606 +1,343 @@
 {% extends "studio/base.html" %}
-{% block title %}Neues Bild erstellen{% endblock %}
+{% block title %}Neuen Job erstellen{% endblock %}
 
 {% block extra_head %}
 <style>
-  /* 2-Column Layout */
-  .wizard-layout { display: grid; grid-template-columns: 1fr 420px; gap: 2rem; align-items: start; }
-  @media (max-width: 1200px) { .wizard-layout { grid-template-columns: 1fr; } }
+  /* Wizard Container */
+  .wizard-container { max-width: 900px; margin: 2rem auto; }
   
-  /* Form Styles */
-  .form-section { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding:1.5rem; margin-bottom:1rem; }
-  .form-section-title { font-size: 1rem; font-weight: 700; margin-bottom: 1.25rem; color: var(--text); }
+  /* Schritt-Indikatoren */
+  .wizard-steps { display: flex; gap: 1rem; margin-bottom: 2rem; padding-bottom: 1rem; border-bottom: 2px solid var(--border); }
+  .wizard-step { flex: 1; text-align: center; padding: .75rem; background: var(--surface2); border-radius: 8px; font-size: .85rem; color: var(--text-muted); transition: all .2s; }
+  .wizard-step.active { background: var(--accent); color: white; font-weight: 600; }
+  .wizard-step.completed { background: var(--surface3); color: var(--text); }
   
-  /* Model Selection Cards */
-  .model-grid { display: grid; gap: .75rem; }
-  .model-option { background: var(--surface2); border: 2px solid var(--border); border-radius: 8px; padding: 1rem; cursor: pointer; transition: all .2s; position: relative; }
-  .model-option:hover { border-color: var(--accent); background: var(--surface3); }
-  .model-option input[type="radio"] { position: absolute; opacity: 0; }
-  .model-option input[type="radio"]:checked + .model-content { }
-  .model-option input[type="radio"]:checked ~ .model-check { display: block; }
-  .model-option.selected { border-color: var(--accent); background: rgba(var(--accent-rgb), 0.1); }
+  /* Content Sections */
+  .wizard-section { display: none; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 2rem; }
+  .wizard-section.active { display: block; }
+  .wizard-section h2 { font-size: 1.5rem; margin-bottom: 1.5rem; }
   
-  .model-name { font-size: .95rem; font-weight: 700; margin-bottom: .25rem; }
-  .model-meta { font-size: .75rem; color: var(--text-muted); margin-bottom: .5rem; }
-  .model-license { display: inline-block; padding: .15rem .4rem; border-radius: 4px; font-size: .7rem; font-weight: 600; margin-top: .25rem; }
-  .license-ok { background: #14532d; color: #86efac; }
-  .license-warn { background: #7c2d12; color: #fdba74; }
+  /* Media Type Selection */
+  .media-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; margin-top: 1.5rem; }
+  .media-card { 
+    background: var(--surface2); 
+    border: 2px solid var(--border); 
+    border-radius: 12px; 
+    padding: 2rem 1rem; 
+    text-align: center; 
+    cursor: pointer; 
+    transition: all .2s; 
+    position: relative;
+  }
+  .media-card:hover { border-color: var(--accent); background: var(--surface3); }
+  .media-card input[type="radio"] { position: absolute; opacity: 0; }
+  .media-card input[type="radio"]:checked ~ .media-content { }
+  .media-card.selected { border-color: var(--accent); background: rgba(var(--accent-rgb), 0.1); }
+  .media-icon { font-size: 3rem; margin-bottom: .75rem; }
+  .media-name { font-size: 1.1rem; font-weight: 700; margin-bottom: .5rem; }
+  .media-badge { display: inline-block; padding: .25rem .5rem; border-radius: 4px; font-size: .7rem; font-weight: 600; margin-top: .5rem; }
+  .badge-active { background: #14532d; color: #86efac; }
+  .badge-soon { background: #7c2d12; color: #fdba74; }
   
-  /* Info Panel (rechts, sticky) */
-  .info-panel { position: sticky; top: 2rem; max-height: calc(100vh - 4rem); overflow-y: auto; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 1.5rem; }
-  .info-panel h3 { font-size: 1rem; font-weight: 700; margin-bottom: .75rem; }
-  .info-panel p { font-size: .85rem; line-height: 1.5; margin-bottom: .75rem; color: var(--text-muted); }
-  .info-stat { display: flex; justify-content: space-between; font-size: .85rem; margin-bottom: .5rem; }
-  .info-stat-label { color: var(--text-muted); }
-  .info-stat-value { font-weight: 600; }
+  /* Model Card */
+  .model-card { 
+    background: var(--surface2); 
+    border: 2px solid var(--accent); 
+    border-radius: 8px; 
+    padding: 1.5rem; 
+    margin-bottom: 1rem;
+  }
+  .model-card .model-name { font-size: 1.2rem; font-weight: 700; margin-bottom: .5rem; }
+  .model-card .model-license { display: inline-block; padding: .25rem .5rem; border-radius: 4px; background: #14532d; color: #86efac; font-size: .75rem; font-weight: 600; margin-bottom: .75rem; }
+  .model-card .model-desc { font-size: .85rem; line-height: 1.5; color: var(--text-muted); margin-bottom: 1rem; }
+  .model-card .model-specs { display: grid; grid-template-columns: repeat(2, 1fr); gap: .5rem; font-size: .8rem; }
+  .model-spec { display: flex; justify-content: space-between; padding: .5rem; background: var(--surface); border-radius: 4px; }
+  .model-spec-label { color: var(--text-muted); }
+  .model-spec-value { font-weight: 600; }
   
-  .example-prompts { margin-top: 1rem; }
-  .example-prompt { background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; padding: .75rem; margin-bottom: .5rem; position: relative; }
-  .example-prompt-text { font-size: .8rem; line-height: 1.4; color: var(--text-muted); margin-bottom: .5rem; }
-  .example-prompt-btn { background: var(--accent); color: white; border: none; padding: .35rem .75rem; border-radius: 4px; font-size: .75rem; cursor: pointer; transition: opacity .2s; }
-  .example-prompt-btn:hover { opacity: 0.8; }
+  /* Form Fields */
+  .form-group { margin-bottom: 1.5rem; }
+  .form-group label { display: block; font-weight: 600; margin-bottom: .5rem; color: var(--text); }
+  .form-group input[type="text"],
+  .form-group input[type="number"],
+  .form-group textarea,
+  .form-group select { 
+    width: 100%; 
+    padding: .75rem; 
+    background: var(--surface2); 
+    border: 1px solid var(--border); 
+    border-radius: 6px; 
+    color: var(--text); 
+    font-family: inherit;
+  }
+  .form-group textarea { min-height: 120px; line-height: 1.5; }
+  .form-help { font-size: .8rem; color: var(--text-muted); margin-top: .25rem; }
   
-  .param-impact { margin-top: 1rem; padding: .75rem; background: var(--surface2); border-radius: 6px; font-size: .8rem; line-height: 1.4; color: var(--text-muted); }
+  /* Example Prompts */
+  .example-prompts { margin-top: 1rem; padding: 1rem; background: var(--surface2); border-radius: 6px; }
+  .example-prompts h4 { font-size: .9rem; margin-bottom: .75rem; }
+  .example-prompt { padding: .75rem; background: var(--surface); border-radius: 4px; margin-bottom: .5rem; font-size: .8rem; line-height: 1.4; cursor: pointer; transition: background .2s; }
+  .example-prompt:hover { background: var(--surface3); }
   
-  /* Reference Image Upload */
-  .upload-zone { border: 2px dashed var(--border); border-radius: 8px; padding: 1.5rem; text-align: center; background: var(--surface2); transition: border-color .2s; }
-  .upload-zone:hover { border-color: var(--accent); }
-  .upload-zone input[type="file"] { display: none; }
-  .upload-label { cursor: pointer; color: var(--accent2); }
-  .upload-preview { margin-top: .75rem; max-width: 100%; border-radius: 6px; }
+  /* Buttons */
+  .wizard-nav { display: flex; gap: 1rem; margin-top: 2rem; }
+  .btn { padding: .75rem 1.5rem; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; transition: all .2s; }
+  .btn-primary { background: var(--accent); color: white; flex: 1; }
+  .btn-primary:hover { opacity: 0.9; }
+  .btn-secondary { background: var(--surface2); color: var(--text); }
+  .btn-secondary:hover { background: var(--surface3); }
   
-  /* Advanced Section */
-  .advanced-toggle { background: none; border: none; color: var(--accent2); cursor: pointer; font-size: .85rem; padding: .5rem 0; }
-  .advanced-content { display: none; margin-top: 1rem; }
-  .advanced-content.open { display: block; }
+  /* Alerts */
+  .alert { padding: 1rem; border-radius: 6px; margin-bottom: 1rem; }
+  .alert-info { background: #1e3a8a; color: #93c5fd; border: 1px solid #3b82f6; }
+  .alert-warning { background: #7c2d12; color: #fdba74; border: 1px solid #ea580c; }
 </style>
+<script>
+let currentStep = 1;
+let selectedMediaType = null;
+
+function showStep(step) {
+  currentStep = step;
+  
+  // Update step indicators
+  document.querySelectorAll('.wizard-step').forEach((el, idx) => {
+    el.classList.remove('active', 'completed');
+    if (idx + 1 === step) el.classList.add('active');
+    else if (idx + 1 < step) el.classList.add('completed');
+  });
+  
+  // Update sections
+  document.querySelectorAll('.wizard-section').forEach((el, idx) => {
+    el.classList.remove('active');
+    if (idx + 1 === step) el.classList.add('active');
+  });
+}
+
+function selectMediaType(type) {
+  selectedMediaType = type;
+  
+  // Update UI
+  document.querySelectorAll('.media-card').forEach(card => {
+    card.classList.remove('selected');
+  });
+  event.currentTarget.classList.add('selected');
+  
+  // Check if media type is available
+  if (type === 'image') {
+    setTimeout(() => showStep(2), 300);
+  } else {
+    alert('🚧 ' + (type === 'music' ? 'Musik' : 'Video') + '-Generierung noch nicht implementiert.\n\nDerzeit nur Bild-Generierung verfügbar.');
+  }
+}
+
+function useExamplePrompt(text) {
+  document.getElementById('id_prompt').value = text;
+}
+
+// Show first step on load
+document.addEventListener('DOMContentLoaded', () => {
+  showStep(1);
+});
+</script>
 {% endblock %}
 
 {% block content %}
-<div class="page-header">
-  <h1>Neues Bild erstellen</h1>
-  <a href="{% url 'studio:job_list' %}" class="btn btn-secondary">← Jobs</a>
-</div>
-
-<div class="wizard-layout">
-  <!-- ══════════════════════════════════════════════════════════════ -->
-  <!-- LINKE SPALTE: FORMULAR -->
-  <!-- ══════════════════════════════════════════════════════════════ -->
-  <div class="form-column">
-    <form method="post" enctype="multipart/form-data" id="jobForm">
-      {% csrf_token %}
-
-      <!-- SECTION: Basis -->
-      <div class="form-section">
-        <div class="form-section-title">Basis-Einstellungen</div>
-
-        <div class="form-group">
-          <label for="id_title">Job-Titel *</label>
-          <input type="text" id="id_title" name="title" value="{{ post.title|default:'' }}" required 
-                 placeholder="z.B. Fantasy-Landschaft mit Drachen">
-          <div class="form-hint">Beschreibender Name für den Job</div>
+<div class="wizard-container">
+  <h1 style="font-size: 1.75rem; margin-bottom: 1.5rem;">✨ Neuen Job erstellen</h1>
+  
+  <!-- Step Indicators -->
+  <div class="wizard-steps">
+    <div class="wizard-step active">
+      <div>Schritt 1</div>
+      <div style="font-size: .75rem; margin-top: .25rem;">Medientyp</div>
+    </div>
+    <div class="wizard-step">
+      <div>Schritt 2</div>
+      <div style="font-size: .75rem; margin-top: .25rem;">Modell</div>
+    </div>
+    <div class="wizard-step">
+      <div>Schritt 3</div>
+      <div style="font-size: .75rem; margin-top: .25rem;">Parameter</div>
+    </div>
+  </div>
+  
+  <!-- Messages -->
+  {% if messages %}
+    {% for message in messages %}
+      <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+    {% endfor %}
+  {% endif %}
+  
+  <form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    
+    <!-- STEP 1: Media Type Selection -->
+    <div class="wizard-section active">
+      <h2>Was möchtest du erstellen?</h2>
+      <p style="color: var(--text-muted); margin-bottom: 1rem;">Wähle den Medientyp für deinen neuen Job.</p>
+      
+      <div class="media-grid">
+        <div class="media-card" onclick="selectMediaType('image')">
+          <input type="radio" name="media_type" value="image" required>
+          <div class="media-content">
+            <div class="media-icon">🖼️</div>
+            <div class="media-name">Bild</div>
+            <div class="media-badge badge-active">✓ Verfügbar</div>
+          </div>
         </div>
-
-        {% if projects %}
-        <div class="form-group">
-          <label for="id_project">Projekt (optional)</label>
-          <select id="id_project" name="project_id">
-            <option value="">— Kein Projekt —</option>
-            {% for p in projects %}
-            <option value="{{ p.id }}" {% if post.project_id == p.id|stringformat:"s" %}selected{% endif %}>
-              {{ p.title }}
+        
+        <div class="media-card" onclick="selectMediaType('music')">
+          <input type="radio" name="media_type" value="music">
+          <div class="media-content">
+            <div class="media-icon">🎵</div>
+            <div class="media-name">Musik</div>
+            <div class="media-badge badge-soon">🚧 Bald</div>
+          </div>
+        </div>
+        
+        <div class="media-card" onclick="selectMediaType('video')">
+          <input type="radio" name="media_type" value="video">
+          <div class="media-content">
+            <div class="media-icon">🎬</div>
+            <div class="media-name">Video</div>
+            <div class="media-badge badge-soon">🚧 Bald</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- STEP 2: Model Selection -->
+    <div class="wizard-section">
+      <h2>KI-Modell</h2>
+      <p style="color: var(--text-muted); margin-bottom: 1rem;">Für Bildgenerierung verwenden wir <strong>FLUX Schnell</strong> — ein ultra-schnelles, hochwertiges Modell.</p>
+      
+      <div class="model-card">
+        <div class="model-name">⚡ FLUX Schnell</div>
+        <div class="model-license">Apache 2.0 — Kommerziell OK ✓</div>
+        <div class="model-desc">
+          Standard-Generierung für alle Print-Produkte. Ultra-schnell (4 Steps), hochqualitativ, vollständig lizenziert für kommerziellen Verkauf.
+        </div>
+        <div class="model-specs">
+          <div class="model-spec">
+            <span class="model-spec-label">Geschwindigkeit:</span>
+            <span class="model-spec-value">⚡⚡⚡ Ultra-Fast</span>
+          </div>
+          <div class="model-spec">
+            <span class="model-spec-label">Qualität:</span>
+            <span class="model-spec-value">★★★★☆ Sehr gut</span>
+          </div>
+          <div class="model-spec">
+            <span class="model-spec-label">Auflösung:</span>
+            <span class="model-spec-value">1024×1024</span>
+          </div>
+          <div class="model-spec">
+            <span class="model-spec-label">Steps:</span>
+            <span class="model-spec-value">4 (optimiert)</span>
+          </div>
+        </div>
+      </div>
+      
+      <div class="alert alert-info">
+        ℹ️ <strong>Lizenz-Info:</strong> FLUX Schnell ist vollständig für kommerzielle Nutzung lizenziert (Apache 2.0). Alle generierten Bilder können verkauft werden.
+      </div>
+      
+      <input type="hidden" name="model" value="flux_schnell">
+      
+      <div class="wizard-nav">
+        <button type="button" class="btn btn-secondary" onclick="showStep(1)">← Zurück</button>
+        <button type="button" class="btn btn-primary" onclick="showStep(3)">Weiter →</button>
+      </div>
+    </div>
+    
+    <!-- STEP 3: Parameters -->
+    <div class="wizard-section">
+      <h2>Parameter & Details</h2>
+      
+      <div class="form-group">
+        <label for="id_title">Job-Titel *</label>
+        <input type="text" id="id_title" name="title" required 
+               value="{{ post.title|default:'' }}" 
+               placeholder="z.B. Snowboarder Powder Mountain Sunset">
+        <div class="form-help">Beschreibender Name für internen Gebrauch</div>
+      </div>
+      
+      <div class="form-group">
+        <label for="id_project_id">Projekt (optional)</label>
+        <select id="id_project_id" name="project_id">
+          <option value="">-- Kein Projekt --</option>
+          {% for project in projects %}
+            <option value="{{ project.id }}" 
+                    {% if post.project_id == project.id|stringformat:'s' %}selected{% endif %}
+                    title="{{ project.description|truncatewords:15 }}">
+              {{ project.title }}
+              {% if project.created_by %}
+                — {{ project.created_by.username }}
+              {% endif %}
+              {% if not project.is_active %}
+                [ARCHIVIERT]
+              {% endif %}
             </option>
-            {% endfor %}
-          </select>
-          <div class="form-hint">Zur Organisation mehrerer Jobs</div>
-        </div>
-        {% endif %}
-
-        <div class="form-group">
-          <label for="id_num_images">Anzahl Bilder</label>
-          <input type="number" id="id_num_images" name="num_images" value="{{ post.num_images|default:'1' }}" 
-                 min="1" max="10" style="width:100px">
-          <div class="form-hint">1–10 Bilder werden generiert</div>
+          {% endfor %}
+        </select>
+        <div class="form-help">
+          Ordne den Job einem Projekt zu (für bessere Organisation). 
+          {% if projects.count > 10 %}
+            <strong>{{ projects.count }} Projekte verfügbar</strong>
+          {% endif %}
         </div>
       </div>
-
-      <!-- SECTION: Modell-Auswahl -->
-      <div class="form-section">
-        <div class="form-section-title">KI-Modell wählen *</div>
-
-        <div class="model-grid">
-          <!-- FLUX Schnell -->
-          <label class="model-option" onclick="selectModel('flux_schnell')">
-            <input type="radio" name="model" value="flux_schnell" 
-                   {% if post.model == 'flux_schnell' %}checked{% endif %}
-                   required>
-            <div class="model-content">
-              <div class="model-name">⚡ FLUX Schnell</div>
-              <div class="model-meta">Ultra-Fast (4-8 Steps) · ★★★★☆</div>
-              <div class="model-license license-ok">Apache 2.0 ✅ Kommerziell OK</div>
-            </div>
-          </label>
-
-          <!-- SDXL -->
-          <label class="model-option" onclick="selectModel('sdxl')">
-            <input type="radio" name="model" value="sdxl"
-                   {% if post.model == 'sdxl' %}checked{% endif %}>
-            <div class="model-content">
-              <div class="model-name">🎨 SDXL 2.1.1</div>
-              <div class="model-meta">High Quality (25-50 Steps) · ★★★★★</div>
-              <div class="model-license license-ok">CreativeML ✅ Kommerziell OK</div>
-            </div>
-          </label>
-
-          <!-- FLUX Dev -->
-          <label class="model-option" onclick="selectModel('flux_dev')">
-            <input type="radio" name="model" value="flux_dev"
-                   {% if post.model == 'flux_dev' %}checked{% endif %}>
-            <div class="model-content">
-              <div class="model-name">🧪 FLUX Dev</div>
-              <div class="model-meta">Premium Quality (20-30 Steps) · ★★★★★</div>
-              <div class="model-license license-warn">⚠️ Nur Tests - NICHT verkaufen!</div>
-            </div>
-          </label>
-          
-          <!-- Face Swap -->
-          <label class="model-option" onclick="selectModel('face_swap')">
-            <input type="radio" name="model" value="face_swap"
-                   {% if post.model == 'face_swap' %}checked{% endif %}>
-            <div class="model-content">
-              <div class="model-name">😊 Face Swap</div>
-              <div class="model-meta">Instant (Kein Training) · ★★★★☆</div>
-              <div class="model-license license-ok">Apache 2.0 ✅ Kommerziell OK</div>
-            </div>
-          </label>
+      
+      <div class="form-group">
+        <label for="id_prompt">Prompt (Bildbeschreibung) *</label>
+        <textarea id="id_prompt" name="prompt" required placeholder="A lone snowboarder carving down an untouched powder slope; the trail behind them disintegrates into cascading pixel voxels of cyan, magenta, and gold, alpine sky crystal-clear, hi-key lighting, large negative space, ultra-sharp 8-k">{{ post.prompt|default:'' }}</textarea>
+        <div class="form-help">Beschreibe was du sehen willst — je detaillierter, desto besser</div>
+      </div>
+      
+      <div class="example-prompts">
+        <h4>💡 Beispiel-Prompts (klicke zum Übernehmen):</h4>
+        <div class="example-prompt" onclick="useExamplePrompt('A lone snowboarder carving down an untouched powder slope; the trail behind them disintegrates into cascading pixel voxels of cyan, magenta, and gold, alpine sky crystal-clear, hi-key lighting, large negative space, ultra-sharp 8-k')">
+          Snowboarder Berg Pixel-Art Style
+        </div>
+        <div class="example-prompt" onclick="useExamplePrompt('A DJ in a retro space-suit spins translucent vinyl records on an outdoor rooftop, behind them a monolithic LED wall displays swirling pixel blocks, cinematic night lighting, subtle RGB glitch, crisp shadows')">
+          DJ Rooftop Nacht Sci-Fi
+        </div>
+        <div class="example-prompt" onclick="useExamplePrompt('A coffee cup on a minimalist desk, steam rising in elegant curves, morning sunlight through venetian blinds creating dramatic shadows, photorealistic, product photography, 8k sharp focus')">
+          Kaffeetasse Produktfoto Morning Light
         </div>
       </div>
-
-      <!-- SECTION: Prompt (nur wenn NICHT Face Swap) -->
-      <div class="form-section" id="promptSection">
-        <div class="form-section-title">Prompt</div>
-
-        <div class="form-group">
-          <label for="id_prompt">Positiver Prompt</label>
-          <textarea id="id_prompt" name="prompt" rows="5" 
-                    placeholder="A majestic lion wearing a golden crown...">{{ post.prompt|default:'' }}</textarea>
-          <div class="form-hint">Beschreibe was du sehen möchtest</div>
-        </div>
-
-        <div class="form-group">
-          <label for="id_negative_prompt">Negativer Prompt (optional)</label>
-          <textarea id="id_negative_prompt" name="negative_prompt" rows="3"
-                    placeholder="blurry, low quality, watermark...">{{ post.negative_prompt|default:'' }}</textarea>
-          <div class="form-hint">Was NICHT im Bild sein soll</div>
-        </div>
+      
+      <div class="form-group">
+        <label for="id_negative_prompt">Negativer Prompt (optional)</label>
+        <textarea id="id_negative_prompt" name="negative_prompt" placeholder="blurry, low quality, watermark, text, logo, distorted, deformed">{{ post.negative_prompt|default:'' }}</textarea>
+        <div class="form-help">Was NICHT im Bild sein soll</div>
       </div>
-
-      <!-- SECTION: Reference Images (Img2Img / Face Swap) -->
-      <div class="form-section" id="referenceSection" style="display:none">
-        <div class="form-section-title">Reference Images</div>
-        <div class="form-hint" style="margin-bottom:1rem;color:var(--text-muted);font-size:.85rem">
-          <strong>Optional:</strong> Für Image2Image (FLUX/SDXL) oder Face Swap. Leer lassen = Text2Image.
-        </div>
-        
-        <!-- Face Image (für Face Swap) -->
-        <div id="faceImageSection" style="display:none;margin-bottom:1rem">
-          <label style="font-size:.9rem;font-weight:600;margin-bottom:.5rem;display:block">Face Image (Gesicht)</label>
-          <div class="upload-zone">
-            <input type="file" id="id_face_image" name="face_image" accept="image/*" 
-                   onchange="previewImage(this, 'facePreview')">
-            <label for="id_face_image" class="upload-label">
-              😊 Portrait-Bild mit Gesicht hochladen
-            </label>
-            <div class="form-hint" style="margin-top:.5rem">
-              Das Gesicht das übertragen werden soll
-            </div>
-            <img id="facePreview" class="upload-preview" style="display:none;max-width:400px;margin-top:.75rem">
-          </div>
-        </div>
-        
-        <!-- Target/Reference Image -->
-        <div id="targetImageSection">
-          <label style="font-size:.9rem;font-weight:600;margin-bottom:.5rem;display:block" id="targetImageLabel">Target Image</label>
-          <div class="upload-zone">
-            <input type="file" id="id_reference_image" name="reference_image" accept="image/*" 
-                   onchange="previewImage(this, 'imagePreview')">
-            <label for="id_reference_image" class="upload-label">
-              📸 Klicken um Bild hochzuladen
-            </label>
-            <div class="form-hint" style="margin-top:.5rem" id="targetImageHint">
-              Für Img2Img (SDXL) oder Zielbild für Face Swap
-            </div>
-            <img id="imagePreview" class="upload-preview" style="display:none;max-width:400px;margin-top:.75rem">
-          </div>
-        </div>
-      </div>
-
-      <!-- SECTION: Erweiterte Parameter -->
-      <div class="form-section">
-        <button type="button" class="advanced-toggle" onclick="toggleAdvanced()">
-          ▶ Erweiterte Parameter
-        </button>
-        
-        <div class="advanced-content" id="advancedParams">
-          <!-- Standard Diffusion Parameter (FLUX, SDXL) -->
-          <div id="diffusionParams">
-            <div class="form-group">
-              <label for="id_steps">Steps (Generation-Schritte)</label>
-              <input type="number" id="id_steps" name="steps" value="{{ post.steps|default:'' }}"
-                     placeholder="Auto (modell-abhängig)" min="1" max="100">
-              <div class="form-hint" id="steps-hint">Leer = Modell-Default</div>
-            </div>
-
-            <div class="form-group">
-              <label for="id_guidance">Guidance Scale</label>
-              <input type="number" id="id_guidance" name="guidance" step="0.1" value="{{ post.guidance|default:'' }}"
-                     placeholder="Auto" min="0" max="20">
-              <div class="form-hint" id="guidance-hint">Leer = Modell-Default</div>
-            </div>
-
-            <div class="form-group">
-              <label for="id_seed">Seed (optional)</label>
-              <input type="number" id="id_seed" name="seed" value="{{ post.seed|default:'' }}"
-                     placeholder="Random" min="0">
-              <div class="form-hint">Für reproduzierbare Ergebnisse</div>
-            </div>
-
-            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:1rem">
-              <div class="form-group">
-                <label for="id_width">Breite (px)</label>
-                <input type="number" id="id_width" name="width" value="{{ post.width|default:'' }}"
-                       placeholder="1024" step="64">
-              </div>
-              <div class="form-group">
-                <label for="id_height">Höhe (px)</label>
-                <input type="number" id="id_height" name="height" value="{{ post.height|default:'' }}"
-                       placeholder="1024" step="64">
-              </div>
-            </div>
-            
-            <!-- SDXL-Spezifische Parameter -->
-            <div id="sdxlParams" style="display:none;margin-top:1rem;padding-top:1rem;border-top:1px solid var(--border)">
-              <div class="form-group">
-                <label for="id_refiner_steps">Refiner Steps</label>
-                <input type="number" id="id_refiner_steps" name="refiner_steps" value="{{ post.refiner_steps|default:'' }}"
-                       placeholder="50" min="10" max="100">
-                <div class="form-hint">Detail-Verbesserung nach Base-Model (30-75)</div>
-              </div>
-              
-              <div class="form-group">
-                <label for="id_scheduler">Scheduler</label>
-                <select id="id_scheduler" name="scheduler">
-                  <option value="">Default (K_EULER)</option>
-                  <option value="K_EULER">K_EULER (empfohlen)</option>
-                  <option value="DPM++">DPM++ (schneller)</option>
-                  <option value="DDIM">DDIM (classic)</option>
-                  <option value="PNDM">PNDM</option>
-                </select>
-                <div class="form-hint">Sampling-Algorithmus</div>
-              </div>
-              
-              <div class="form-group">
-                <label for="id_strength">Strength (Img2Img)</label>
-                <input type="number" id="id_strength" name="strength" step="0.05" value="{{ post.strength|default:'' }}"
-                       placeholder="0.3" min="0" max="1">
-                <div class="form-hint">0.3 = nah am Original, 0.8 = starke Änderung</div>
-              </div>
-              
-              <div class="form-group">
-                <label for="id_high_noise_frac">High Noise Fraction</label>
-                <input type="number" id="id_high_noise_frac" name="high_noise_frac" step="0.05" value="{{ post.high_noise_frac|default:'' }}"
-                       placeholder="0.8" min="0" max="1">
-                <div class="form-hint">Wann Refiner aktiviert (0.6-0.9)</div>
-              </div>
-            </div>
+      
+      <details style="margin-top: 1.5rem;">
+        <summary style="cursor: pointer; font-weight: 600; padding: .5rem 0;">⚙️ Erweiterte Optionen</summary>
+        <div style="margin-top: 1rem; padding: 1rem; background: var(--surface2); border-radius: 6px;">
+          <div class="form-group">
+            <label for="id_num_images">Anzahl Bilder</label>
+            <input type="number" id="id_num_images" name="num_images" min="1" max="4" value="{{ post.num_images|default:1 }}">
+            <div class="form-help">Wie viele Varianten generieren (1-4)?</div>
           </div>
           
-          <!-- Face Swap Parameter -->
-          <div id="faceSwapParams" style="display:none">
-            <div class="form-group">
-              <label>
-                <input type="checkbox" id="id_face_restore" name="face_restore" checked>
-                Face Restore (Gesichtsdetails verbessern)
-              </label>
-              <div class="form-hint">Empfohlen für bessere Gesichtsqualität</div>
-            </div>
-            
-            <div class="form-group">
-              <label>
-                <input type="checkbox" id="id_face_upsample" name="face_upsample" checked>
-                Face Upsample (Hochskalierung vor Swap)
-              </label>
-              <div class="form-hint">Verbessert Details im Gesicht</div>
-            </div>
-            
-            <div class="form-group">
-              <label>
-                <input type="checkbox" id="id_background_enhance" name="background_enhance">
-                Background Enhance (Hintergrund schärfen)
-              </label>
-              <div class="form-hint">Optional - kann Artifacts erzeugen</div>
-            </div>
-            
-            <div class="form-group">
-              <label for="id_upscale">Upscale Factor</label>
-              <select id="id_upscale" name="upscale">
-                <option value="1">1x (Original-Größe)</option>
-                <option value="2" selected>2x (doppelte Auflösung)</option>
-                <option value="3">3x</option>
-                <option value="4">4x (sehr langsam)</option>
-              </select>
-              <div class="form-hint">Skalierungsfaktor des Ausgabebildes</div>
-            </div>
-            
-            <div class="form-group">
-              <label for="id_blend_ratio">Blend Ratio</label>
-              <input type="number" id="id_blend_ratio" name="blend_ratio" step="0.05" value="0.75"
-                     min="0.5" max="1.0">
-              <div class="form-hint">0.75 = Natural Blend (empfohlen), 1.0 = Komplett ersetzen</div>
-            </div>
+          <div class="form-group">
+            <label for="id_seed">Seed (optional)</label>
+            <input type="number" id="id_seed" name="seed" value="{{ post.seed|default:'' }}" placeholder="z.B. 42">
+            <div class="form-help">Fester Seed für reproduzierbare Ergebnisse (leer = zufällig)</div>
           </div>
         </div>
+      </details>
+      
+      <div class="alert alert-warning" style="margin-top: 1.5rem;">
+        ⚠️ <strong>Wichtig:</strong> Nach dem Erstellen muss ein Admin den Job im Backend starten (ADR-11 Security Rule).
       </div>
-
-      <!-- Submit -->
-      <button type="submit" class="btn btn-primary" style="width:100%">
-        🚀 Job erstellen
-      </button>
-    </form>
-  </div>
-
-  <!-- ══════════════════════════════════════════════════════════════ -->
-  <!-- RECHTE SPALTE: MODEL INFO (Sticky) -->
-  <!-- ══════════════════════════════════════════════════════════════ -->
-  <div class="info-panel" id="modelInfo">
-    <h3>Modell-Information</h3>
-    <p style="color:var(--text-muted);font-size:.85rem">
-      Wähle ein Modell um Details zu sehen
-    </p>
-  </div>
+      
+      <div class="wizard-nav">
+        <button type="button" class="btn btn-secondary" onclick="showStep(2)">← Zurück</button>
+        <button type="submit" class="btn btn-primary">Job erstellen →</button>
+      </div>
+    </div>
+  </form>
 </div>
-
-<script>
-// Model Descriptions (vom Backend)
-const MODEL_DESCRIPTIONS = {{ model_descriptions|safe }};
-
-// Model Selection Handler
-function selectModel(modelKey) {
-  // Update Radio Button
-  document.querySelector(`input[value="${modelKey}"]`).checked = true;
-  
-  // Update UI (visuelle Selektion)
-  document.querySelectorAll('.model-option').forEach(el => el.classList.remove('selected'));
-  event.currentTarget.classList.add('selected');
-  
-  // Update Info Panel
-  updateModelInfo(modelKey);
-}
-
-// Update Model Info Panel (rechts)
-function updateModelInfo(modelKey) {
-  const info = MODEL_DESCRIPTIONS[modelKey];
-  if (!info) return;
-  
-  const panel = document.getElementById('modelInfo');
-  
-  // License Badge Color
-  let licenseBadge = '';
-  if (info.license.includes('✅') || info.license.includes('OK')) {
-    licenseBadge = '<span class="model-license license-ok">' + info.license + '</span>';
-  } else {
-    licenseBadge = '<span class="model-license license-warn">' + info.license + '</span>';
-  }
-  
-  // Build HTML
-  let html = `
-    <h3>${info.name}</h3>
-    ${licenseBadge}
-    
-    <div style="margin-top:1rem">
-      <div class="info-stat">
-        <span class="info-stat-label">Geschwindigkeit:</span>
-        <span class="info-stat-value">${info.speed}</span>
-      </div>
-      <div class="info-stat">
-        <span class="info-stat-label">Qualität:</span>
-        <span class="info-stat-value">${info.quality}</span>
-      </div>
-    </div>
-    
-    <p style="margin-top:1rem">${info.use_case}</p>
-    
-    <div class="example-prompts">
-      <strong style="font-size:.85rem">Beispiel-Prompts:</strong>
-      <div class="example-prompt">
-        <div class="example-prompt-text">${info.example_prompt}</div>
-        <button type="button" class="example-prompt-btn" onclick="insertPrompt('${escapeHtml(info.example_prompt)}', 'positive')">
-          In Prompt einfügen
-        </button>
-      </div>
-      ${info.example_negative ? `
-        <div class="example-prompt">
-          <div class="example-prompt-text">${info.example_negative}</div>
-          <button type="button" class="example-prompt-btn" onclick="insertPrompt('${escapeHtml(info.example_negative)}', 'negative')">
-            In Negative-Prompt einfügen
-          </button>
-        </div>
-      ` : ''}
-    </div>
-    
-    ${info.param_impact ? `
-      <div class="param-impact">
-        <strong style="display:block;margin-bottom:.5rem">Parameter-Empfehlungen:</strong>
-        ${info.param_impact.steps ? '<div><strong>Steps:</strong> ' + info.param_impact.steps + '</div>' : ''}
-        ${info.param_impact.guidance ? '<div style="margin-top:.25rem"><strong>Guidance:</strong> ' + info.param_impact.guidance + '</div>' : ''}
-        ${info.param_impact.size ? '<div style="margin-top:.25rem"><strong>Größe:</strong> ' + info.param_impact.size + '</div>' : ''}
-      </div>
-    ` : ''}
-    
-    ${info.warning ? `
-      <div style="margin-top:1rem;padding:.75rem;background:#7c2d12;border-radius:6px;color:#fdba74;font-size:.8rem">
-        ${info.warning}
-      </div>
-    ` : ''}
-    
-    <!-- Endpoint Info -->
-    ${info.endpoint_info ? `
-      <div style="margin-top:1rem;padding:.75rem;background:var(--surface2);border:1px solid var(--border);border-radius:6px;font-size:.8rem">
-        <strong style="display:block;margin-bottom:.5rem;color:var(--text)">🔧 Endpoint & Parameter:</strong>
-        <div style="color:var(--text-muted);line-height:1.5">
-          ${info.endpoint_info.endpoint ? '<div><strong>Endpoint:</strong> ' + info.endpoint_info.endpoint + '</div>' : ''}
-          ${info.endpoint_info.parameters ? '<div style="margin-top:.5rem"><strong>Parameter:</strong><br>' + info.endpoint_info.parameters + '</div>' : ''}
-        </div>
-      </div>
-    ` : ''}
-  `;
-  
-  panel.innerHTML = html;
-  
-  // Update Parameter Hints
-  if (info.recommended_params) {
-    const stepsHint = document.getElementById('steps-hint');
-    const guidanceHint = document.getElementById('guidance-hint');
-    const widthInput = document.getElementById('id_width');
-    const heightInput = document.getElementById('id_height');
-    
-    if (stepsHint && info.recommended_params.steps) {
-      stepsHint.textContent = `Empfohlen: ${info.recommended_params.steps} Steps`;
-      document.getElementById('id_steps').placeholder = info.recommended_params.steps;
-    }
-    if (guidanceHint && info.recommended_params.guidance) {
-      guidanceHint.textContent = `Empfohlen: ${info.recommended_params.guidance}`;
-      document.getElementById('id_guidance').placeholder = info.recommended_params.guidance;
-    }
-    if (widthInput && info.recommended_params.width) {
-      widthInput.placeholder = info.recommended_params.width;
-    }
-    if (heightInput && info.recommended_params.height) {
-      heightInput.placeholder = info.recommended_params.height;
-    }
-  }
-  
-  // Show/Hide Reference Image Section based on model capabilities
-  const refSection = document.getElementById('referenceSection');
-  const faceSection = document.getElementById('faceImageSection');
-  const targetLabel = document.getElementById('targetImageLabel');
-  const targetHint = document.getElementById('targetImageHint');
-  const promptSection = document.getElementById('promptSection');
-  const promptField = document.getElementById('id_prompt');
-  
-  // Show/Hide Parameter Sections
-  const diffusionParams = document.getElementById('diffusionParams');
-  const faceSwapParams = document.getElementById('faceSwapParams');
-  const sdxlParams = document.getElementById('sdxlParams');
-  
-  if (info.face_swap) {
-    // ═══════════════════════════════════════════════════════════════
-    // Face Swap Standalone: Zwei Bilder PFLICHT, KEIN Prompt
-    // ═══════════════════════════════════════════════════════════════
-    refSection.style.display = 'block';
-    faceSection.style.display = 'block';
-    targetLabel.textContent = 'Target Body Image';
-    targetHint.textContent = 'Zielbild (Körper/Kontext) wo das Gesicht eingefügt werden soll';
-    promptSection.style.display = 'none';
-    promptField.removeAttribute('required');
-    
-    // Parameter Sections
-    diffusionParams.style.display = 'none';
-    faceSwapParams.style.display = 'block';
-    
-  } else if (info.img2img && info.img2img.enabled) {
-    // ═══════════════════════════════════════════════════════════════
-    // SDXL: Image2Image möglich (Prompt + OPTIONAL Reference Image)
-    // ═══════════════════════════════════════════════════════════════
-    refSection.style.display = 'block';
-    faceSection.style.display = 'none';
-    targetLabel.textContent = 'Reference Image (optional für Img2Img)';
-    targetHint.textContent = 'Optional: Basis-Bild für Image2Image Transformation. Leer = Text2Image.';
-    promptSection.style.display = 'block';
-    promptField.setAttribute('required', 'required');
-    
-    // Parameter Sections
-    diffusionParams.style.display = 'block';
-    faceSwapParams.style.display = 'none';
-    sdxlParams.style.display = 'block';  // SDXL-spezifische Felder
-    
-  } else {
-    // ═══════════════════════════════════════════════════════════════
-    // FLUX Schnell/Dev: Text2Image ODER Image2Image
-    // ═══════════════════════════════════════════════════════════════
-    refSection.style.display = 'block';  // IMMER zeiген für Img2Img Option
-    faceSection.style.display = 'none';
-    targetLabel.textContent = 'Reference Image (optional für Img2Img)';
-    targetHint.textContent = 'Optional: Basis-Bild für Image2Image. Leer lassen = Text2Image (nur Prompt).';
-    promptSection.style.display = 'block';
-    promptField.setAttribute('required', 'required');
-    
-    // Parameter Sections
-    diffusionParams.style.display = 'block';
-    faceSwapParams.style.display = 'none';
-    if (sdxlParams) sdxlParams.style.display = 'none';
-  }
-}
-
-// Insert Prompt into Textarea
-function insertPrompt(text, type) {
-  const target = type === 'positive' ? document.getElementById('id_prompt') : document.getElementById('id_negative_prompt');
-  if (target.value.trim()) {
-    target.value += '\n' + text;
-  } else {
-    target.value = text;
-  }
-  target.focus();
-}
-
-// Image Preview with resize
-function previewImage(input, previewId) {
-  const preview = document.getElementById(previewId || 'imagePreview');
-  if (input.files && input.files[0]) {
-    const file = input.files[0];
-    
-    // Check file size (warn if > 10MB)
-    if (file.size > 10 * 1024 * 1024) {
-      alert('⚠️ Bild ist sehr groß (' + Math.round(file.size / 1024 / 1024) + 'MB). Upload kann länger dauern.');
-    }
-    
-    const reader = new FileReader();
-    reader.onload = function(e) {
-      preview.src = e.target.result;
-      preview.style.display = 'block';
-    };
-    reader.readAsDataURL(file);
-  }
-}
-
-// Toggle Advanced Parameters
-function toggleAdvanced() {
-  const content = document.getElementById('advancedParams');
-  const btn = event.currentTarget;
-  content.classList.toggle('open');
-  btn.textContent = content.classList.contains('open') ? '▼ Erweiterte Parameter' : '▶ Erweiterte Parameter';
-}
-
-// HTML Escape Helper
-function escapeHtml(text) {
-  return text.replace(/'/g, "\\'").replace(/"/g, '\\"').replace(/\n/g, ' ');
-}
-
-// Init: Select first model if none selected
-document.addEventListener('DOMContentLoaded', function() {
-  const selectedModel = document.querySelector('input[name="model"]:checked');
-  if (selectedModel) {
-    updateModelInfo(selectedModel.value);
-    selectedModel.closest('.model-option').classList.add('selected');
-  } else {
-    // Auto-select FLUX Schnell
-    const fluxSchnell = document.querySelector('input[value="flux_schnell"]');
-    if (fluxSchnell) {
-      fluxSchnell.checked = true;
-      fluxSchnell.closest('.model-option').classList.add('selected');
-      updateModelInfo('flux_schnell');
-    }
-  }
-});
-</script>
 {% endblock %}
