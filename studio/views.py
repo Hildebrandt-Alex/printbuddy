@@ -204,10 +204,38 @@ def job_create(request):
             except Project.DoesNotExist:
                 pass
 
-        # Job erstellen (ohne Pipeline Template)
+        # Pipeline Template automatisch zuweisen (erstes aktives Template)
+        pipeline_template = PipelineTemplate.objects.filter(is_active=True).first()
+        
+        if not pipeline_template:
+            messages.error(
+                request, 
+                "Kein aktives Pipeline-Template gefunden. Admin muss ein Template anlegen."
+            )
+            return render(request, "studio/job_create.html", {
+                "prompt_templates": prompt_templates,
+                "projects": projects,
+                "post": request.POST,
+            })
+        
+        # Pipeline Template automatisch zuweisen (erstes aktives Template)
+        pipeline_template = PipelineTemplate.objects.filter(is_active=True).first()
+        
+        if not pipeline_template:
+            messages.error(
+                request, 
+                "Kein aktives Pipeline-Template gefunden. Admin muss ein Template anlegen."
+            )
+            return render(request, "studio/job_create.html", {
+                "prompt_templates": prompt_templates,
+                "projects": projects,
+                "post": request.POST,
+            })
+        
+        # Job erstellen mit Template
         job = Job.objects.create(
             title=title,
-            pipeline_template=None,
+            pipeline_template=pipeline_template,
             project=project,
             prompt=prompt,
             negative_prompt=negative_prompt,

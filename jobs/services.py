@@ -38,6 +38,11 @@ def build_pipeline_chain(job_id: str):
 
     job = Job.objects.select_related("pipeline_template").get(id=job_id)
     t = job.pipeline_template
+    
+    # KRITISCH: Template muss existieren
+    if not t:
+        logger.error("[build_pipeline_chain] Job %s hat kein Pipeline-Template!", job_id)
+        raise ValueError(f"Job {job_id} hat kein Pipeline-Template zugewiesen")
 
     # JobSteps anlegen (idempotent — löscht vorhandene und erstellt neu)
     JobStep.objects.filter(job_id=job_id).delete()
@@ -80,7 +85,6 @@ def build_pipeline_chain(job_id: str):
     # Celery Chain aufbauen
     task_map = {
         "generate": generate_image.si(job_id),
-        "face_swap": face_swap_image.si(job_id),
         "upscale": upscale_image.si(job_id),
         "vectorize": vectorize_image.si(job_id),
         "cmyk_export": cmyk_export.si(job_id),
