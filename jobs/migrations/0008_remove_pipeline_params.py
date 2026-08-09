@@ -6,6 +6,27 @@
 from django.db import migrations
 
 
+def remove_pipeline_params_postgresql_only(apps, schema_editor):
+    """
+    Entferne orphan field nur auf PostgreSQL, SQLite überspringen.
+    """
+    if schema_editor.connection.vendor != 'postgresql':
+        return  # SQLite hat das Feld nie gehabt, nichts zu tun
+    
+    with schema_editor.connection.cursor() as cursor:
+        cursor.execute("""
+            DO $$ 
+            BEGIN
+                IF EXISTS (
+                    SELECT 1 FROM information_schema.columns 
+                    WHERE table_name='jobs_job' AND column_name='pipeline_params'
+                ) THEN
+                    ALTER TABLE jobs_job DROP COLUMN pipeline_params;
+                END IF;
+            END $$;
+        """)
+
+
 class Migration(migrations.Migration):
     """
     Diese Migration entfernt das orphan field 'pipeline_params' aus PostgreSQL.
@@ -13,6 +34,8 @@ class Migration(migrations.Migration):
     
     WICHTIG: Wurde bereits manuell ausgeführt via SQL, daher ist diese Migration
     idempotent (wiederholbar ohne Fehler).
+    
+    Läuft NUR auf PostgreSQL, SQLite wird übersprungen.
     """
 
     dependencies = [
@@ -20,19 +43,8 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RunSQL(
-            sql="""
-                DO $$ 
-                BEGIN
-                    IF EXISTS (
-                        SELECT 1 FROM information_schema.columns 
-                        WHERE table_name='jobs_job' AND column_name='pipeline_params'
-                    ) THEN
-                        ALTER TABLE jobs_job DROP COLUMN pipeline_params;
-                    END IF;
-                END $$;
-            """,
-            reverse_sql=migrations.RunSQL.noop,
-            state_operations=[],  # Kein Model-State-Change nötig
+        migrations.RunPython(
+            code=remove_pipeline_params_postgresql_only,
+            reverse_code=migrations.RunPython.noop,
         ),
     ]
