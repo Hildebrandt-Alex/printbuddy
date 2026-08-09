@@ -315,9 +315,15 @@ def job_results(request, job_id):
         return redirect("studio:job_detail", job_id=job.id)
 
     preview_dir = Path(getattr(settings, "NAS_BASE_PATH", "local_nas")) / "exports" / "preview"
-    preview_steps = job.steps.filter(step_type="preview_export", status="done").exclude(
+    raw_dir = Path(getattr(settings, "NAS_BASE_PATH", "local_nas")) / "raw"
+    
+    # Zeige Preview UND Quick-Adjust/Crop Assets
+    preview_steps = job.steps.filter(
+        step_type__in=["preview_export", "quick_adjust", "crop"],
+        status="done"
+    ).exclude(
         output_asset_id__isnull=True
-    )
+    ).order_by('-completed_at')
 
     # Prüfe welche Assets bereits als GalleryImage vorgemerkt sind
     from gallery.models import GalleryImage
@@ -327,8 +333,21 @@ def job_results(request, job_id):
     assets = []
     for step in preview_steps:
         asset_id = str(step.output_asset_id)
-        filename = f"{asset_id}_preview.jpg"
-        filepath = preview_dir / filename
+        
+        # Quick Adjust und Crop Assets sind im raw/ Verzeichnis
+        if step.step_type == "quick_adjust":
+            filename = f"{asset_id}_adjusted.png"
+            filepath = raw_dir / filename
+            asset_type = "🎨 Adjusted"
+        elif step.step_type == "crop":
+            filename = f"{asset_id}_cropped.png"
+            filepath = raw_dir / filename
+            asset_type = "✂️ Cropped"
+        else:
+            filename = f"{asset_id}_preview.jpg"
+            filepath = preview_dir / filename
+            asset_type = "Preview"
+        
         try:
             file_exists = filepath.exists()
         except (PermissionError, OSError):
@@ -359,6 +378,7 @@ def job_results(request, job_id):
             "exists": file_exists,
             "gallery_status": status,
             "gallery_status_label": status_label,
+            "asset_type": asset_type,  # Zeige Typ (Preview / 🎨 Adjusted / ✂️ Cropped)
         })
 
     return render(request, "studio/job_results.html", {"job": job, "assets": assets})

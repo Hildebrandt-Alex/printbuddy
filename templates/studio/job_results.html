@@ -77,10 +77,23 @@
   {% for asset in assets %}
   <div class="card" style="padding:0;overflow:hidden">
     <!-- Preview-Bild -->
-    <div style="background:var(--surface2);aspect-ratio:1;display:flex;align-items:center;justify-content:center">
+    <div style="background:var(--surface2);aspect-ratio:1;display:flex;align-items:center;justify-content:center;position:relative">
       {% if asset.exists %}
+      {% if asset.asset_type == "🎨 Adjusted" or asset.asset_type == "✂️ Cropped" %}
+      <img src="/media/raw/{{ asset.filename }}" alt="{{ asset.asset_id }}"
+           style="width:100%;height:100%;object-fit:cover">
+      {% else %}
       <img src="/media/exports/preview/{{ asset.filename }}" alt="{{ asset.asset_id }}"
            style="width:100%;height:100%;object-fit:cover">
+      {% endif %}
+      
+      <!-- Asset-Type Badge -->
+      {% if asset.asset_type and asset.asset_type != "Preview" %}
+      <div style="position:absolute;top:.5rem;right:.5rem;background:rgba(0,0,0,.8);color:white;padding:.35rem .75rem;border-radius:6px;font-size:.75rem;font-weight:600;backdrop-filter:blur(8px)">
+        {{ asset.asset_type }}
+      </div>
+      {% endif %}
+      
       {% else %}
       <span style="color:var(--text-muted);font-size:.8rem">Datei nicht gefunden</span>
       {% endif %}
