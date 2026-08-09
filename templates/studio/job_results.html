@@ -12,6 +12,26 @@
   <a href="{% url 'studio:job_detail' job.id %}" class="btn btn-secondary">← Job-Details</a>
 </div>
 
+<!-- Enhancement Button (nur wenn Job abgeschlossen) -->
+{% if job.status == 'done' %}
+<div style="background:linear-gradient(135deg, rgba(var(--accent-rgb), 0.08), rgba(var(--accent-rgb), 0.02));border:1px solid var(--border);border-radius:12px;padding:1.25rem;margin-bottom:1.5rem">
+  <div style="display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap">
+    <div style="display:flex;align-items:center;gap:1rem">
+      <span style="font-size:1.75rem">⚡</span>
+      <div>
+        <h3 style="font-size:1rem;font-weight:600;margin-bottom:.25rem">Bilder verbessern</h3>
+        <p style="color:var(--text-muted);font-size:.8rem;margin:0">
+          Upscale 4x, CMYK Export, Vektorisierung oder POD-Export hinzufügen
+        </p>
+      </div>
+    </div>
+    <button id="enhance-btn" class="btn btn-primary" style="padding:.65rem 1.5rem;font-size:.9rem">
+      Enhancement starten →
+    </button>
+  </div>
+</div>
+{% endif %}
+
 <!-- Product Wizard Button (nur wenn noch kein Produkt zugewiesen) -->
 {% if job.status == 'done' and not job.pipeline_template %}
 <div style="background:linear-gradient(135deg, rgba(var(--accent-rgb), 0.1), rgba(var(--accent-rgb), 0.05));border:2px solid var(--accent);border-radius:12px;padding:1.5rem;margin-bottom:2rem;text-align:center">
@@ -112,4 +132,156 @@
   <p style="color:var(--text-muted)">Keine Preview-Assets gefunden.</p>
 </div>
 {% endif %}
+
+<!-- Enhancement Modal -->
+<div id="enhancement-modal" style="display:none;position:fixed;inset:0;  background:rgba(0,0,0,.7);z-index:1000;align-items:center;justify-content:center">
+  <div class="card" style="max-width:600px;width:90%;max-height:90vh;overflow-y:auto;margin:2rem">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem">
+      <h2 style="font-size:1.25rem;font-weight:700;margin:0">Enhancement auswählen</h2>
+      <button id="modal-close" class="btn btn-secondary btn-sm">×</button>
+    </div>
+
+    <p style="color:var(--text-muted);font-size:.85rem;margin-bottom:1.5rem">
+      Wähle die gewünschten Verbesserungen. Die Preview-Bilder werden als Ausgangspunkt verwendet.
+    </p>
+
+    <form id="enhancement-form" method="post" action="{% url 'studio:create_enhancement' job.id %}">
+      {% csrf_token %}
+      
+      <!-- Checkboxes für Enhancement-Optionen -->
+      <div style="display:flex;flex-direction:column;gap:1rem;margin-bottom:1.5rem">
+        
+        <!-- Upscale -->
+        <label style="display:flex;align-items:start;gap:1rem;padding:1rem;background:var(--surface2);border:1px solid var(--border);border-radius:8px;cursor:pointer;transition:border-color .2s">
+          <input type="checkbox" name="steps" value="upscale" style="margin-top:.25rem" data-cost="0.08" data-duration="30">
+          <div style="flex:1">
+            <div style="font-weight:600;font-size:.95rem;margin-bottom:.25rem">Upscale 4x (Real-ESRGAN)</div>
+            <div style="color:var(--text-muted);font-size:.8rem;margin-bottom:.35rem">
+              1024px → 4096px (16x Pixelanzahl), höhere Auflösung für Druck
+            </div>
+            <div style="display:flex;gap:1rem;font-size:.75rem">
+              <span style="color:var(--orange)">+ $0.08</span>
+              <span style="color:var(--text-muted)">~30s</span>
+            </div>
+          </div>
+        </label>
+
+        <!-- CMYK Export -->
+        <label style="display:flex;align-items:start;gap:1rem;padding:1rem;background:var(--surface2);border:1px solid var(--border);border-radius:8px;cursor:pointer;transition:border-color .2s">
+          <input type="checkbox" name="steps" value="cmyk_export" style="margin-top:.25rem" data-cost="0.01" data-duration="5">
+          <div style="flex:1">
+            <div style="font-weight:600;font-size:.95rem;margin-bottom:.25rem">CMYK Export (Offset-Druck)</div>
+            <div style="color:var(--text-muted);font-size:.8rem;margin-bottom:.35rem">
+              TIFF + PDF/X-4 mit 3mm Beschnitt für professionellen Offset-Druck
+            </div>
+            <div style="display:flex;gap:1rem;font-size:.75rem">
+              <span style="color:var(--orange)">+ $0.01</span>
+              <span style="color:var(--text-muted)">~5s</span>
+            </div>
+          </div>
+        </label>
+
+        <!-- Vector Export -->
+        <label style="display:flex;align-items:start;gap:1rem;padding:1rem;background:var(--surface2);border:1px solid var(--border);border-radius:8px;cursor:pointer;transition:border-color .2s">
+          <input type="checkbox" name="steps" value="vectorize" style="margin-top:.25rem" data-cost="0.02" data-duration="10">
+          <div style="flex:1">
+            <div style="font-weight:600;font-size:.95rem;margin-bottom:.25rem">Vektorisierung (SVG)</div>
+            <div style="color:var(--text-muted);font-size:.8rem;margin-bottom:.35rem">
+              Inkscape CLI + Potrace → skalierbare Vektorgrafik für Logos/Icons
+            </div>
+            <div style="display:flex;gap:1rem;font-size:.75rem">
+              <span style="color:var(--orange)">+ $0.02</span>
+              <span style="color:var(--text-muted)">~10s</span>
+            </div>
+          </div>
+        </label>
+
+        <!-- POD Export -->
+        <label style="display:flex;align-items:start;gap:1rem;padding:1rem;background:var(--surface2);border:1px solid var(--border);border-radius:8px;cursor:pointer;transition:border-color .2s">
+          <input type="checkbox" name="steps" value="pod_export" style="margin-top:.25rem" data-cost="0" data-duration="3">
+          <div style="flex:1">
+            <div style="font-weight:600;font-size:.95rem;margin-bottom:.25rem">POD Export (Printful-Ready)</div>
+            <div style="color:var(--text-muted);font-size:.8rem;margin-bottom:.35rem">
+              PNG 300dpi sRGB — optimiert für Print-on-Demand Services
+            </div>
+            <div style="display:flex;gap:1rem;font-size:.75rem">
+              <span style="color:var(--green)">Kostenlos</span>
+              <span style="color:var(--text-muted)">~3s</span>
+            </div>
+          </div>
+        </label>
+
+      </div>
+
+      <!-- Kosten-Zusammenfassung -->
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:1rem;margin-bottom:1.5rem">
+        <div style="display:flex;justify-content:space-between;font-size:.9rem;margin-bottom:.5rem">
+          <span style="color:var(--text-muted)">Geschätzte Kosten:</span>
+          <span id="total-cost" style="font-weight:600;color:var(--accent)">$0.00</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:.9rem">
+          <span style="color:var(--text-muted)">Geschätzte Dauer:</span>
+          <span id="total-duration" style="font-weight:600;color:var(--text-muted)">0s</span>
+        </div>
+      </div>
+
+      <!-- Buttons -->
+      <div style="display:flex;gap:1rem">
+        <button type="button" id="modal-cancel" class="btn btn-secondary" style="flex:1">Abbrechen</button>
+        <button type="submit" class="btn btn-primary" style="flex:1">Enhancement starten</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+// Modal öffnen/schließen
+const modal = document.getElementById('enhancement-modal');
+const enhanceBtn = document.getElementById('enhance-btn');
+const modalClose = document.getElementById('modal-close');
+const modalCancel = document.getElementById('modal-cancel');
+
+if (enhanceBtn) {
+  enhanceBtn.addEventListener('click', () => {
+    modal.style.display = 'flex';
+  });
+}
+
+if (modalClose) {
+  modalClose.addEventListener('click', () => {
+    modal.style.display = 'none';
+  });
+}
+
+if (modalCancel) {
+  modalCancel.addEventListener('click', () => {
+    modal.style.display = 'none';
+  });
+}
+
+// Kosten live berechnen
+const checkboxes = document.querySelectorAll('input[name="steps"]');
+const totalCostEl = document.getElementById('total-cost');
+const totalDurationEl = document.getElementById('total-duration');
+
+function updateTotals() {
+  let totalCost = 0;
+  let totalDuration = 0;
+  
+  checkboxes.forEach(cb => {
+    if (cb.checked) {
+      totalCost += parseFloat(cb.dataset.cost);
+      totalDuration += parseInt(cb.dataset.duration);
+    }
+  });
+  
+  totalCostEl.textContent = `$${totalCost.toFixed(2)}`;
+  totalDurationEl.textContent = `~${totalDuration}s`;
+}
+
+checkboxes.forEach(cb => {
+  cb.addEventListener('change', updateTotals);
+});
+</script>
+
 {% endblock %}

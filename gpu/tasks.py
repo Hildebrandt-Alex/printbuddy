@@ -446,15 +446,46 @@ def upscale_image(self, job_id: str):
     try:
         job = Job.objects.get(id=job_id)
 
-        # Asset-ID vom generate-Step holen
-        try:
-            gen_step = JobStep.objects.get(job_id=job_id, step_type="generate", status="done")
-            source_asset_id = str(gen_step.output_asset_id)
-        except JobStep.DoesNotExist:
-            raise ValueError("generate-Step nicht done — kann nicht upscalen")
+        # NEUE LOGIK: Enhancement-Jobs nutzen source_asset_id aus notes
+        import json
+        source_asset_id = None
+        source_path = None
+        
+        if job.notes:
+            try:
+                notes_data = json.loads(job.notes)
+                source_asset_id = notes_data.get("source_asset_id")
+            except (json.JSONDecodeError, TypeError):
+                pass
+        
+        # Input-File bestimmen
+        if source_asset_id:
+            # Enhancement-Job: Nutze source_asset aus Preview
+            logger.info(f"[upscale_image] Enhancement-Mode: source_asset_id={source_asset_id}")
+            
+            # Try preview directory first
+            preview_dir = _get_output_dir("exports/preview")
+            preview_path = preview_dir / f"{source_asset_id}.jpg"
+            if preview_path.exists():
+                source_path = preview_path
+            else:
+                # Fallback: raw directory
+                raw_dir = _get_output_dir("raw")
+                raw_path = raw_dir / f"{source_asset_id}.png"
+                if raw_path.exists():
+                    source_path = raw_path
+                else:
+                    raise FileNotFoundError(f"Source asset {source_asset_id} nicht gefunden")
+        else:
+            # Normaler Job: Asset-ID vom generate-Step holen
+            try:
+                gen_step = JobStep.objects.get(job_id=job_id, step_type="generate", status="done")
+                source_asset_id = str(gen_step.output_asset_id)
+            except JobStep.DoesNotExist:
+                raise ValueError("generate-Step nicht done — kann nicht upscalen")
 
-        raw_dir = _get_output_dir("raw")
-        source_path = raw_dir / f"{source_asset_id}.png"
+            raw_dir = _get_output_dir("raw")
+            source_path = raw_dir / f"{source_asset_id}.png"
 
         if not source_path.exists():
             raise FileNotFoundError(f"Quell-Bild nicht gefunden: {source_path}")

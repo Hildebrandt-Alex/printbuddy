@@ -49,27 +49,59 @@ def build_pipeline_chain(job_id: str):
 
     step_definitions = []
 
-    # Pflicht: generate
-    step_definitions.append(("generate", True))
+    # NEUE LOGIK: Enhancement-Jobs überspringen Generate
+    # Prüfe notes auf "is_enhancement" Flag
+    import json
+    is_enhancement = False
+    enhancement_steps = []
+    if job.notes:
+        try:
+            notes_data = json.loads(job.notes)
+            is_enhancement = notes_data.get("is_enhancement", False)
+            enhancement_steps = notes_data.get("enhancement_steps", [])
+        except (json.JSONDecodeError, TypeError):
+            pass
     
-    # Face Swap (nach Generation, vor Upscale)
-    if t.step_face_swap:
-        step_definitions.append(("face_swap", True))
+    # Generate nur bei normalen Jobs
+    if not is_enhancement:
+        step_definitions.append(("generate", True))
+        
+        # Face Swap (nach Generation, vor Upscale)
+        if t.step_face_swap:
+            step_definitions.append(("face_swap", True))
     
-    if t.step_upscale:
-        step_definitions.append(("upscale", True))
-    if t.step_vectorize:
-        step_definitions.append(("vectorize", True))
-    if t.step_cmyk:
-        step_definitions.append(("cmyk_export", True))
-    if t.step_pod_export:
-        step_definitions.append(("pod_export", True))
-    # Pflicht: preview (immer)
+    # Enhancement-Jobs: Nur gewählte Steps
+    if is_enhancement:
+        # Steps aus notes lesen und in richtiger Reihenfolge einfügen
+        if "upscale" in enhancement_steps:
+            step_definitions.append(("upscale", True))
+        if "vectorize" in enhancement_steps:
+            step_definitions.append(("vectorize", True))
+        if "cmyk_export" in enhancement_steps:
+            step_definitions.append(("cmyk_export", True))
+        if "pod_export" in enhancement_steps:
+            step_definitions.append(("pod_export", True))
+    else:
+        # Normale Jobs: Template-Flags nutzen
+        if t.step_upscale:
+            step_definitions.append(("upscale", True))
+        if t.step_vectorize:
+            step_definitions.append(("vectorize", True))
+        if t.step_cmyk:
+            step_definitions.append(("cmyk_export", True))
+        if t.step_pod_export:
+            step_definitions.append(("pod_export", True))
+    
+    # Pflicht: preview (immer am Ende)
     step_definitions.append(("preview_export", True))
-    if t.step_mockup:
-        step_definitions.append(("mockup_gen", True))
-    if t.step_auto_qa:
-        step_definitions.append(("auto_qa", True))
+    
+    # Optional: Mockup und QA (nur normale Jobs)
+    if not is_enhancement:
+        if t.step_mockup:
+            step_definitions.append(("mockup_gen", True))
+        if t.step_auto_qa:
+            step_definitions.append(("auto_qa", True))
+    
     # Pflicht: notify
     step_definitions.append(("notify_studio_step", True))
 
@@ -85,11 +117,11 @@ def build_pipeline_chain(job_id: str):
         )
 
     logger.info("[build_pipeline_chain] %d Steps für Job %s angelegt", len(step_definitions), job_id)
-face_swap": face_swap_image.si(job_id),
-        "
+
     # Celery Chain aufbauen
     task_map = {
         "generate": generate_image.si(job_id),
+        "face_swap": face_swap_image.si(job_id),
         "upscale": upscale_image.si(job_id),
         "vectorize": vectorize_image.si(job_id),
         "cmyk_export": cmyk_export.si(job_id),

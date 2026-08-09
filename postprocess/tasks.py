@@ -40,9 +40,40 @@ def _save_step(job_id: str, step_type: str, status: str, asset_id=None, error_ms
 
 
 def _get_latest_asset(job_id: str, prefer_upscaled: bool = True) -> Path:
-    """Gibt den Pfad zum aktuellsten verfügbaren Bild-Asset zurück."""
-    from jobs.models import JobStep
+    """
+    Gibt den Pfad zum aktuellsten verfügbaren Bild-Asset zurück.
+    
+    NEUE LOGIK: Bei Enhancement-Jobs wird source_asset_id aus notes gelesen.
+    """
+    from jobs.models import Job, JobStep
+    import json
 
+    # ENHANCEMENT-JOBS: Prüfe notes auf source_asset_id
+    try:
+        job = Job.objects.get(id=job_id)
+        if job.notes:
+            try:
+                notes_data = json.loads(job.notes)
+                source_asset_id = notes_data.get("source_asset_id")
+                if source_asset_id:
+                    # Enhancement-Mode: Nutze Preview-Asset als Input
+                    logger.info(f"[_get_latest_asset] Enhancement-Mode: source_asset_id={source_asset_id}")
+                    preview_dir = _get_output_dir("exports/preview")
+                    source_path = preview_dir / f"{source_asset_id}.jpg"
+                    if source_path.exists():
+                        return source_path
+                    # Fallback: raw-Verzeichnis
+                    raw_dir = _get_output_dir("raw")
+                    source_path = raw_dir / f"{source_asset_id}.png"
+                    if source_path.exists():
+                        return source_path
+                    logger.warning(f"[_get_latest_asset] source_asset_id {source_asset_id} nicht gefunden")
+            except (json.JSONDecodeError, TypeError):
+                pass
+    except Job.DoesNotExist:
+        pass
+
+    # NORMALE JOBS: Standard-Logik
     raw_dir = _get_output_dir("raw")
 
     if prefer_upscaled:

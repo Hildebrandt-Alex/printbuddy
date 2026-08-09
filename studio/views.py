@@ -801,3 +801,110 @@ def knowledge_it(request):
     Vergleiche und Upgrade-Szenarien.
     """
     return render(request, "studio/knowledge_it.html")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Enhancement Job Creation — Auto-Approved
+# ─────────────────────────────────────────────────────────────────────────────
+
+@studio_required
+@require_POST
+def create_enhancement_job(request, job_id):
+    """
+    Erstellt Enhancement-Job basierend auf Original-Job.
+    Enhancement-Jobs werden AUTOMATISCH approved (status='queued').
+    Nutzt existierendes Preview-Asset als Input (keine Neugenerierung).
+    """
+    import json
+    from django.utils import timezone
+    from jobs.services import build_pipeline_chain
+    from jobs.models import JobStep
+    
+    original_job = get_object_or_404(Job, id=job_id)
+    
+    # Validierung: Nur von fertigen Jobs
+    if original_job.status != 'done':
+        messages.error(request, "Enhancement nur für abgeschlossene Jobs möglich.")
+        return redirect('studio:job_results', job_id=job_id)
+    
+    # Validierung: Mindestens ein Step ausgewählt
+    selected_steps = request.POST.getlist('steps')
+    if not selected_steps:
+        messages.error(request, "Bitte mindestens einen Enhancement-Schritt auswählen.")
+        return redirect('studio:job_results', job_id=job_id)
+    
+    # Finde latest preview asset
+    try:
+        preview_step = JobStep.objects.filter(
+            job=original_job,
+            step_type='preview_export',
+            status='done'
+        ).order_by('-completed_at').first()
+        
+        if not preview_step or not preview_step.output_asset_id:
+            messages.error(request, "Kein Preview-Asset gefunden.")
+            return redirect('studio:job_results', job_id=job_id)
+        
+        source_asset_id = str(preview_step.output_asset_id)
+    except Exception as e:
+        logger.error(f"[create_enhancement_job] Fehler beim Finden des Assets: {e}")
+        messages.error(request, "Fehler beim Laden des Preview-Assets.")
+        return redirect('studio:job_results', job_id=job_id)
+    
+    # Enhancement-Only Template finden
+    enhancement_template = PipelineTemplate.objects.filter(
+        name__icontains="Enhancement Only"
+    ).first()
+    
+    if not enhancement_template:
+        messages.error(
+            request, 
+            "Enhancement-Template nicht gefunden. Bitte 'python manage.py create_enhancement_templates' ausführen."
+        )
+        return redirect('studio:job_results', job_id=job_id)
+    
+    # Notes mit source_job_id, source_asset_id und gewählten Steps
+    notes_data = {
+        "source_job_id": str(original_job.id),
+        "source_asset_id": source_asset_id,
+        "enhancement_steps": selected_steps,
+        "is_enhancement": True
+    }
+    
+    # Job erstellen — AUTOMATISCH approved (status='queued')
+    enhancement_job = Job.objects.create(
+        title=f"Enhancement: {original_job.title}",
+        status='queued',  # ← DIREKT queued, NICHT draft!
+        pipeline_template=enhancement_template,
+        prompt=original_job.prompt,  # Original-Prompt übernehmen
+        negative_prompt=original_job.negative_prompt,
+        model=original_job.model,
+        notes=json.dumps(notes_data),
+        created_by=request.user,
+        project=original_job.project,  # Projekt übernehmen
+        started_at=timezone.now()
+    )
+    
+    logger.info(
+        f"[create_enhancement_job] Enhancement-Job {enhancement_job.id} erstellt "
+        f"von {request.user.username} für Original-Job {original_job.id}"
+    )
+    
+    # Celery Chain direkt starten
+    try:
+        task_chain = build_pipeline_chain(str(enhancement_job.id))
+        result = task_chain.apply_async()
+        enhancement_job.celery_chain_id = result.id
+        enhancement_job.save(update_fields=['celery_chain_id'])
+        
+        messages.success(
+            request, 
+            f"✅ Enhancement-Job gestartet! ({len(selected_steps)} Schritte)"
+        )
+    except Exception as e:
+        logger.error(f"[create_enhancement_job] Fehler beim Starten der Chain: {e}")
+        enhancement_job.status = 'failed'
+        enhancement_job.save(update_fields=['status'])
+        messages.error(request, f"Fehler beim Starten: {e}")
+    
+    return redirect('studio:job_detail', job_id=enhancement_job.id)
