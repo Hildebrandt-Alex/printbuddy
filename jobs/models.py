@@ -146,6 +146,7 @@ class Job(models.Model):
 class JobStep(models.Model):
     class StepType(models.TextChoices):
         GENERATE       = 'generate',       'Generierung'
+        FACE_SWAP      = 'face_swap',      'Face Swap'
         UPSCALE        = 'upscale',        'Upscaling'
         VECTORIZE      = 'vectorize',      'Vektorisierung'
         CMYK_EXPORT    = 'cmyk_export',    'CMYK Export'

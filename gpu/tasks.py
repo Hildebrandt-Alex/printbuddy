@@ -539,11 +539,11 @@ def face_swap_image(self, job_id: str):
         if not target_path.exists():
             raise FileNotFoundError(f"Generiertes Bild nicht gefunden: {target_path}")
 
-        # Hole User-Gesicht (reference_image)
-        if not job.reference_image:
-            raise ValueError("Kein reference_image hochgeladen für Face Swap")
+        # Hole User-Gesicht (face_image — NICHT reference_image!)
+        if not job.face_image:
+            raise ValueError("Kein face_image hochgeladen für Face Swap")
 
-        source_image_path = Path(settings.MEDIA_ROOT) / job.reference_image.name
+        source_image_path = Path(settings.MEDIA_ROOT) / job.face_image.name
         if not source_image_path.exists():
             raise FileNotFoundError(f"Reference Image nicht gefunden: {source_image_path}")
 

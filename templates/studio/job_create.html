@@ -136,6 +136,65 @@ function selectMediaType(type) {
   }
 }
 
+let selectedPipelineMode = 'text2img';
+
+function selectPipelineMode(mode) {
+  selectedPipelineMode = mode;
+  
+  // Update UI
+  document.querySelectorAll('.mode-card').forEach(card => {
+    card.classList.remove('selected');
+  });
+  event.currentTarget.classList.add('selected');
+  
+  // Check radio button
+  const radioButton = event.currentTarget.querySelector('input[type="radio"]');
+  if (radioButton) {
+    radioButton.checked = true;
+  }
+  
+  setTimeout(() => showStep(3), 300);
+}
+
+function updateModelInfo() {
+  const modelSelect = document.getElementById('model_select');
+  const selectedModel = modelSelect.value;
+  
+  // Hide all model cards
+  document.querySelectorAll('.model-detail-card').forEach(card => {
+    card.style.display = 'none';
+  });
+  
+  // Show selected model card
+  const selectedCard = document.getElementById('model_' + selectedModel);
+  if (selectedCard) {
+    selectedCard.style.display = 'block';
+  }
+}
+
+function updateUploadFields() {
+  const mode = document.querySelector('input[name="pipeline_mode"]:checked')?.value || 'text2img';
+  
+  // Get upload sections
+  const refImageSection = document.getElementById('reference_image_section');
+  const faceImageSection = document.getElementById('face_image_section');
+  const strengthSection = document.getElementById('strength_section');
+  
+  // Hide all by default
+  if (refImageSection) refImageSection.style.display = 'none';
+  if (faceImageSection) faceImageSection.style.display = 'none';
+  if (strengthSection) strengthSection.style.display = 'none';
+  
+  // Show based on mode
+  if (mode === 'img2img') {
+    if (refImageSection) refImageSection.style.display = 'block';
+    if (strengthSection) strengthSection.style.display = 'block';
+  } else if (mode === 'face_swap') {
+    if (faceImageSection) faceImageSection.style.display = 'block';
+    if (refImageSection) refImageSection.style.display = 'block';
+  }
+}
+
 function useExamplePrompt(text) {
   document.getElementById('id_prompt').value = text;
 }
@@ -159,10 +218,14 @@ document.addEventListener('DOMContentLoaded', () => {
     </div>
     <div class="wizard-step">
       <div>Schritt 2</div>
-      <div style="font-size: .75rem; margin-top: .25rem;">Modell</div>
+      <div style="font-size: .75rem; margin-top: .25rem;">Pipeline</div>
     </div>
     <div class="wizard-step">
       <div>Schritt 3</div>
+      <div style="font-size: .75rem; margin-top: .25rem;">Modell</div>
+    </div>
+    <div class="wizard-step">
+      <div>Schritt 4</div>
       <div style="font-size: .75rem; margin-top: .25rem;">Parameter</div>
     </div>
   </div>
@@ -212,12 +275,61 @@ document.addEventListener('DOMContentLoaded', () => {
       </div>
     </div>
     
-    <!-- STEP 2: Model Selection -->
+    <!-- STEP 2: Pipeline Mode Selection -->
     <div class="wizard-section">
-      <h2>KI-Modell</h2>
-      <p style="color: var(--text-muted); margin-bottom: 1rem;">Für Bildgenerierung verwenden wir <strong>FLUX Schnell</strong> — ein ultra-schnelles, hochwertiges Modell.</p>
+      <h2>Pipeline-Modus wählen</h2>
+      <p style="color: var(--text-muted); margin-bottom: 1rem;">Wie möchtest du dein Bild erstellen?</p>
       
-      <div class="model-card">
+      <div class="media-grid">
+        <div class="mode-card media-card" onclick="selectPipelineMode('text2img')">
+          <input type="radio" name="pipeline_mode" value="text2img" required checked>
+          <div class="media-content">
+            <div class="media-icon">✍️</div>
+            <div class="media-name">Text → Bild</div>
+            <p style="font-size: .8rem; color: var(--text-muted); margin-top: .5rem;">Klassisch: Nur mit Prompt beschreiben</p>
+          </div>
+        </div>
+        
+        <div class="mode-card media-card" onclick="selectPipelineMode('img2img')">
+          <input type="radio" name="pipeline_mode" value="img2img">
+          <div class="media-content">
+            <div class="media-icon">🖼️</div>
+            <div class="media-name">Bild → Bild</div>
+            <p style="font-size: .8rem; color: var(--text-muted); margin-top: .5rem;">Referenzbild + Prompt für Style-Transfer</p>
+          </div>
+        </div>
+        
+        <div class="mode-card media-card" onclick="selectPipelineMode('face_swap')">
+          <input type="radio" name="pipeline_mode" value="face_swap">
+          <div class="media-content">
+            <div class="media-icon">👤</div>
+            <div class="media-name">Face Swap</div>
+            <p style="font-size: .8rem; color: var(--text-muted); margin-top: .5rem;">Dein Gesicht in generierter Szene</p>
+          </div>
+        </div>
+      </div>
+      
+      <div class="wizard-nav">
+        <button type="button" class="btn btn-secondary" onclick="showStep(1)">← Zurück</button>
+      </div>
+    </div>
+    
+    <!-- STEP 3: Model Selection -->
+    <div class="wizard-section">
+      <h2>KI-Modell wählen</h2>
+      <p style="color: var(--text-muted); margin-bottom: 1rem;">Wähle das AI-Modell basierend auf Geschwindigkeit, Qualität und Verwendungszweck.</p>
+      
+      <div class="form-group">
+        <label for="model_select">Modell</label>
+        <select id="model_select" name="model" onchange="updateModelInfo()" style="padding: 1rem; font-size: 1rem;">
+          <option value="flux_schnell" selected>⚡ FLUX Schnell — Schnell & Kommerziell (~$0.02, 10s)</option>
+          <option value="flux_dev">🎨 FLUX Dev — Beste Qualität, NUR INTERN (~$0.05, 30s)</option>
+          <option value="sdxl">🖼️ SDXL — Realistisch & Details (~$0.05, 60s)</option>
+        </select>
+      </div>
+      
+      <!-- FLUX Schnell Details -->
+      <div id="model_flux_schnell" class="model-card model-detail-card">
         <div class="model-name">⚡ FLUX Schnell</div>
         <div class="model-license">Apache 2.0 — Kommerziell OK ✓</div>
         <div class="model-desc">
@@ -226,38 +338,112 @@ document.addEventListener('DOMContentLoaded', () => {
         <div class="model-specs">
           <div class="model-spec">
             <span class="model-spec-label">Geschwindigkeit:</span>
-            <span class="model-spec-value">⚡⚡⚡ Ultra-Fast</span>
+            <span class="model-spec-value">⚡⚡⚡ Ultra-Fast (~10s)</span>
+          </div>
+          <div class="model-spec">
+            <span class="model-spec-label">Kosten:</span>
+            <span class="model-spec-value">~$0.02 pro Bild</span>
           </div>
           <div class="model-spec">
             <span class="model-spec-label">Qualität:</span>
             <span class="model-spec-value">★★★★☆ Sehr gut</span>
           </div>
           <div class="model-spec">
-            <span class="model-spec-label">Auflösung:</span>
-            <span class="model-spec-value">1024×1024</span>
-          </div>
-          <div class="model-spec">
-            <span class="model-spec-label">Steps:</span>
-            <span class="model-spec-value">4 (optimiert)</span>
+            <span class="model-spec-label">Best for:</span>
+            <span class="model-spec-value">Merch, Schnelle Iterationen</span>
           </div>
         </div>
       </div>
       
-      <div class="alert alert-info">
-        ℹ️ <strong>Lizenz-Info:</strong> FLUX Schnell ist vollständig für kommerzielle Nutzung lizenziert (Apache 2.0). Alle generierten Bilder können verkauft werden.
+      <!-- FLUX Dev Details -->
+      <div id="model_flux_dev" class="model-card model-detail-card" style="display: none;">
+        <div class="model-name">🎨 FLUX Dev</div>
+        <div class="model-license" style="background: #7c2d12; color: #fdba74;">⚠️ Nicht-kommerziell — NUR INTERN</div>
+        <div class="model-desc">
+          Höchste Qualität für interne Tests, QA und Proof-of-Concept. Darf NICHT für Produkte verwendet werden die verkauft werden!
+        </div>
+        <div class="model-specs">
+          <div class="model-spec">
+            <span class="model-spec-label">Geschwindigkeit:</span>
+            <span class="model-spec-value">⚡⚡ Mittel (~30s)</span>
+          </div>
+          <div class="model-spec">
+            <span class="model-spec-label">Kosten:</span>
+            <span class="model-spec-value">~$0.05 pro Bild</span>
+          </div>
+          <div class="model-spec">
+            <span class="model-spec-label">Qualität:</span>
+            <span class="model-spec-value">★★★★★ Exzellent</span>
+          </div>
+          <div class="model-spec">
+            <span class="model-spec-label">Best for:</span>
+            <span class="model-spec-value">QA, Tests, Interne Preview</span>
+          </div>
+        </div>
+        <div class="alert alert-warning" style="margin-top: 1rem;">
+          ⚠️ <strong>LIZENZ-WARNUNG:</strong> Bilder aus FLUX Dev dürfen NICHT verkauft werden. Nur für interne Zwecke!
+        </div>
       </div>
       
-      <input type="hidden" name="model" value="flux_schnell">
+      <!-- SDXL Details -->
+      <div id="model_sdxl" class="model-card model-detail-card" style="display: none;">
+        <div class="model-name">🖼️ Stable Diffusion XL</div>
+        <div class="model-license">CreativeML — Kommerziell OK ✓</div>
+        <div class="model-desc">
+          Hochdetailliert, realistisch, gut für Portraits und komplexe Szenen. Unterstützt mehr Features aber langsamer.
+        </div>
+        <div class="model-specs">
+          <div class="model-spec">
+            <span class="model-spec-label">Geschwindigkeit:</span>
+            <span class="model-spec-value">⚡ Langsam (~60s)</span>
+          </div>
+          <div class="model-spec">
+            <span class="model-spec-label">Kosten:</span>
+            <span class="model-spec-value">~$0.05 pro Bild</span>
+          </div>
+          <div class="model-spec">
+            <span class="model-spec-label">Qualität:</span>
+            <span class="model-spec-value">★★★★★ Exzellent</span>
+          </div>
+          <div class="model-spec">
+            <span class="model-spec-label">Best for:</span>
+            <span class="model-spec-value">Portraits, Realismus, Details</span>
+          </div>
+        </div>
+      </div>
       
       <div class="wizard-nav">
-        <button type="button" class="btn btn-secondary" onclick="showStep(1)">← Zurück</button>
-        <button type="button" class="btn btn-primary" onclick="showStep(3)">Weiter →</button>
+        <button type="button" class="btn btn-secondary" onclick="showStep(2)">← Zurück</button>
+        <button type="button" class="btn btn-primary" onclick="showStep(4); updateUploadFields();">Weiter →</button>
       </div>
     </div>
     
-    <!-- STEP 3: Parameters -->
+    <!-- STEP 4: Parameters -->
     <div class="wizard-section">
       <h2>Parameter & Details</h2>
+      
+      <!-- Conditional Upload Fields -->
+      <div id="reference_image_section" class="form-group" style="display: none;">
+        <label for="id_reference_image">📸 Referenzbild hochladen</label>
+        <input type="file" id="id_reference_image" name="reference_image" accept="image/*">
+        <div class="form-help">Bild als Kompositions- oder Style-Vorlage. AI nutzt dies in Kombination mit deinem Prompt.</div>
+      </div>
+      
+      <div id="face_image_section" class="form-group" style="display: none;">
+        <label for="id_face_image">👤 Portrait hochladen (Gesicht für Swap)</label>
+        <input type="file" id="id_face_image" name="face_image" accept="image/*">
+        <div class="form-help">Dein Gesichts-Portrait. Wird auf das generierte Bild übertragen.</div>
+      </div>
+      
+      <div id="strength_section" class="form-group" style="display: none;">
+        <label for="id_strength">Strength (Prompt vs. Referenzbild)</label>
+        <input type="range" id="id_strength" name="img2img_strength" min="0.5" max="1.0" step="0.05" value="0.75" 
+               oninput="document.getElementById('strength_value').textContent = this.value">
+        <div class="form-help">
+          <strong><span id="strength_value">0.75</span></strong> — 
+          Niedriger = mehr Referenzbild, Höher = mehr Prompt
+        </div>
+      </div>
       
       <div class="form-group">
         <label for="id_title">Job-Titel *</label>
@@ -340,7 +526,7 @@ document.addEventListener('DOMContentLoaded', () => {
       </div>
       
       <div class="wizard-nav">
-        <button type="button" class="btn btn-secondary" onclick="showStep(2)">← Zurück</button>
+        <button type="button" class="btn btn-secondary" onclick="showStep(3)">← Zurück</button>
         <button type="submit" class="btn btn-primary">Job erstellen →</button>
       </div>
     </div>

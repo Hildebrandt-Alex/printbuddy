@@ -25,7 +25,7 @@ def build_pipeline_chain(job_id: str):
     Nur UUIDs als Argumente — kein ORM-Objekt serialisieren.
     """
     from jobs.models import Job, JobStep
-    from gpu.tasks import generate_image, upscale_image
+    from gpu.tasks import generate_image, upscale_image, face_swap_image
     from postprocess.tasks import (
         vectorize_image,
         cmyk_export,
@@ -51,6 +51,10 @@ def build_pipeline_chain(job_id: str):
 
     # Pflicht: generate
     step_definitions.append(("generate", True))
+    
+    # Face Swap (nach Generation, vor Upscale)
+    if t.step_face_swap:
+        step_definitions.append(("face_swap", True))
     
     if t.step_upscale:
         step_definitions.append(("upscale", True))
@@ -81,7 +85,8 @@ def build_pipeline_chain(job_id: str):
         )
 
     logger.info("[build_pipeline_chain] %d Steps für Job %s angelegt", len(step_definitions), job_id)
-
+face_swap": face_swap_image.si(job_id),
+        "
     # Celery Chain aufbauen
     task_map = {
         "generate": generate_image.si(job_id),

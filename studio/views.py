@@ -179,12 +179,20 @@ def job_create(request):
         prompt          = request.POST.get("prompt", "").strip()
         negative_prompt = request.POST.get("negative_prompt", "").strip()
         model           = request.POST.get("model", "flux_schnell")  # Default
+        pipeline_mode   = request.POST.get("pipeline_mode", "text2img")
         seed            = request.POST.get("seed") or None
         num_images      = int(request.POST.get("num_images") or 1)
+        img2img_strength = request.POST.get("img2img_strength")
+        reference_image = request.FILES.get("reference_image")
+        face_image      = request.FILES.get("face_image")
 
         errors = []
         if not title:  errors.append("Titel ist erforderlich.")
         if not prompt: errors.append("Prompt ist erforderlich.")
+        if pipeline_mode == "img2img" and not reference_image:
+            errors.append("Referenzbild ist erforderlich für Bild→Bild Modus.")
+        if pipeline_mode == "face_swap" and not face_image:
+            errors.append("Portrait ist erforderlich für Face Swap Modus.")
 
         if errors:
             for e in errors:
@@ -204,8 +212,29 @@ def job_create(request):
             except Project.DoesNotExist:
                 pass
 
-        # Pipeline Template automatisch zuweisen (erstes aktives Template)
-        pipeline_template = PipelineTemplate.objects.filter(is_active=True).first()
+        # Pipeline Template basierend auf Modus wählen
+        if pipeline_mode == "face_swap":
+            # Suche nach Face Swap Template (falls vorhanden)
+            pipeline_template = PipelineTemplate.objects.filter(
+                is_active=True, 
+                step_face_swap=True
+            ).first()
+            if not pipeline_template:
+                # Fallback: Preview Only Template
+                pipeline_template = PipelineTemplate.objects.filter(
+                    is_active=True,
+                    step_upscale=False
+                ).first()
+        else:
+            # Preview Only Template (kein Upscale für schnelle Iteration)
+            pipeline_template = PipelineTemplate.objects.filter(
+                is_active=True,
+                step_upscale=False
+            ).first()
+        
+        if not pipeline_template:
+            # Fallback: erstes aktives Template
+            pipeline_template = PipelineTemplate.objects.filter(is_active=True).first()
         
         if not pipeline_template:
             messages.error(
@@ -218,19 +247,10 @@ def job_create(request):
                 "post": request.POST,
             })
         
-        # Pipeline Template automatisch zuweisen (erstes aktives Template)
-        pipeline_template = PipelineTemplate.objects.filter(is_active=True).first()
-        
-        if not pipeline_template:
-            messages.error(
-                request, 
-                "Kein aktives Pipeline-Template gefunden. Admin muss ein Template anlegen."
-            )
-            return render(request, "studio/job_create.html", {
-                "prompt_templates": prompt_templates,
-                "projects": projects,
-                "post": request.POST,
-            })
+        # Param Notes für img2img strength (Backend liest dies aus)
+        notes = f"PipelineMode: {pipeline_mode}"
+        if img2img_strength:
+            notes += f"\nImg2Img: {img2img_strength}"
         
         # Job erstellen mit Template
         job = Job.objects.create(
@@ -239,13 +259,16 @@ def job_create(request):
             project=project,
             prompt=prompt,
             negative_prompt=negative_prompt,
+            reference_image=reference_image,
+            face_image=face_image,
             model=model,
             width=1024,        # FLUX Schnell Standard
             height=1024,
-            num_steps=4,       # FLUX Schnell optimiert für 4 Steps
-            guidance=7.0,      # FLUX Schnell fixed Guidance
+            num_steps=4 if model == "flux_schnell" else (20 if model == "flux_dev" else 30),
+            guidance=7.0,
             seed=int(seed) if seed else None,
             num_images=num_images,
+            notes=notes,
             status='draft',
             created_by=request.user,
         )
