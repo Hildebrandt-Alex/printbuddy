@@ -908,3 +908,193 @@ def create_enhancement_job(request, job_id):
         messages.error(request, f"Fehler beim Starten: {e}")
     
     return redirect('studio:job_detail', job_id=enhancement_job.id)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Quick Adjust — Farb-/Helligkeits-/Crop-Anpassungen
+# ─────────────────────────────────────────────────────────────────────────────
+
+@studio_required
+@require_POST
+def quick_adjust_image(request, job_id):
+    """
+    Wendet Quick Adjustments auf das neueste Asset eines Jobs an.
+    Unterstützt:
+    - Color adjustments (brightness, contrast, saturation, sharpness)
+    - Crop (mit x, y, width, height)
+    
+    Erstellt einen neuen Job-Step mit den Anpassungsparametern.
+    """
+    import json
+    from django.http import JsonResponse
+    from jobs.models import JobStep
+    from postprocess.tasks import adjust_colors, crop_image
+    
+    job = get_object_or_404(Job, id=job_id)
+    
+    # Validierung: Job muss done sein (Enhancement erstellt neue Jobs)
+    if job.status != 'done':
+        return JsonResponse({
+            'success': False,
+            'error': 'Job muss abgeschlossen sein für Quick Adjust.'
+        }, status=400)
+    
+    # Anpassungstyp bestimmen
+    adjust_type = request.POST.get('adjust_type', 'color')  # 'color' oder 'crop'
+    
+    if adjust_type == 'color':
+        # Color Adjustment Parameter lesen
+        try:
+            brightness = int(request.POST.get('brightness', 0))
+            contrast = int(request.POST.get('contrast', 0))
+            saturation = int(request.POST.get('saturation', 0))
+            sharpness = int(request.POST.get('sharpness', 100))
+            
+            # Validierung
+            if not (-100 <= brightness <= 100):
+                raise ValueError("Brightness muss zwischen -100 und 100 liegen")
+            if not (-100 <= contrast <= 100):
+                raise ValueError("Contrast muss zwischen -100 und 100 liegen")
+            if not (-100 <= saturation <= 100):
+                raise ValueError("Saturation muss zwischen -100 und 100 liegen")
+            if not (0 <= sharpness <= 200):
+                raise ValueError("Sharpness muss zwischen 0 und 200 liegen")
+            
+        except (ValueError, TypeError) as e:
+            return JsonResponse({
+                'success': False,
+                'error': f'Ungültige Parameter: {e}'
+            }, status=400)
+        
+        # Notes mit Quick Adjust Params erstellen/updaten
+        try:
+            notes_data = json.loads(job.notes) if job.notes else {}
+        except json.JSONDecodeError:
+            notes_data = {}
+        
+        notes_data['quick_adjust_params'] = {
+            'brightness': brightness,
+            'contrast': contrast,
+            'saturation': saturation,
+            'sharpness': sharpness
+        }
+        
+        job.notes = json.dumps(notes_data)
+        job.save(update_fields=['notes'])
+        
+        # JobStep erstellen
+        step_order = job.steps.count() + 1
+        job_step = JobStep.objects.create(
+            job=job,
+            step_type='quick_adjust',
+            order=step_order,
+            status='pending',
+            params={
+                'brightness': brightness,
+                'contrast': contrast,
+                'saturation': saturation,
+                'sharpness': sharpness
+            }
+        )
+        
+        # Celery Task starten
+        try:
+            result = adjust_colors.apply_async(args=[str(job_id)], queue='cpu_queue')
+            logger.info(f"[quick_adjust_image] Color adjustment task {result.id} gestartet für Job {job_id}")
+            
+            return JsonResponse({
+                'success': True,
+                'step_id': str(job_step.id),
+                'task_id': result.id,
+                'message': 'Farbanpassung wird verarbeitet...'
+            })
+        except Exception as e:
+            logger.error(f"[quick_adjust_image] Fehler beim Starten der Task: {e}")
+            job_step.status = 'failed'
+            job_step.error_msg = str(e)
+            job_step.save(update_fields=['status', 'error_msg'])
+            return JsonResponse({
+                'success': False,
+                'error': f'Fehler beim Starten: {e}'
+            }, status=500)
+    
+    elif adjust_type == 'crop':
+        # Crop Parameter lesen
+        try:
+            x = int(request.POST.get('x', 0))
+            y = int(request.POST.get('y', 0))
+            width = int(request.POST.get('width'))
+            height = int(request.POST.get('height'))
+            aspect_ratio = request.POST.get('aspect_ratio', 'free')
+            
+            # Validierung
+            if width <= 0 or height <= 0:
+                raise ValueError("Width/Height müssen positiv sein")
+            if x < 0 or y < 0:
+                raise ValueError("x/y müssen >= 0 sein")
+            
+        except (ValueError, TypeError) as e:
+            return JsonResponse({
+                'success': False,
+                'error': f'Ungültige Crop-Parameter: {e}'
+            }, status=400)
+        
+        # Notes mit Crop Params erstellen/updaten
+        try:
+            notes_data = json.loads(job.notes) if job.notes else {}
+        except json.JSONDecodeError:
+            notes_data = {}
+        
+        notes_data['crop_params'] = {
+            'x': x,
+            'y': y,
+            'width': width,
+            'height': height,
+            'aspect_ratio': aspect_ratio
+        }
+        
+        job.notes = json.dumps(notes_data)
+        job.save(update_fields=['notes'])
+        
+        # JobStep erstellen
+        step_order = job.steps.count() + 1
+        job_step = JobStep.objects.create(
+            job=job,
+            step_type='crop',
+            order=step_order,
+            status='pending',
+            params={
+                'x': x,
+                'y': y,
+                'width': width,
+                'height': height,
+                'aspect_ratio': aspect_ratio
+            }
+        )
+        
+        # Celery Task starten
+        try:
+            result = crop_image.apply_async(args=[str(job_id)], queue='cpu_queue')
+            logger.info(f"[quick_adjust_image] Crop task {result.id} gestartet für Job {job_id}")
+            
+            return JsonResponse({
+                'success': True,
+                'step_id': str(job_step.id),
+                'task_id': result.id,
+                'message': 'Crop wird verarbeitet...'
+            })
+        except Exception as e:
+            logger.error(f"[quick_adjust_image] Fehler beim Starten der Crop-Task: {e}")
+            job_step.status = 'failed'
+            job_step.error_msg = str(e)
+            job_step.save(update_fields=['status', 'error_msg'])
+            return JsonResponse({
+                'success': False,
+                'error': f'Fehler beim Starten: {e}'
+            }, status=500)
+    
+    else:
+        return JsonResponse({
+            'success': False,
+            'error': f'Unbekannter adjust_type: {adjust_type}'
+        }, status=400)

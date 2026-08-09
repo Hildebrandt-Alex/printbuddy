@@ -19,6 +19,7 @@ urlpatterns = [
     path("jobs/<uuid:job_id>/results/",   views.job_results,         name="job_results"),
     path("jobs/<uuid:job_id>/select/",    views.asset_select,        name="asset_select"),
     path("jobs/<uuid:job_id>/enhance/",   views.create_enhancement_job, name="create_enhancement"),
+    path("jobs/<uuid:job_id>/adjust/",    views.quick_adjust_image,  name="quick_adjust"),
     path("jobs/<uuid:job_id>/product/",   views.product_wizard,      name="product_wizard"),
     path("prompts/",                      views.prompt_library,      name="prompt_library"),
     

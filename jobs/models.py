@@ -154,6 +154,8 @@ class JobStep(models.Model):
         PREVIEW_EXPORT = 'preview_export', 'Preview Export'
         MOCKUP_GEN     = 'mockup_gen',     'Mockup Generierung'
         AUTO_QA        = 'auto_qa',        'Auto QA'
+        QUICK_ADJUST   = 'quick_adjust',   'Quick Adjust'
+        CROP           = 'crop',           'Zuschneiden'
         NOTIFY_STUDIO  = 'notify_studio',  'Studio-Benachrichtigung'
 
     class Status(models.TextChoices):

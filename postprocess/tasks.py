@@ -417,3 +417,179 @@ def generate_all_mockups(self, gallery_image_id: str):
     logger.info("[generate_all_mockups] GalleryImage %s — Placeholder", gallery_image_id)
     # Phase 7: Printful Mockup API Integration
     return "placeholder"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# TASK: adjust_colors — Brightness/Contrast/Saturation/Sharpness
+# ─────────────────────────────────────────────────────────────────────────────
+
+@shared_task(bind=True, max_retries=3, default_retry_delay=10, queue="cpu_queue")
+def adjust_colors(self, job_id: str):
+    """
+    Wendet Farb-/Helligkeits-/Kontrast-Anpassungen auf das Bild an.
+    Parameter werden aus job.notes['quick_adjust_params'] gelesen.
+    
+    Erwartet:
+    - brightness: -100 bis +100 (0 = keine Änderung)
+    - contrast: -100 bis +100 (0 = keine Änderung)
+    - saturation: -100 bis +100 (0 = keine Änderung)
+    - sharpness: 0 bis 200 (100 = keine Änderung)
+    """
+    logger.info("[adjust_colors] Job %s", job_id)
+    _save_step(job_id, "quick_adjust", "running")
+
+    try:
+        import json
+        from PIL import Image, ImageEnhance
+        from jobs.models import Job
+
+        # Parameter aus job.notes lesen
+        job = Job.objects.get(id=job_id)
+        if not job.notes:
+            raise ValueError("job.notes fehlt — keine Anpassungsparameter")
+        
+        try:
+            notes_data = json.loads(job.notes)
+            params = notes_data.get("quick_adjust_params", {})
+        except (json.JSONDecodeError, TypeError):
+            raise ValueError("Ungültige job.notes JSON-Struktur")
+
+        brightness = params.get("brightness", 0)  # -100 bis +100
+        contrast = params.get("contrast", 0)      # -100 bis +100
+        saturation = params.get("saturation", 0)  # -100 bis +100
+        sharpness = params.get("sharpness", 100)  # 0 bis 200
+
+        logger.info("[adjust_colors] Params: brightness=%s, contrast=%s, saturation=%s, sharpness=%s",
+                    brightness, contrast, saturation, sharpness)
+
+        # Bild laden (nutzt _get_latest_asset für Enhancement-Jobs)
+        source = _get_latest_asset(job_id, prefer_upscaled=True)
+        
+        # Output-Pfad in raw/ (adjusted images bleiben hochauflösend)
+        output_dir = _get_output_dir("raw")
+        asset_id = uuid.uuid4()
+        output_path = output_dir / f"{asset_id}_adjusted.png"
+
+        with Image.open(source) as img:
+            if img.mode not in ("RGB", "RGBA"):
+                img = img.convert("RGB")
+            
+            # Brightness (0.0 = schwarz, 1.0 = original, 2.0 = doppelt so hell)
+            # -100 → 0.0, 0 → 1.0, +100 → 2.0
+            if brightness != 0:
+                factor = 1.0 + (brightness / 100.0)
+                enhancer = ImageEnhance.Brightness(img)
+                img = enhancer.enhance(max(0.0, factor))
+            
+            # Contrast (0.0 = grau, 1.0 = original, 2.0 = doppelter Kontrast)
+            if contrast != 0:
+                factor = 1.0 + (contrast / 100.0)
+                enhancer = ImageEnhance.Contrast(img)
+                img = enhancer.enhance(max(0.0, factor))
+            
+            # Saturation (0.0 = Grayscale, 1.0 = original, 2.0 = doppelt gesättigt)
+            if saturation != 0:
+                factor = 1.0 + (saturation / 100.0)
+                enhancer = ImageEnhance.Color(img)
+                img = enhancer.enhance(max(0.0, factor))
+            
+            # Sharpness (0.0 = blur, 1.0 = original, 2.0 = sehr scharf)
+            # 0 → 0.0, 100 → 1.0, 200 → 2.0
+            if sharpness != 100:
+                factor = sharpness / 100.0
+                enhancer = ImageEnhance.Sharpness(img)
+                img = enhancer.enhance(max(0.0, factor))
+            
+            # Speichern als PNG (verlustfrei)
+            img.save(output_path, "PNG")
+
+        logger.info("[adjust_colors] Fertig: %s", output_path)
+        _save_step(job_id, "quick_adjust", "done", asset_id=asset_id)
+        return str(asset_id)
+
+    except Exception as exc:
+        logger.error("[adjust_colors] Job %s: %s", job_id, exc)
+        _save_step(job_id, "quick_adjust", "failed", error_msg=str(exc))
+        raise self.retry(exc=exc)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# TASK: crop_image — Nicht-destruktives Zuschneiden
+# ─────────────────────────────────────────────────────────────────────────────
+
+@shared_task(bind=True, max_retries=3, default_retry_delay=10, queue="cpu_queue")
+def crop_image(self, job_id: str):
+    """
+    Schneidet das Bild auf den angegebenen Bereich zu.
+    Parameter werden aus job.notes['crop_params'] gelesen.
+    
+    Erwartet:
+    - x, y: Startkoordinaten (Pixel, links oben = 0,0)
+    - width, height: Größe des Crop-Bereichs (Pixel)
+    - aspect_ratio: Optional (1:1, 16:9, 4:3, free) — nur UI-Info
+    
+    Original bleibt unverändert (non-destructive).
+    """
+    logger.info("[crop_image] Job %s", job_id)
+    _save_step(job_id, "crop", "running")
+
+    try:
+        import json
+        from PIL import Image
+        from jobs.models import Job
+
+        # Parameter aus job.notes lesen
+        job = Job.objects.get(id=job_id)
+        if not job.notes:
+            raise ValueError("job.notes fehlt — keine Crop-Parameter")
+        
+        try:
+            notes_data = json.loads(job.notes)
+            params = notes_data.get("crop_params", {})
+        except (json.JSONDecodeError, TypeError):
+            raise ValueError("Ungültige job.notes JSON-Struktur")
+
+        x = params.get("x", 0)
+        y = params.get("y", 0)
+        width = params.get("width")
+        height = params.get("height")
+
+        if not width or not height:
+            raise ValueError("width/height fehlen in crop_params")
+
+        logger.info("[crop_image] Crop: x=%s, y=%s, width=%s, height=%s", x, y, width, height)
+
+        # Bild laden
+        source = _get_latest_asset(job_id, prefer_upscaled=True)
+        
+        # Output-Pfad
+        output_dir = _get_output_dir("raw")
+        asset_id = uuid.uuid4()
+        output_path = output_dir / f"{asset_id}_cropped.png"
+
+        with Image.open(source) as img:
+            # Crop-Box: (left, upper, right, lower)
+            box = (x, y, x + width, y + height)
+            
+            # Validierung: Box darf nicht über Bildgrenzen hinaus
+            img_width, img_height = img.size
+            if x < 0 or y < 0 or (x + width) > img_width or (y + height) > img_height:
+                logger.warning("[crop_image] Crop-Box außerhalb Bildgrenzen — auf Bild begrenzt")
+                box = (
+                    max(0, x),
+                    max(0, y),
+                    min(img_width, x + width),
+                    min(img_height, y + height)
+                )
+            
+            cropped = img.crop(box)
+            cropped.save(output_path, "PNG")
+
+        logger.info("[crop_image] Fertig: %s", output_path)
+        _save_step(job_id, "crop", "done", asset_id=asset_id)
+        return str(asset_id)
+
+    except Exception as exc:
+        logger.error("[crop_image] Job %s: %s", job_id, exc)
+        _save_step(job_id, "crop", "failed", error_msg=str(exc))
+        raise self.retry(exc=exc)

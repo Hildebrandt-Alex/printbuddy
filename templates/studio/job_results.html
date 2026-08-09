@@ -30,6 +30,24 @@
     </button>
   </div>
 </div>
+
+<!-- Quick Adjust Button (nur wenn Job abgeschlossen) -->
+<div style="background:linear-gradient(135deg, rgba(147, 51, 234, 0.08), rgba(147, 51, 234, 0.02));border:1px solid var(--border);border-radius:12px;padding:1.25rem;margin-bottom:1.5rem">
+  <div style="display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap">
+    <div style="display:flex;align-items:center;gap:1rem">
+      <span style="font-size:1.75rem">🎨</span>
+      <div>
+        <h3 style="font-size:1rem;font-weight:600;margin-bottom:.25rem">Bildbearbeitung</h3>
+        <p style="color:var(--text-muted);font-size:.8rem;margin:0">
+          Helligkeit, Kontrast, Sättigung, Schärfe — perfekt für Production-Ready Bilder
+        </p>
+      </div>
+    </div>
+    <button id="adjust-btn" class="btn btn-secondary" style="padding:.65rem 1.5rem;font-size:.9rem;background:rgb(147, 51, 234);color:white">
+      Quick Adjust →
+    </button>
+  </div>
+</div>
 {% endif %}
 
 <!-- Product Wizard Button (nur wenn noch kein Produkt zugewiesen) -->
@@ -233,6 +251,223 @@
     </form>
   </div>
 </div>
+
+<!-- Quick Adjust Modal -->
+<div id="adjust-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:1000;align-items:center;justify-content:center">
+  <div class="card" style="max-width:700px;width:90%;max-height:90vh;overflow-y:auto;margin:2rem">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem">
+      <h2 style="font-size:1.25rem;font-weight:700;margin:0">🎨 Quick Adjust</h2>
+      <button id="adjust-modal-close" class="btn btn-secondary btn-sm">×</button>
+    </div>
+
+    <p style="color:var(--text-muted);font-size:.85rem;margin-bottom:1.5rem">
+      Farb- und Helligkeitsanpassungen für production-ready Bilder. Änderungen sind non-destructive.
+    </p>
+
+    <form id="adjust-form" method="post" action="{% url 'studio:quick_adjust' job.id %}">
+      {% csrf_token %}
+      <input type="hidden" name="adjust_type" value="color" />
+
+      <!-- Brightness Slider -->
+      <div style="margin-bottom:1.5rem">
+        <label style="display:flex;justify-content:space-between;margin-bottom:.5rem">
+          <span style="font-weight:600;font-size:.9rem">Helligkeit</span>
+          <span id="brightness-value" style="color:var(--text-muted);font-size:.85rem">0</span>
+        </label>
+        <input type="range" name="brightness" id="brightness" min="-100" max="100" value="0" step="1" 
+               style="width:100%;height:6px;border-radius:3px;background:linear-gradient(to right, #222, #888, #fff);cursor:pointer" />
+        <div style="display:flex;justify-content:space-between;font-size:.75rem;color:var(--text-muted);margin-top:.25rem">
+          <span>Dunkler</span>
+          <span>Heller</span>
+        </div>
+      </div>
+
+      <!-- Contrast Slider -->
+      <div style="margin-bottom:1.5rem">
+        <label style="display:flex;justify-content:space-between;margin-bottom:.5rem">
+          <span style="font-weight:600;font-size:.9rem">Kontrast</span>
+          <span id="contrast-value" style="color:var(--text-muted);font-size:.85rem">0</span>
+        </label>
+        <input type="range" name="contrast" id="contrast" min="-100" max="100" value="0" step="1" 
+               style="width:100%;height:6px;border-radius:3px;background:linear-gradient(to right, #888, #fff, #000);cursor:pointer" />
+        <div style="display:flex;justify-content:space-between;font-size:.75rem;color:var(--text-muted);margin-top:.25rem">
+          <span>Weniger</span>
+          <span>Mehr</span>
+        </div>
+      </div>
+
+      <!-- Saturation Slider -->
+      <div style="margin-bottom:1.5rem">
+        <label style="display:flex;justify-content:space-between;margin-bottom:.5rem">
+          <span style="font-weight:600;font-size:.9rem">Sättigung</span>
+          <span id="saturation-value" style="color:var(--text-muted);font-size:.85rem">0</span>
+        </label>
+        <input type="range" name="saturation" id="saturation" min="-100" max="100" value="0" step="1" 
+               style="width:100%;height:6px;border-radius:3px;background:linear-gradient(to right, #888, #ff0080);cursor:pointer" />
+        <div style="display:flex;justify-content:space-between;font-size:.75rem;color:var(--text-muted);margin-top:.25rem">
+          <span>Graustufen</span>
+          <span>Gesättigt</span>
+        </div>
+      </div>
+
+      <!-- Sharpness Slider -->
+      <div style="margin-bottom:1.5rem">
+        <label style="display:flex;justify-content:space-between;margin-bottom:.5rem">
+          <span style="font-weight:600;font-size:.9rem">Schärfe</span>
+          <span id="sharpness-value" style="color:var(--text-muted);font-size:.85rem">100</span>
+        </label>
+        <input type="range" name="sharpness" id="sharpness" min="0" max="200" value="100" step="1" 
+               style="width:100%;height:6px;border-radius:3px;background:linear-gradient(to right, #888, #fff);cursor:pointer" />
+        <div style="display:flex;justify-content:space-between;font-size:.75rem;color:var(--text-muted);margin-top:.25rem">
+          <span>Weich</span>
+          <span>Sehr scharf</span>
+        </div>
+      </div>
+
+      <!-- Info Box -->
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:1rem;margin-bottom:1.5rem">
+        <div style="display:flex;gap:.75rem;align-items:start">
+          <span style="font-size:1.25rem">ℹ️</span>
+          <div style="font-size:.8rem;color:var(--text-muted)">
+            <strong style="color:var(--text);display:block;margin-bottom:.25rem">Live Preview kommt bald</strong>
+            Aktuell wird das Bild im Hintergrund verarbeitet (~3-5s). Original bleibt erhalten.
+          </div>
+        </div>
+      </div>
+
+      <!-- Status Display -->
+      <div id="adjust-status" style="display:none;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:1rem;margin-bottom:1.5rem;text-align:center">
+        <div style="font-size:1.5rem;margin-bottom:.5rem">⏳</div>
+        <div style="font-weight:600;margin-bottom:.25rem">Verarbeitung läuft...</div>
+        <div style="color:var(--text-muted);font-size:.85rem">Das Bild wird angepasst, bitte warten.</div>
+      </div>
+
+      <!-- Buttons -->
+      <div style="display:flex;gap:1rem">
+        <button type="button" id="adjust-modal-cancel" class="btn btn-secondary" style="flex:1">Abbrechen</button>
+        <button type="submit" id="adjust-submit" class="btn btn-primary" style="flex:1;background:rgb(147, 51, 234)">Anwenden</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+// Quick Adjust Modal öffnen/schließen
+const adjustModal = document.getElementById('adjust-modal');
+const adjustBtn = document.getElementById('adjust-btn');
+const adjustModalClose = document.getElementById('adjust-modal-close');
+const adjustModalCancel = document.getElementById('adjust-modal-cancel');
+
+if (adjustBtn) {
+  adjustBtn.addEventListener('click', () => {
+    adjustModal.style.display = 'flex';
+  });
+}
+
+if (adjustModalClose) {
+  adjustModalClose.addEventListener('click', () => {
+    adjustModal.style.display = 'none';
+  });
+}
+
+if (adjustModalCancel) {
+  adjustModalCancel.addEventListener('click', () => {
+    adjustModal.style.display = 'none';
+  });
+}
+
+// Slider Value Updates
+const brightness = document.getElementById('brightness');
+const brightnessValue = document.getElementById('brightness-value');
+const contrast = document.getElementById('contrast');
+const contrastValue = document.getElementById('contrast-value');
+const saturation = document.getElementById('saturation');
+const saturationValue = document.getElementById('saturation-value');
+const sharpness = document.getElementById('sharpness');
+const sharpnessValue = document.getElementById('sharpness-value');
+
+if (brightness) {
+  brightness.addEventListener('input', (e) => {
+    brightnessValue.textContent = e.target.value;
+  });
+}
+
+if (contrast) {
+  contrast.addEventListener('input', (e) => {
+    contrastValue.textContent = e.target.value;
+  });
+}
+
+if (saturation) {
+  saturation.addEventListener('input', (e) => {
+    saturationValue.textContent = e.target.value;
+  });
+}
+
+if (sharpness) {
+  sharpness.addEventListener('input', (e) => {
+    sharpnessValue.textContent = e.target.value;
+  });
+}
+
+// AJAX Form Submit für Quick Adjust
+const adjustForm = document.getElementById('adjust-form');
+if (adjustForm) {
+  adjustForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const statusDiv = document.getElementById('adjust-status');
+    const submitBtn = document.getElementById('adjust-submit');
+    
+    // Status anzeigen
+    statusDiv.style.display = 'block';
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Verarbeite...';
+    
+    try {
+      const formData = new FormData(adjustForm);
+      const response = await fetch(adjustForm.action, {
+        method: 'POST',
+        body: formData,
+        headers: {
+          'X-Requested-With': 'XMLHttpRequest'
+        }
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        // Erfolg - Page reload um neue Assets zu zeigen
+        statusDiv.innerHTML = `
+          <div style="font-size:1.5rem;margin-bottom:.5rem">✅</div>
+          <div style="font-weight:600;margin-bottom:.25rem">Fertig!</div>
+          <div style="color:var(--text-muted);font-size:.85rem">Seite wird aktualisiert...</div>
+        `;
+        setTimeout(() => {
+          window.location.reload();
+        }, 1500);
+      } else {
+        // Fehler
+        statusDiv.innerHTML = `
+          <div style="font-size:1.5rem;margin-bottom:.5rem">❌</div>
+          <div style="font-weight:600;margin-bottom:.25rem">Fehler</div>
+          <div style="color:var(--red);font-size:.85rem">${result.error || 'Unbekannter Fehler'}</div>
+        `;
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Anwenden';
+      }
+    } catch (error) {
+      statusDiv.innerHTML = `
+        <div style="font-size:1.5rem;margin-bottom:.5rem">❌</div>
+        <div style="font-weight:600;margin-bottom:.25rem">Netzwerkfehler</div>
+        <div style="color:var(--red);font-size:.85rem">${error.message}</div>
+      `;
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Anwenden';
+    }
+  });
+}
+</script>
 
 <script>
 // Modal öffnen/schließen
