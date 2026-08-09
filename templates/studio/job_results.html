@@ -273,13 +273,28 @@
       <button id="adjust-modal-close" class="btn btn-secondary btn-sm">×</button>
     </div>
 
-    <p style="color:var(--text-muted);font-size:.85rem;margin-bottom:1.5rem">
+    <p style="color:var(--text-muted);font-size:.85rem;margin-bottom:1rem">
       Farb- und Helligkeitsanpassungen für production-ready Bilder. Änderungen sind non-destructive.
     </p>
+
+    <!-- Live Preview Canvas -->
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:1rem;margin-bottom:1.5rem">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem">
+        <span style="font-weight:600;font-size:.9rem">Live Preview</span>
+        <span style="font-size:.75rem;color:var(--text-muted)">Änderungen in Echtzeit</span>
+      </div>
+      <div style="background:#000;border-radius:6px;overflow:hidden;aspect-ratio:1;display:flex;align-items:center;justify-content:center">
+        <canvas id="preview-canvas" style="max-width:100%;max-height:400px;display:block"></canvas>
+      </div>
+      <div style="margin-top:.75rem;font-size:.75rem;color:var(--text-muted);text-align:center">
+        ℹ️ Schärfe wird nur beim Server-Rendering angewendet
+      </div>
+    </div>
 
     <form id="adjust-form" method="post" action="{% url 'studio:quick_adjust' job.id %}">
       {% csrf_token %}
       <input type="hidden" name="adjust_type" value="color" />
+      <input type="hidden" id="preview-image-url" value="" />
 
       <!-- Brightness Slider -->
       <div style="margin-bottom:1.5rem">
@@ -337,13 +352,14 @@
         </div>
       </div>
 
-      <!-- Info Box -->
+      <!-- Storage Info Box -->
       <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:1rem;margin-bottom:1.5rem">
         <div style="display:flex;gap:.75rem;align-items:start">
-          <span style="font-size:1.25rem">ℹ️</span>
+          <span style="font-size:1.25rem">💾</span>
           <div style="font-size:.8rem;color:var(--text-muted)">
-            <strong style="color:var(--text);display:block;margin-bottom:.25rem">Live Preview kommt bald</strong>
-            Aktuell wird das Bild im Hintergrund verarbeitet (~3-5s). Original bleibt erhalten.
+            <strong style="color:var(--text);display:block;margin-bottom:.25rem">Speicherort</strong>
+            Adjusted-Bilder: <code style="background:rgba(0,0,0,.3);padding:.15rem .4rem;border-radius:3px;font-size:.75rem">/mnt/agency_nas/raw/{uuid}_adjusted.png</code><br>
+            Original-Preview bleibt in <code style="background:rgba(0,0,0,.3);padding:.15rem .4rem;border-radius:3px;font-size:.75rem">/mnt/agency_nas/exports/preview/</code> erhalten.
           </div>
         </div>
       </div>
@@ -374,6 +390,8 @@ const adjustModalCancel = document.getElementById('adjust-modal-cancel');
 if (adjustBtn) {
   adjustBtn.addEventListener('click', () => {
     adjustModal.style.display = 'flex';
+    // Live-Preview initialisieren wenn Modal geöffnet wird
+    setTimeout(initLivePreview, 100);
   });
 }
 
@@ -399,27 +417,98 @@ const saturationValue = document.getElementById('saturation-value');
 const sharpness = document.getElementById('sharpness');
 const sharpnessValue = document.getElementById('sharpness-value');
 
+// Live Preview Canvas Setup
+let previewCanvas = null;
+let previewCtx = null;
+let originalImage = null;
+
+function initLivePreview() {
+  previewCanvas = document.getElementById('preview-canvas');
+  if (!previewCanvas) return;
+  
+  previewCtx = previewCanvas.getContext('2d', { willReadFrequently: true });
+  
+  // Lade erstes Preview-Bild
+  const firstPreviewImg = document.querySelector('[src*="/media/exports/preview/"]');
+  if (!firstPreviewImg) {
+    console.warn('Kein Preview-Bild gefunden für Live-Preview');
+    return;
+  }
+  
+  const imgUrl = firstPreviewImg.src;
+  document.getElementById('preview-image-url').value = imgUrl;
+  
+  originalImage = new Image();
+  originalImage.crossOrigin = 'anonymous';
+  originalImage.onload = () => {
+    // Canvas-Größe an Bild anpassen
+    previewCanvas.width = originalImage.width;
+    previewCanvas.height = originalImage.height;
+    updatePreview();
+  };
+  originalImage.onerror = () => {
+    console.error('Fehler beim Laden des Preview-Bildes');
+  };
+  originalImage.src = imgUrl;
+}
+
+function updatePreview() {
+  if (!previewCanvas || !previewCtx || !originalImage) return;
+  
+  // Clear canvas
+  previewCtx.clearRect(0, 0, previewCanvas.width, previewCanvas.height);
+  
+  // Werte von Slidern holen
+  const brightnessVal = parseInt(brightness?.value || 0);
+  const contrastVal = parseInt(contrast?.value || 0);
+  const saturationVal = parseInt(saturation?.value || 0);
+  // sharpness wird ignoriert (nur Server-seitig)
+  
+  // CSS Filter berechnen
+  // brightness: -100 to +100 → 0% to 200% (0 = schwarz, 100 = normal, 200 = doppelt)
+  const brightnessPct = 100 + brightnessVal; // -100→0%, 0→100%, +100→200%
+  
+  // contrast: -100 to +100 → 0% to 200%
+  const contrastPct = 100 + contrastVal;
+  
+  // saturation: -100 to +100 → 0% to 200%
+  const saturationPct = 100 + saturationVal;
+  
+  // Filter anwenden
+  previewCtx.filter = `brightness(${brightnessPct}%) contrast(${contrastPct}%) saturate(${saturationPct}%)`;
+  
+  // Bild zeichnen
+  previewCtx.drawImage(originalImage, 0, 0);
+  
+  // Filter zurücksetzen für nächsten Draw
+  previewCtx.filter = 'none';
+}
+
 if (brightness) {
   brightness.addEventListener('input', (e) => {
     brightnessValue.textContent = e.target.value;
+    updatePreview();
   });
 }
 
 if (contrast) {
   contrast.addEventListener('input', (e) => {
     contrastValue.textContent = e.target.value;
+    updatePreview();
   });
 }
 
 if (saturation) {
   saturation.addEventListener('input', (e) => {
     saturationValue.textContent = e.target.value;
+    updatePreview();
   });
 }
 
 if (sharpness) {
   sharpness.addEventListener('input', (e) => {
     sharpnessValue.textContent = e.target.value;
+    // Sharpness wird nicht live angezeigt (nur Server-Rendering)
   });
 }
 
