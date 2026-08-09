@@ -18,7 +18,7 @@ Prompt -> GPU-Generierung (RunPod/Vast.ai) -> Post-Processing (Upscale/CMYK/Vect
 ```
 
 **Team:** 2 Personen — A (Backend/Infra/Security), B (Content/Produkt/Vertrieb)
-**Domain:** datemyhobby.com/printbuddy
+**Domain:** printbuddy.datemyhobby.com
 **Runtime:** Django 4.2 LTS · Python 3.11 · PostgreSQL 15 · Redis 7 · Celery 5
 
 ---
@@ -511,7 +511,7 @@ echo "Deploy $(git rev-parse --short HEAD) abgeschlossen"
 # Django
 SECRET_KEY=                          # >= 50 Zeichen, zufällig
 DEBUG=False                          # True nur lokal
-ALLOWED_HOSTS=datemyhobby.com
+ALLOWED_HOSTS=printbuddy.datemyhobby.com
 DATABASE_URL=postgres://user:pass@localhost:5432/printbuddy
 
 # Feature Flags
@@ -537,7 +537,7 @@ VASTAI_API_KEY=
 # Etsy
 ETSY_API_KEY=
 ETSY_API_SECRET=
-ETSY_REDIRECT_URI=https://datemyhobby.com/etsy/callback/
+ETSY_REDIRECT_URI=https://printbuddy.datemyhobby.com/etsy/callback/
 
 # Email
 EMAIL_HOST=smtp.mailgun.org
