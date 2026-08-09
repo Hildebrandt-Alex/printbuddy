@@ -483,7 +483,7 @@ def product_wizard(request, job_id):
         assets.append({
             "asset_id": asset_id,
             "filename": filename,
-            "url": f"/nas/exports/preview/{filename}",
+            "url": f"/media/exports/preview/{filename}",
         })
     
     if request.method == "POST":
