@@ -76,6 +76,9 @@ def _generate_mock_image(job_id: str, width: int, height: int) -> Path:
         fill=(180, 160, 255),
     )
     img.save(output_path, "PNG")
+    # NFS-Permissions fix für Nginx-Zugriff
+    import os
+    os.chmod(output_path, 0o666)
     logger.info("[MOCK] Placeholder-PNG erzeugt: %s", output_path)
     return output_path, asset_id
 
@@ -384,6 +387,9 @@ def generate_image(self, job_id: str):
                 if "," in image_data:
                     image_data = image_data.split(",", 1)[1]
                 output_path.write_bytes(base64.b64decode(image_data))
+                # NFS-Permissions fix für Nginx-Zugriff
+                import os
+                os.chmod(output_path, 0o666)
             elif isinstance(out, dict) and (out.get("image_url") or out.get("url") or out.get("result")):
                 image_url = out.get("image_url") or out.get("url") or out.get("result")
                 img_resp  = req.get(image_url, timeout=60)
@@ -394,6 +400,9 @@ def generate_image(self, job_id: str):
                 pil_img = PilImage.open(io.BytesIO(img_resp.content)).convert("RGB")
                 output_path = output_path.with_suffix(".png")
                 pil_img.save(output_path, "PNG")
+                # NFS-Permissions fix für Nginx-Zugriff
+                import os
+                os.chmod(output_path, 0o666)
             
             elif isinstance(out, str):
                 # SDXL Worker: "data:image/png;base64,iVBORw0KG..." -> strip prefix
@@ -403,12 +412,18 @@ def generate_image(self, job_id: str):
                     if "," in image_data:
                         image_data = image_data.split(",", 1)[1]
                 output_path.write_bytes(base64.b64decode(image_data))
+                # NFS-Permissions fix für Nginx-Zugriff
+                import os
+                os.chmod(output_path, 0o666)
             elif isinstance(result, dict) and result.get("images"):
                 # Manche Modelle liefern {"images": ["base64..."]}
                 image_data = result["images"][0]
                 if "," in image_data:
                     image_data = image_data.split(",", 1)[1]
                 output_path.write_bytes(base64.b64decode(image_data))
+                # NFS-Permissions fix für Nginx-Zugriff
+                import os
+                os.chmod(output_path, 0o666)
             else:
                 raise ValueError(f"Unbekanntes RunPod Output-Format: {type(out)}: {str(out)[:300]}")
 
@@ -526,6 +541,9 @@ def upscale_image(self, job_id: str):
         asset_id = uuid.uuid4()
         output_path = raw_dir / f"{asset_id}_4x.png"
         output_path.write_bytes(base64.b64decode(upscaled_b64))
+        # NFS-Permissions fix für Nginx-Zugriff
+        import os
+        os.chmod(output_path, 0o666)
 
         logger.info("[RunPod] Upscale fertig: %s", output_path)
         _save_step(job_id, "upscale", "done", asset_id=asset_id)

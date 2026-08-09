@@ -117,6 +117,9 @@ def pod_export(self, job_id: str):
                 img = img.convert("RGB")
             # DPI-Metadaten setzen (300dpi für Print)
             img.save(output_path, "PNG", dpi=(300, 300))
+            # NFS-Permissions fix für Nginx-Zugriff
+            import os
+            os.chmod(output_path, 0o666)
 
         logger.info("[pod_export] Fertig: %s", output_path)
         _save_step(job_id, "pod_export", "done", asset_id=asset_id)
@@ -152,6 +155,9 @@ def preview_export(self, job_id: str):
             # Auf max 1200px skalieren
             img.thumbnail((1200, 1200), Image.LANCZOS)
             img.save(output_path, "JPEG", quality=88, dpi=(72, 72))
+            # NFS-Permissions fix für Nginx-Zugriff
+            import os
+            os.chmod(output_path, 0o666)
 
         logger.info("[preview_export] Fertig: %s", output_path)
         _save_step(job_id, "preview_export", "done", asset_id=asset_id)
@@ -206,6 +212,9 @@ def cmyk_export(self, job_id: str):
             from PIL import ImageOps
             img_with_bleed = ImageOps.expand(img_cmyk, border=bleed_px, fill=(0, 0, 0, 0))
             img_with_bleed.save(tiff_path, "TIFF", dpi=(300, 300), compression="lzw")
+            # NFS-Permissions fix für Nginx-Zugriff
+            import os
+            os.chmod(tiff_path, 0o666)
 
         logger.info("[cmyk_export] TIFF gespeichert: %s", tiff_path)
 
@@ -229,6 +238,11 @@ def cmyk_export(self, job_id: str):
             # PDF-Fehler ist nicht kritisch wenn TIFF da ist
             if not pdf_path.exists():
                 raise RuntimeError(f"Ghostscript fehlgeschlagen: {result.stderr[:200]}")
+        
+        # NFS-Permissions fix für PDF
+        if pdf_path.exists():
+            import os
+            os.chmod(pdf_path, 0o666)
 
         logger.info("[cmyk_export] PDF gespeichert: %s", pdf_path)
         _save_step(job_id, "cmyk_export", "done", asset_id=asset_id)
@@ -299,6 +313,10 @@ def vectorize_image(self, job_id: str):
 
         if not svg_path.exists():
             raise FileNotFoundError(f"SVG nicht erzeugt: {svg_path}")
+        
+        # NFS-Permissions fix für Nginx-Zugriff
+        import os
+        os.chmod(svg_path, 0o666)
 
         logger.info("[vectorize_image] SVG gespeichert: %s", svg_path)
         _save_step(job_id, "vectorize", "done", asset_id=asset_id)
@@ -502,6 +520,9 @@ def adjust_colors(self, job_id: str):
             
             # Speichern als PNG (verlustfrei)
             img.save(output_path, "PNG")
+            # NFS-Permissions fix für Nginx-Zugriff
+            import os
+            os.chmod(output_path, 0o666)
 
         logger.info("[adjust_colors] Fertig: %s", output_path)
         _save_step(job_id, "quick_adjust", "done", asset_id=asset_id)
@@ -584,6 +605,9 @@ def crop_image(self, job_id: str):
             
             cropped = img.crop(box)
             cropped.save(output_path, "PNG")
+            # NFS-Permissions fix für Nginx-Zugriff
+            import os
+            os.chmod(output_path, 0o666)
 
         logger.info("[crop_image] Fertig: %s", output_path)
         _save_step(job_id, "crop", "done", asset_id=asset_id)
