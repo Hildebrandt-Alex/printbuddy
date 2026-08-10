@@ -336,10 +336,25 @@ def job_results(request, job_id):
         
         # Quick Adjust und Crop Assets sind im raw/ Verzeichnis
         if step.step_type == "quick_adjust":
-            # Filename mit Timestamp (falls vorhanden)
+            # Filename mit Timestamp (falls vorhanden) - mit Backward-Compatibility
             timestamp = step.completed_at.strftime("%Y%m%d_%H%M%S") if step.completed_at else "unknown"
-            filename = f"{asset_id}_adjusted_{timestamp}.png"
-            filepath = raw_dir / filename
+            filename_new = f"{asset_id}_adjusted_{timestamp}.png"
+            filepath_new = raw_dir / filename_new
+            
+            # Fallback auf alten Dateinamen ohne Timestamp (für alte Quick Adjusts)
+            filename_old = f"{asset_id}_adjusted.png"
+            filepath_old = raw_dir / filename_old
+            
+            if filepath_new.exists():
+                filename = filename_new
+                filepath = filepath_new
+            elif filepath_old.exists():
+                filename = filename_old
+                filepath = filepath_old
+            else:
+                # Wenn keine Datei existiert, verwende neuen Namen (wird bei neuem Adjust erstellt)
+                filename = filename_new
+                filepath = filepath_new
             
             # Badge mit Versionsnummer
             adjust_number = job.steps.filter(
