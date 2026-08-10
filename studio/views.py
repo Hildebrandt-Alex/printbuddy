@@ -336,9 +336,18 @@ def job_results(request, job_id):
         
         # Quick Adjust und Crop Assets sind im raw/ Verzeichnis
         if step.step_type == "quick_adjust":
-            filename = f"{asset_id}_adjusted.png"
+            # Filename mit Timestamp (falls vorhanden)
+            timestamp = step.completed_at.strftime("%Y%m%d_%H%M%S") if step.completed_at else "unknown"
+            filename = f"{asset_id}_adjusted_{timestamp}.png"
             filepath = raw_dir / filename
-            asset_type = "🎨 Adjusted"
+            
+            # Badge mit Versionsnummer
+            adjust_number = job.steps.filter(
+                step_type="quick_adjust",
+                status="done",
+                completed_at__lte=step.completed_at
+            ).count() if step.completed_at else 1
+            asset_type = f"🎨 Adjusted #{adjust_number}"
         elif step.step_type == "crop":
             filename = f"{asset_id}_cropped.png"
             filepath = raw_dir / filename
@@ -853,33 +862,52 @@ def create_enhancement_job(request, job_id):
         messages.error(request, "Bitte mindestens einen Enhancement-Schritt auswählen.")
         return redirect('studio:job_results', job_id=job_id)
     
-    # Finde latest preview asset
-    try:
-        preview_step = JobStep.objects.filter(
-            job=original_job,
-            step_type='preview_export',
-            status='done'
-        ).order_by('-completed_at').first()
-        
-        if not preview_step or not preview_step.output_asset_id:
-            messages.error(request, "Kein Preview-Asset gefunden.")
+    # Source Asset Selection (User-wählbar via POST)
+    source_asset_id = request.POST.get('source_asset')
+    
+    if not source_asset_id:
+        # Fallback: Letztes Asset (beliebiger Typ)
+        try:
+            last_step = JobStep.objects.filter(
+                job=original_job,
+                step_type__in=["preview_export", "quick_adjust", "crop"],
+                status="done"
+            ).exclude(output_asset_id__isnull=True).order_by('-completed_at').first()
+            
+            if not last_step:
+                messages.error(request, "Kein Asset gefunden für Enhancement.")
+                return redirect('studio:job_results', job_id=job_id)
+            
+            source_asset_id = str(last_step.output_asset_id)
+            logger.info(f"[Enhancement] Fallback zu letztem Asset: {source_asset_id}")
+        except Exception as e:
+            logger.error(f"[create_enhancement_job] Fehler: {e}")
+            messages.error(request, "Fehler beim Laden des Assets.")
             return redirect('studio:job_results', job_id=job_id)
-        
-        source_asset_id = str(preview_step.output_asset_id)
-    except Exception as e:
-        logger.error(f"[create_enhancement_job] Fehler beim Finden des Assets: {e}")
-        messages.error(request, "Fehler beim Laden des Preview-Assets.")
+    
+    # Validierung: Asset existiert und ist done
+    source_step = JobStep.objects.filter(
+        job=original_job,
+        output_asset_id=source_asset_id,
+        status="done"
+    ).first()
+    
+    if not source_step:
+        messages.error(request, "Gewähltes Asset nicht gefunden.")
         return redirect('studio:job_results', job_id=job_id)
     
-    # Enhancement-Only Template finden
+    logger.info(f"[Enhancement] Verwende {source_step.step_type} Asset: {source_asset_id}")
+    
+    # Enhancement-Only Template finden (robust via semantic field)
     enhancement_template = PipelineTemplate.objects.filter(
-        name__icontains="Enhancement Only"
+        step_generate=False,
+        is_active=True
     ).first()
     
     if not enhancement_template:
         messages.error(
             request, 
-            "Enhancement-Template nicht gefunden. Bitte 'python manage.py create_enhancement_templates' ausführen."
+            "Enhancement-Template nicht gefunden. Bitte 'python create_enhancement_template.py' ausführen."
         )
         return redirect('studio:job_results', job_id=job_id)
     

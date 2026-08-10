@@ -484,9 +484,12 @@ def adjust_colors(self, job_id: str):
         source = _get_latest_asset(job_id, prefer_upscaled=True)
         
         # Output-Pfad in raw/ (adjusted images bleiben hochauflösend)
+        # Mit Timestamp für Versionierung
         output_dir = _get_output_dir("raw")
         asset_id = uuid.uuid4()
-        output_path = output_dir / f"{asset_id}_adjusted.png"
+        from datetime import datetime
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        output_path = output_dir / f"{asset_id}_adjusted_{timestamp}.png"
 
         with Image.open(source) as img:
             if img.mode not in ("RGB", "RGBA"):
