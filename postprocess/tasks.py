@@ -76,16 +76,39 @@ def _get_latest_asset(job_id: str, prefer_upscaled: bool = True) -> Path:
                 if source_asset_id:
                     # Enhancement-Mode: Nutze Preview-Asset als Input
                     logger.info(f"[_get_latest_asset] Enhancement-Mode: source_asset_id={source_asset_id}")
+                    
+                    # 1. Preview-Export (Standard)
                     preview_dir = _get_output_dir("exports/preview")
-                    source_path = preview_dir / f"{source_asset_id}.jpg"
-                    if source_path.exists():
-                        return source_path
-                    # Fallback: raw-Verzeichnis
+                    preview_path = preview_dir / f"{source_asset_id}_preview.jpg"
+                    if preview_path.exists():
+                        logger.info(f"[_get_latest_asset] Gefunden: preview")
+                        return preview_path
+                    
+                    # 2. Quick Adjust (mit Timestamp - neueste Version)
                     raw_dir = _get_output_dir("raw")
-                    source_path = raw_dir / f"{source_asset_id}.png"
-                    if source_path.exists():
-                        return source_path
-                    logger.warning(f"[_get_latest_asset] source_asset_id {source_asset_id} nicht gefunden")
+                    adjusted_files = sorted(
+                        raw_dir.glob(f"{source_asset_id}_adjusted_*.png"),
+                        key=lambda p: p.stat().st_mtime,
+                        reverse=True
+                    )
+                    if adjusted_files:
+                        logger.info(f"[_get_latest_asset] Gefunden: adjusted ({len(adjusted_files)} Versionen, neueste: {adjusted_files[0].name})")
+                        return adjusted_files[0]
+                    
+                    # 3. Cropped
+                    cropped_path = raw_dir / f"{source_asset_id}_cropped.png"
+                    if cropped_path.exists():
+                        logger.info(f"[_get_latest_asset] Gefunden: cropped")
+                        return cropped_path
+                    
+                    # 4. Raw (alter Fallback ohne Suffix)
+                    raw_path = raw_dir / f"{source_asset_id}.png"
+                    if raw_path.exists():
+                        logger.info(f"[_get_latest_asset] Gefunden: raw")
+                        return raw_path
+                    
+                    # Nichts gefunden
+                    raise FileNotFoundError(f"Asset {source_asset_id} nicht gefunden (kein preview/adjusted/cropped/raw)")
             except (json.JSONDecodeError, TypeError):
                 pass
     except Job.DoesNotExist:
