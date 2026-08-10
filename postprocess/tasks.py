@@ -570,6 +570,12 @@ def adjust_colors(self, job_id: str):
 
         logger.info("[adjust_colors] Fertig: %s", output_path)
         _save_step(job_id, "quick_adjust", "done", asset_id=asset_id)
+        
+        # WICHTIG: Preview-Export nach Adjustment triggern damit neue Version in Galerie erscheint
+        logger.info("[adjust_colors] Trigger preview_export für adjusted Asset %s", asset_id)
+        from postprocess.tasks import preview_export
+        preview_export.apply_async(args=[job_id], queue='cpu_queue')
+        
         return str(asset_id)
 
     except Exception as exc:

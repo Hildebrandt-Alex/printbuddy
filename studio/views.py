@@ -318,12 +318,11 @@ def job_results(request, job_id):
     raw_dir = Path(getattr(settings, "NAS_BASE_PATH", "local_nas")) / "raw"
     
     # Zeige Preview UND Quick-Adjust/Crop Assets
+    # WICHTIG: Include pending/running steps damit neue Adjustments sofort sichtbar sind
     preview_steps = job.steps.filter(
         step_type__in=["preview_export", "quick_adjust", "crop"],
-        status="done"
-    ).exclude(
-        output_asset_id__isnull=True
-    ).order_by('-completed_at')
+        status__in=["pending", "running", "done"]
+    ).order_by('-created_at')
 
     # Prüfe welche Assets bereits als GalleryImage vorgemerkt sind
     from gallery.models import GalleryImage
@@ -332,6 +331,22 @@ def job_results(request, job_id):
 
     assets = []
     for step in preview_steps:
+        # Pending/running steps haben noch kein output_asset_id
+        if not step.output_asset_id:
+            # Zeige "Processing..." Badge für pending/running steps
+            assets.append({
+                "asset_id": None,
+                "filename": None,
+                "directory": None,
+                "exists": False,
+                "gallery_status": "processing",
+                "gallery_status_label": "⏳ Wird verarbeitet...",
+                "asset_type": "🎨 Quick Adjust" if step.step_type == "quick_adjust" else "Processing",
+                "is_processing": True,
+                "step_status": step.status,
+            })
+            continue
+        
         asset_id = str(step.output_asset_id)
         
         # Quick Adjust und Crop Assets sind im raw/ Verzeichnis

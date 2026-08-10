@@ -78,7 +78,16 @@
   <div class="card" style="padding:0;overflow:hidden">
     <!-- Preview-Bild -->
     <div style="background:var(--surface2);aspect-ratio:1;display:flex;align-items:center;justify-content:center;position:relative">
-      {% if asset.exists %}
+      {% if asset.is_processing %}
+      <!-- Processing Badge für pending/running steps -->
+      <div style="display:flex;flex-direction:column;align-items:center;gap:1rem;padding:2rem">
+        <div style="width:48px;height:48px;border:4px solid rgba(var(--accent-rgb), 0.2);border-top-color:var(--accent);border-radius:50%;animation:spin 1s linear infinite"></div>
+        <div style="text-align:center">
+          <p style="font-size:.9rem;font-weight:600;margin-bottom:.25rem">{{ asset.asset_type }}</p>
+          <p style="font-size:.75rem;color:var(--text-muted)">{{ asset.gallery_status_label }}</p>
+        </div>
+      </div>
+      {% elif asset.exists %}
       <img src="/media/{{ asset.directory }}/{{ asset.filename }}" alt="{{ asset.asset_id }}"
            style="width:100%;height:100%;object-fit:cover">
       
