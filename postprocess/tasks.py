@@ -22,7 +22,25 @@ def _save_step(job_id: str, step_type: str, status: str, asset_id=None, error_ms
     from jobs.models import JobStep
 
     try:
-        step = JobStep.objects.get(job_id=job_id, step_type=step_type)
+        # Bei mehreren Steps gleichen Typs (z.B. Quick Adjust): neuesten nehmen
+        # Priorität: pending (gerade erstellt) > letzter insgesamt
+        step = JobStep.objects.filter(
+            job_id=job_id, 
+            step_type=step_type,
+            status='pending'
+        ).order_by('-created_at').first()
+        
+        if not step:
+            # Fallback: neuester Step dieses Typs mit beliebigem Status
+            step = JobStep.objects.filter(
+                job_id=job_id,
+                step_type=step_type
+            ).order_by('-created_at').first()
+        
+        if not step:
+            logger.warning("JobStep %s/%s nicht gefunden", job_id, step_type)
+            return
+        
         step.status = status
         if status == "running":
             step.started_at = timezone.now()
@@ -35,8 +53,8 @@ def _save_step(job_id: str, step_type: str, status: str, asset_id=None, error_ms
         step.save(update_fields=[
             "status", "started_at", "completed_at", "output_asset_id", "error_msg"
         ])
-    except JobStep.DoesNotExist:
-        logger.warning("JobStep %s/%s nicht gefunden", job_id, step_type)
+    except Exception as e:
+        logger.error("Fehler in _save_step: %s", e)
 
 
 def _get_latest_asset(job_id: str, prefer_upscaled: bool = True) -> Path:
