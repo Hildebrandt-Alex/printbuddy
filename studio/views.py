@@ -345,10 +345,21 @@ def job_results(request, job_id):
             filename_old = f"{asset_id}_adjusted.png"
             filepath_old = raw_dir / filename_old
             
-            if filepath_new.exists():
+            # NFS kann PermissionError werfen statt False bei nicht-existierenden Dateien
+            try:
+                file_exists_new = filepath_new.exists()
+            except (PermissionError, OSError):
+                file_exists_new = False
+            
+            try:
+                file_exists_old = filepath_old.exists()
+            except (PermissionError, OSError):
+                file_exists_old = False
+            
+            if file_exists_new:
                 filename = filename_new
                 filepath = filepath_new
-            elif filepath_old.exists():
+            elif file_exists_old:
                 filename = filename_old
                 filepath = filepath_old
             else:
