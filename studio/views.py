@@ -396,13 +396,20 @@ def job_results(request, job_id):
             status = "not_selected"
             status_label = None
         
+        # Bestimme Verzeichnis für URL-Generierung
+        if step.step_type in ["quick_adjust", "crop"]:
+            directory = "raw"
+        else:
+            directory = "exports/preview"
+        
         assets.append({
             "asset_id": asset_id,
             "filename": filename,
+            "directory": directory,  # Für korrekte URL-Generierung im Template
             "exists": file_exists,
             "gallery_status": status,
             "gallery_status_label": status_label,
-            "asset_type": asset_type,  # Zeige Typ (Preview / 🎨 Adjusted / ✂️ Cropped)
+            "asset_type": asset_type,  # Zeige Typ (Preview / 🎨 Adjusted #1 / ✂️ Cropped)
         })
 
     return render(request, "studio/job_results.html", {"job": job, "assets": assets})
