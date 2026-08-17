@@ -407,7 +407,54 @@ def job_results(request, job_id):
         })
     
     # ═══════════════════════════════════════════════════════════════════
-    # 2. ADJUSTMENTS: Quick Adjust & Crop (chronologisch)
+    # 2. ENHANCEMENT JOBS: Wenn kein Original → Zeige Preview-Exports
+    # ═══════════════════════════════════════════════════════════════════
+    if not original_step:
+        # Enhancement Jobs haben keine generate/upscale → zeige Preview-Exports
+        preview_steps = job.steps.filter(step_type="preview_export", status="done")
+        for step in preview_steps:
+            if not step.output_asset_id:
+                continue
+            
+            asset_id = str(step.output_asset_id)
+            filename = f"{asset_id}_preview.jpg"
+            filepath = preview_dir / filename
+            
+            try:
+                file_exists = filepath.exists()
+            except (PermissionError, OSError):
+                file_exists = True
+            
+            # Gallery Status Check
+            gallery_img = None
+            for img in existing_gallery_images:
+                if asset_id in str(img.file_path.name):
+                    gallery_img = img
+                    break
+            
+            if gallery_img:
+                if gallery_img.is_public:
+                    status = "online"
+                    status_label = "✓ Online in Galerie"
+                else:
+                    status = "vorgemerkt"
+                    status_label = "● Vorgemerkt (wartet auf Admin-Freigabe)"
+            else:
+                status = "not_selected"
+                status_label = None
+            
+            assets.append({
+                "asset_id": asset_id,
+                "filename": filename,
+                "directory": f"jobs/{job.id}/exports/preview",
+                "exists": file_exists,
+                "gallery_status": status,
+                "gallery_status_label": status_label,
+                "asset_type": "📦 Enhancement Export",
+            })
+    
+    # ═══════════════════════════════════════════════════════════════════
+    # 3. ADJUSTMENTS: Quick Adjust & Crop (chronologisch)
     # ═══════════════════════════════════════════════════════════════════
     adjustment_steps = job.steps.filter(
         step_type__in=["quick_adjust", "crop"],
