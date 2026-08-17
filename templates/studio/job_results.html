@@ -451,10 +451,10 @@ function initLivePreview() {
   
   previewCtx = previewCanvas.getContext('2d', { willReadFrequently: true });
   
-  // Lade erstes Preview-Bild (job-basierte Struktur: /media/jobs/{id}/exports/preview/)
-  const firstPreviewImg = document.querySelector('[src*="exports/preview/"]');
+  // Fix: Suche nach IRGENDEINEM Asset-Bild (flexibler Selector)
+  const firstPreviewImg = document.querySelector('.card img[src*="/media/jobs/"]');
   if (!firstPreviewImg) {
-    console.warn('Kein Preview-Bild gefunden für Live-Preview');
+    console.warn('Kein Asset-Bild gefunden für Live-Preview');
     return;
   }
   
@@ -465,12 +465,12 @@ function initLivePreview() {
   originalImage.crossOrigin = 'anonymous';
   originalImage.onload = () => {
     // Canvas-Größe an Bild anpassen
-    previewCanvas.width = originalImage.width;
-    previewCanvas.height = originalImage.height;
+    previewCanvas.width = originalImage.naturalWidth;
+    previewCanvas.height = originalImage.naturalHeight;
     updatePreview();
   };
   originalImage.onerror = () => {
-    console.error('Fehler beim Laden des Preview-Bildes');
+    console.error('Fehler beim Laden des Preview-Bildes:', imgUrl);
   };
   originalImage.src = imgUrl;
 }
