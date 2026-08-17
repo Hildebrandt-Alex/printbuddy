@@ -314,6 +314,65 @@ created_at:   DateTimeField(auto_now_add=True)
 | `notify_fulfillment_partner` | `partners` | `cpu_queue` | Order bezahlt | E-Mail + optional Webhook an zugewiesenen Partner |
 | `push_order_to_channel` | `channels` | `cpu_queue` | Order-Status-Update | Bestellbestätigung an Channel-Webhook pushen |
 | `generate_all_mockups` | `postprocess` | `cpu_queue` | Asset-Selektion (Studio) | Printful Mockup API für alle ImageProduct-Einträge eines Bildes aufrufen; setzt mockup_status=ready |
+| `adjust_colors` | `postprocess` | `cpu_queue` | Quick Adjust Button | PIL Farb-/Helligkeits-/Kontrast-Anpassungen; erstellt <uuid>_adjusted_<timestamp>.png in raw/ |
+
+### Quick Adjust + Enhancement Workflow
+
+**Quick Adjust Flow (Nicht-destruktiv):**
+```
+User auf job_results Page -> Klickt "Quick Adjust" Button
+  -> quick_adjust_image View (studio/views.py:1037)
+  -> Erstellt JobStep(step_type='quick_adjust', params={brightness, contrast, saturation, sharpness})
+  -> adjust_colors Task (postprocess/tasks.py:486)
+     -> Lädt _get_latest_asset (raw/<generate_or_upscale_asset>.png)
+     -> Wendet PIL-Adjustments an (brightness, contrast, saturation, sharpness)
+     -> Speichert: raw/<neue_uuid>_adjusted_<timestamp>.png
+     -> _save_step setzt output_asset_id = neue_uuid
+     -> Trigger preview_export für Web-Preview
+  -> job_results View zeigt adjusted Bild mit Badge "🎨 Adjusted #N"
+```
+
+**WICHTIG:**
+- Quick Adjust basiert **immer** auf Original-Job-Asset (generate oder upscale)
+- Jeder Adjust bekommt **eigene UUID** (keine Überschreibung)
+- Dateinamen mit Timestamp für Versionierung: `<uuid>_adjusted_20260810_022143.png`
+- JobStep.params speichert Adjustment-Werte (Logs/Debug)
+- Kein source_asset_id nötig (ist implizit der Job-Generate-Asset)
+
+**Enhancement Flow (Re-uses Assets):**
+```
+User wählt adjusted/preview/cropped Bild -> "Enhancement" Button
+  -> create_enhancement_job View (studio/views.py:911)
+     -> Liest source_asset aus POST['source_asset'] (Asset-ID aus Dropdown)
+     -> Erstellt neuen Job mit:
+        - pipeline_template: step_generate=False (kein Generate!)
+        - status='queued' (automatisch approved, ADR-11 Ausnahme)
+        - notes JSON: {"source_asset_id": "<uuid>", "is_enhancement": True}
+     -> Startet Celery Chain
+
+Enhancement-Pipeline:
+  -> upscale Task
+     -> _get_latest_asset(enhancement_job_id, prefer_upscaled=True)
+     -> Liest notes.source_asset_id ✅
+     -> Enhancement-Mode aktiv (postprocess/tasks.py:75-109)
+     -> Sucht Datei in dieser Reihenfolge:
+        1. exports/preview/<uuid>_preview.jpg (Standard Preview)
+        2. raw/<uuid>_adjusted_*.png (Quick Adjusted, neueste Version via glob+sort)
+        3. raw/<uuid>_cropped.png (Cropped)
+        4. raw/<uuid>.png (Raw Generate)
+     -> Lädt korrekte Source-Datei
+     -> Upscale mit Real-ESRGAN -> raw/<neue_uuid>_4x.png
+  -> Optional: vectorize, cmyk_export (je nach Template)
+  -> preview_export -> exports/preview/<upscale_uuid>_preview.jpg
+  -> User sieht Enhanced Asset in Enhancement-Job-Results
+```
+
+**KRITISCH:**
+- Enhancement-Jobs MÜSSEN `notes.source_asset_id` setzen (View tut das, Zeile 989)
+- _get_latest_asset hat zwei Modi: Normal (Lines 126+) und Enhancement (Lines 75-109)
+- Ohne notes.source_asset_id würde Enhancement fehlschlagen (kein generate Step vorhanden)
+
+**Asset-Zuordnung:** Jeder JobStep hat genau ein `output_asset_id` -> ein Asset gehört einem Step -> ein Step gehört einem Job. Kein Cross-Job-Bleed möglich (außer durch fehlerhafte manuelle Zuweisungen).
 
 ### Pipeline Chain (jobs/services.py)
 
