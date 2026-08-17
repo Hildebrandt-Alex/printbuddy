@@ -577,8 +577,9 @@ def upscale_image(self, job_id: str):
         with open(source_path, "rb") as f:
             image_b64 = base64.b64encode(f.read()).decode()
 
-        result = runpod.run_sync(
-            endpoint_id=settings.RUNPOD_UPSCALE_ENDPOINT,
+        # Fix: runpod.Endpoint().run_sync() ist die korrekte API
+        endpoint = runpod.Endpoint(settings.RUNPOD_UPSCALE_ENDPOINT)
+        result = endpoint.run_sync(
             input={"image": image_b64, "scale": 4},
             timeout=180,
         )
