@@ -322,7 +322,7 @@ def job_results(request, job_id):
     preview_steps = job.steps.filter(
         step_type__in=["preview_export", "quick_adjust", "crop"],
         status__in=["pending", "running", "done"]
-    ).order_by('-created_at')
+    ).order_by('-id')  # Newest first (JobStep has no created_at, use id instead)
 
     # Prüfe welche Assets bereits als GalleryImage vorgemerkt sind
     from gallery.models import GalleryImage
