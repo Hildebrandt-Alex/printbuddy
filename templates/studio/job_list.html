@@ -53,11 +53,22 @@
         <td><span class="badge badge-{{ job.status }}">{{ job.get_status_display }}</span></td>
         <td style="color:var(--text-muted)">{{ job.created_at|date:"d.m.Y H:i" }}</td>
         <td>
-          {% if job.status == "done" %}
-            <a href="{% url 'studio:job_results' job.id %}" class="btn btn-secondary btn-sm">Ergebnisse</a>
-          {% else %}
-            <a href="{% url 'studio:job_detail' job.id %}" class="btn btn-secondary btn-sm">Details</a>
-          {% endif %}
+          <div style="display:flex;gap:.25rem">
+            {% if job.status == "done" %}
+              <a href="{% url 'studio:job_results' job.id %}" class="btn btn-secondary btn-sm">Ergebnisse</a>
+            {% elif job.status in 'queued,running' %}
+              <a href="{% url 'studio:job_detail' job.id %}" class="btn btn-secondary btn-sm">Details</a>
+              <form method="post" action="{% url 'studio:cancel_job' job.id %}" style="display:inline" 
+                    onsubmit="return confirm('Job stoppen?')">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-secondary btn-sm" style="background:var(--red);color:white" title="Job stoppen">
+                  ⏹
+                </button>
+              </form>
+            {% else %}
+              <a href="{% url 'studio:job_detail' job.id %}" class="btn btn-secondary btn-sm">Details</a>
+            {% endif %}
+          </div>
         </td>
       </tr>
     {% endfor %}

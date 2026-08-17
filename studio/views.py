@@ -302,6 +302,28 @@ def job_status_partial(request, job_id):
     return render(request, "studio/partials/job_status.html", {"job": job, "steps": steps})
 
 
+@require_POST
+@studio_required
+def cancel_job(request, job_id):
+    """Cancel a queued or running job."""
+    job = get_object_or_404(Job, id=job_id, created_by=request.user)
+    
+    # Nur Jobs in queued/running können gecancelt werden
+    if job.status not in ['queued', 'running']:
+        messages.error(request, f"Job kann nicht gestoppt werden (Status: {job.get_status_display()})")
+        return redirect('studio:job_detail', job_id=job.id)
+    
+    # Job Status auf cancelled setzen
+    job.status = 'cancelled'
+    job.save()
+    
+    # Alle pending/running Steps auf skipped setzen
+    job.steps.filter(status__in=['pending', 'running']).update(status='skipped')
+    
+    messages.success(request, f'Job "{job.title}" wurde gestoppt.')
+    return redirect('studio:job_list')
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Job-Ergebnisse
 # ─────────────────────────────────────────────────────────────────────────────

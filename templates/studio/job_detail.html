@@ -12,6 +12,17 @@
   </div>
   <div style="display:flex;gap:.5rem">
     <a href="{% url 'studio:job_list' %}" class="btn btn-secondary">← Jobs</a>
+    
+    {% if job.status in 'queued,running' %}
+    <form method="post" action="{% url 'studio:cancel_job' job.id %}" style="display:inline" 
+          onsubmit="return confirm('Job wirklich stoppen?')">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-secondary" style="background:var(--red);color:white">
+        ⏹ Job stoppen
+      </button>
+    </form>
+    {% endif %}
+    
     {% if job.status == "done" %}
     <a href="{% url 'studio:job_results' job.id %}" class="btn btn-primary">Ergebnisse →</a>
     {% endif %}
