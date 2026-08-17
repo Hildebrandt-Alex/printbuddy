@@ -10,10 +10,49 @@ from django.utils import timezone
 logger = logging.getLogger(__name__)
 
 
-def _get_output_dir(subdir: str) -> Path:
-    """Gibt absoluten Pfad zum NAS-Ausgabeverzeichnis zurück."""
+def _get_output_dir(job_id: str, step_type: str) -> Path:
+    """
+    Job-basierte Output-Verzeichnis-Struktur.
+    
+    Struktur:
+        /mnt/agency_nas/jobs/{job_id}/
+            original/   <- generate, upscale, face_swap
+            adjusted/   <- quick_adjust  
+            crop/       <- crop
+            exports/    <- alle Export-Steps
+    
+    Args:
+        job_id: Job UUID (REQUIRED)
+        step_type: JobStep.step_type (REQUIRED)
+    
+    Returns:
+        Path zum Output-Ordner (erstellt falls nicht vorhanden)
+    """
+    if not job_id or not step_type:
+        raise ValueError("job_id und step_type sind REQUIRED")
+    
     base = Path(getattr(settings, "NAS_BASE_PATH", "/mnt/agency_nas"))
-    path = base / subdir
+    job_base = base / "jobs" / str(job_id)
+    
+    # Step-Type → Ordner Mapping
+    if step_type in ("generate", "upscale", "face_swap"):
+        path = job_base / "original"
+    elif step_type == "quick_adjust":
+        path = job_base / "adjusted"
+    elif step_type == "crop":
+        path = job_base / "crop"
+    elif step_type == "preview_export":
+        path = job_base / "exports" / "preview"
+    elif step_type == "pod_export":
+        path = job_base / "exports" / "pod"
+    elif step_type == "cmyk_export":
+        path = job_base / "exports" / "cmyk"
+    elif step_type == "vectorize":
+        path = job_base / "exports" / "vector"
+    else:
+        logger.warning(f"Unbekannter step_type '{step_type}', verwende /other/")
+        path = job_base / "other"
+    
     path.mkdir(parents=True, exist_ok=True)
     return path
 
@@ -63,7 +102,7 @@ def _generate_mock_image(job_id: str, width: int, height: int) -> Path:
     """Erzeugt ein farbiges Placeholder-PNG ohne RunPod-Call."""
     from PIL import Image, ImageDraw, ImageFont
 
-    output_dir = _get_output_dir("raw")
+    output_dir = _get_output_dir(str(job_id), "generate")
     asset_id = uuid.uuid4()
     output_path = output_dir / f"{asset_id}.png"
 
@@ -367,7 +406,7 @@ def generate_image(self, job_id: str):
 
             # Bild dekodieren + speichern
             logger.info(f"[RunPod] Dekodiere Output — Type: {type(result)}, Keys: {list(result.keys()) if isinstance(result, dict) else 'N/A'}")
-            output_dir = _get_output_dir("raw")
+            output_dir = _get_output_dir(str(job_id), "generate")
             asset_id   = uuid.uuid4()
             output_path = output_dir / f"{asset_id}.png"
 
@@ -475,22 +514,34 @@ def upscale_image(self, job_id: str):
         
         # Input-File bestimmen
         if source_asset_id:
-            # Enhancement-Job: Nutze source_asset aus Preview
+            # Enhancement-Job: Nutze source_asset aus anderem Job
             logger.info(f"[upscale_image] Enhancement-Mode: source_asset_id={source_asset_id}")
             
+            # Finde source_job_id via JobStep
+            source_step = JobStep.objects.filter(output_asset_id=source_asset_id).first()
+            if not source_step:
+                raise FileNotFoundError(f"Source asset {source_asset_id} nicht gefunden (kein JobStep)")
+            source_job_id = str(source_step.job_id)
+            logger.info(f"[upscale_image] Source Job: {source_job_id}")
+            
             # Try preview directory first
-            preview_dir = _get_output_dir("exports/preview")
+            preview_dir = _get_output_dir(source_job_id, "preview_export")
             preview_path = preview_dir / f"{source_asset_id}.jpg"
             if preview_path.exists():
                 source_path = preview_path
             else:
-                # Fallback: raw directory
-                raw_dir = _get_output_dir("raw")
-                raw_path = raw_dir / f"{source_asset_id}.png"
-                if raw_path.exists():
-                    source_path = raw_path
+                # Fallback: original directory (generate or upscale)
+                original_dir = _get_output_dir(source_job_id, "generate")
+                original_path = original_dir / f"{source_asset_id}.png"
+                if original_path.exists():
+                    source_path = original_path
                 else:
-                    raise FileNotFoundError(f"Source asset {source_asset_id} nicht gefunden")
+                    # Try upscale (4x suffix)
+                    upscale_path = original_dir / f"{source_asset_id}_4x.png"
+                    if upscale_path.exists():
+                        source_path = upscale_path
+                    else:
+                        raise FileNotFoundError(f"Source asset {source_asset_id} nicht gefunden")
         else:
             # Normaler Job: Asset-ID vom generate-Step holen
             try:
@@ -499,8 +550,8 @@ def upscale_image(self, job_id: str):
             except JobStep.DoesNotExist:
                 raise ValueError("generate-Step nicht done — kann nicht upscalen")
 
-            raw_dir = _get_output_dir("raw")
-            source_path = raw_dir / f"{source_asset_id}.png"
+            original_dir = _get_output_dir(str(job_id), "generate")
+            source_path = original_dir / f"{source_asset_id}.png"
 
         if not source_path.exists():
             raise FileNotFoundError(f"Quell-Bild nicht gefunden: {source_path}")
@@ -509,7 +560,8 @@ def upscale_image(self, job_id: str):
         if getattr(settings, "MOCK_GPU", False):
             import shutil
             asset_id = uuid.uuid4()
-            output_path = raw_dir / f"{asset_id}_4x.png"
+            output_dir = _get_output_dir(str(job_id), "upscale")
+            output_path = output_dir / f"{asset_id}_4x.png"
             shutil.copy2(source_path, output_path)
             _save_step(job_id, "upscale", "done", asset_id=asset_id)
             logger.info("[MOCK] upscale_image fertig: %s", asset_id)
@@ -539,7 +591,8 @@ def upscale_image(self, job_id: str):
             raise ValueError("Kein Bild im Upscale-Output")
 
         asset_id = uuid.uuid4()
-        output_path = raw_dir / f"{asset_id}_4x.png"
+        output_dir = _get_output_dir(str(job_id), "upscale")
+        output_path = output_dir / f"{asset_id}_4x.png"
         output_path.write_bytes(base64.b64decode(upscaled_b64))
         # NFS-Permissions fix für Nginx-Zugriff
         import os
@@ -583,7 +636,7 @@ def face_swap_image(self, job_id: str):
             raise ValueError("Kein generiertes Bild gefunden (generate step fehlt)")
 
         target_filename = f"{preview_step.output_asset_id}.png"
-        target_path = _get_output_dir("raw") / target_filename
+        target_path = _get_output_dir(str(job_id), "generate") / target_filename
 
         if not target_path.exists():
             raise FileNotFoundError(f"Generiertes Bild nicht gefunden: {target_path}")
@@ -642,7 +695,7 @@ def face_swap_image(self, job_id: str):
 
         asset_id = uuid.uuid4()
         output_filename = f"{asset_id}.png"
-        output_path = _get_output_dir("raw") / output_filename
+        output_path = _get_output_dir(str(job_id), "face_swap") / output_filename
 
         with open(output_path, "wb") as f:
             f.write(result_bytes)

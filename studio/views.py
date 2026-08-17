@@ -336,8 +336,14 @@ def job_results(request, job_id):
         messages.warning(request, "Job ist noch nicht abgeschlossen.")
         return redirect("studio:job_detail", job_id=job.id)
 
-    preview_dir = Path(getattr(settings, "NAS_BASE_PATH", "local_nas")) / "exports" / "preview"
-    raw_dir = Path(getattr(settings, "NAS_BASE_PATH", "local_nas")) / "raw"
+    # Job-basierte Pfad-Struktur
+    base = Path(getattr(settings, "NAS_BASE_PATH", "local_nas"))
+    job_base = base / "jobs" / str(job.id)
+    
+    original_dir = job_base / "original"
+    adjusted_dir = job_base / "adjusted"
+    crop_dir = job_base / "crop"
+    preview_dir = job_base / "exports" / "preview"
     
     # Prüfe welche Assets bereits als GalleryImage vorgemerkt sind
     from gallery.models import GalleryImage
@@ -359,14 +365,13 @@ def job_results(request, job_id):
     if original_step and original_step.output_asset_id:
         asset_id = str(original_step.output_asset_id)
         
-        # Original ist im raw/ Verzeichnis (PNG)
-        # Upscale hat _4x Suffix, Generate ohne Suffix
+        # Upscale hat _4x Suffix, Generate ohne
         if original_step.step_type == "upscale":
             filename = f"{asset_id}_4x.png"
         else:
             filename = f"{asset_id}.png"
         
-        filepath = raw_dir / filename
+        filepath = original_dir / filename
         
         try:
             file_exists = filepath.exists()
@@ -394,7 +399,7 @@ def job_results(request, job_id):
         assets.append({
             "asset_id": asset_id,
             "filename": filename,
-            "directory": "raw",
+            "directory": f"jobs/{job.id}/original",
             "exists": file_exists,
             "gallery_status": status,
             "gallery_status_label": status_label,
@@ -435,27 +440,27 @@ def job_results(request, job_id):
             
             # ROBUST: Suche mit Glob-Pattern (Timestamp kann abweichen)
             import glob
-            pattern = str(raw_dir / f"{asset_id}_adjusted_*.png")
+            pattern = str(adjusted_dir / f"{asset_id}_adjusted_*.png")
             matching_files = glob.glob(pattern)
             
             if matching_files:
-                # Neueste Version wenn mehrere
+                # Neueste Version
                 filepath = Path(max(matching_files, key=lambda p: Path(p).stat().st_mtime))
                 filename = filepath.name
             else:
-                # Fallback: Altes Format
+                # Fallback
                 filename = f"{asset_id}_adjusted.png"
-                filepath = raw_dir / filename
+                filepath = adjusted_dir / filename
             
             asset_type = f"🎨 Adjusted #{adjust_counter}"
-            directory = "raw"
+            directory = f"jobs/{job.id}/adjusted"
             
         elif step.step_type == "crop":
             crop_counter += 1
             filename = f"{asset_id}_cropped.png"
-            filepath = raw_dir / filename
+            filepath = crop_dir / filename
             asset_type = f"✂️ Cropped #{crop_counter}"
-            directory = "raw"
+            directory = f"jobs/{job.id}/crop"
         
         try:
             file_exists = filepath.exists()
@@ -517,7 +522,9 @@ def asset_select(request, job_id):
         messages.error(request, "Kein Asset ausgewählt.")
         return redirect("studio:job_results", job_id=job.id)
 
-    preview_dir = Path(getattr(settings, "NAS_BASE_PATH", "local_nas")) / "exports" / "preview"
+    # Job-basierte Pfade
+    base = Path(getattr(settings, "NAS_BASE_PATH", "local_nas"))
+    preview_dir = base / "jobs" / str(job.id) / "exports" / "preview"
     preview_filename = f"{asset_id}_preview.jpg"
     preview_src = preview_dir / preview_filename
 
@@ -543,8 +550,8 @@ def asset_select(request, job_id):
             slug=slug,
             category=category,
             cta_type=cta_type,
-            file_path=f"exports/preview/{preview_filename}",
-            thumb_path=f"exports/preview/{preview_filename}",  # Preview ist bereits klein — kein Pillow-Open auf NAS
+            file_path=f"jobs/{job.id}/exports/preview/{preview_filename}",
+            thumb_path=f"jobs/{job.id}/exports/preview/{preview_filename}",  # Preview ist bereits klein — kein Pillow-Open auf NAS
             is_public=False,  # Admin gibt explizit frei
             source_job_id=job.id,
             project=getattr(job, 'project', None),  # Projekt vom Job erben (falls vorhanden)
@@ -624,9 +631,10 @@ def product_wizard(request, job_id):
         messages.error(request, "Keine generierten Bilder gefunden.")
         return redirect("studio:job_detail", job_id=job.id)
     
-    # Asset-Previews sammeln
+    # Asset-Previews sammeln (job-basiert)
     from pathlib import Path
-    preview_dir = Path(getattr(settings, "NAS_BASE_PATH", "local_nas")) / "exports" / "preview"
+    base = Path(getattr(settings, "NAS_BASE_PATH", "local_nas"))
+    preview_dir = base / "jobs" / str(job.id) / "exports" / "preview"
     
     assets = []
     for step in preview_steps:
@@ -635,7 +643,7 @@ def product_wizard(request, job_id):
         assets.append({
             "asset_id": asset_id,
             "filename": filename,
-            "url": f"/media/exports/preview/{filename}",
+            "url": f"/media/jobs/{job.id}/exports/preview/{filename}",
         })
     
     if request.method == "POST":

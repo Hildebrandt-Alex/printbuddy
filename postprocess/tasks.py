@@ -11,9 +11,49 @@ from django.utils import timezone
 logger = logging.getLogger(__name__)
 
 
-def _get_output_dir(subdir: str) -> Path:
+def _get_output_dir(job_id: str, step_type: str) -> Path:
+    """
+    Job-basierte Output-Verzeichnis-Struktur.
+    
+    Struktur:
+        /mnt/agency_nas/jobs/{job_id}/
+            original/   <- generate, upscale, face_swap
+            adjusted/   <- quick_adjust  
+            crop/       <- crop
+            exports/    <- alle Export-Steps
+    
+    Args:
+        job_id: Job UUID (REQUIRED)
+        step_type: JobStep.step_type (REQUIRED)
+    
+    Returns:
+        Path zum Output-Ordner (erstellt falls nicht vorhanden)
+    """
+    if not job_id or not step_type:
+        raise ValueError("job_id und step_type sind REQUIRED")
+    
     base = Path(getattr(settings, "NAS_BASE_PATH", "/mnt/agency_nas"))
-    path = base / subdir
+    job_base = base / "jobs" / str(job_id)
+    
+    # Step-Type → Ordner Mapping
+    if step_type in ("generate", "upscale", "face_swap"):
+        path = job_base / "original"
+    elif step_type == "quick_adjust":
+        path = job_base / "adjusted"
+    elif step_type == "crop":
+        path = job_base / "crop"
+    elif step_type == "preview_export":
+        path = job_base / "exports" / "preview"
+    elif step_type == "pod_export":
+        path = job_base / "exports" / "pod"
+    elif step_type == "cmyk_export":
+        path = job_base / "exports" / "cmyk"
+    elif step_type == "vectorize":
+        path = job_base / "exports" / "vector"
+    else:
+        logger.warning(f"Unbekannter step_type '{step_type}', verwende /other/")
+        path = job_base / "other"
+    
     path.mkdir(parents=True, exist_ok=True)
     return path
 
@@ -59,14 +99,15 @@ def _save_step(job_id: str, step_type: str, status: str, asset_id=None, error_ms
 
 def _get_latest_asset(job_id: str, prefer_upscaled: bool = True) -> Path:
     """
-    Gibt den Pfad zum aktuellsten verfügbaren Bild-Asset zurück.
+    Gibt den Pfad zum aktuellsten verfügbaren Bild-Asset zurück (job-based structure).
     
-    NEUE LOGIK: Bei Enhancement-Jobs wird source_asset_id aus notes gelesen.
+    Enhancement-Jobs: Sucht in source_job Ordnern.
+    Normal Jobs: Sucht in job_id Ordnern.
     """
     from jobs.models import Job, JobStep
     import json
 
-    # ENHANCEMENT-JOBS: Prüfe notes auf source_asset_id
+    # ENHANCEMENT-JOBS: Finde source_job_id über source_asset_id
     try:
         job = Job.objects.get(id=job_id)
         if job.notes:
@@ -74,105 +115,116 @@ def _get_latest_asset(job_id: str, prefer_upscaled: bool = True) -> Path:
                 notes_data = json.loads(job.notes)
                 source_asset_id = notes_data.get("source_asset_id")
                 if source_asset_id:
-                    # Enhancement-Mode: Nutze Preview-Asset als Input
                     logger.info(f"[_get_latest_asset] Enhancement-Mode: source_asset_id={source_asset_id}")
                     
+                    # Finde source_job_id via JobStep lookup
+                    source_step = JobStep.objects.filter(output_asset_id=source_asset_id).first()
+                    if not source_step:
+                        raise FileNotFoundError(f"Source Asset {source_asset_id} nicht in JobSteps gefunden")
+                    
+                    source_job_id = str(source_step.job_id)
+                    logger.info(f"[_get_latest_asset] Source Job: {source_job_id}")
+                    
+                    # Suche in source_job Ordnern
                     # 1. Preview-Export (Standard)
-                    preview_dir = _get_output_dir("exports/preview")
+                    preview_dir = _get_output_dir(source_job_id, "preview_export")
                     preview_path = preview_dir / f"{source_asset_id}_preview.jpg"
                     if preview_path.exists():
                         logger.info(f"[_get_latest_asset] Gefunden: preview")
                         return preview_path
                     
                     # 2. Quick Adjust (mit Timestamp - neueste Version)
-                    raw_dir = _get_output_dir("raw")
+                    adjusted_dir = _get_output_dir(source_job_id, "quick_adjust")
                     adjusted_files = sorted(
-                        raw_dir.glob(f"{source_asset_id}_adjusted_*.png"),
+                        adjusted_dir.glob(f"{source_asset_id}_adjusted_*.png"),
                         key=lambda p: p.stat().st_mtime,
                         reverse=True
                     )
                     if adjusted_files:
-                        logger.info(f"[_get_latest_asset] Gefunden: adjusted ({len(adjusted_files)} Versionen, neueste: {adjusted_files[0].name})")
+                        logger.info(f"[_get_latest_asset] Gefunden: adjusted ({len(adjusted_files)} Versionen)")
                         return adjusted_files[0]
                     
                     # 3. Cropped
-                    cropped_path = raw_dir / f"{source_asset_id}_cropped.png"
+                    crop_dir = _get_output_dir(source_job_id, "crop")
+                    cropped_path = crop_dir / f"{source_asset_id}_cropped.png"
                     if cropped_path.exists():
                         logger.info(f"[_get_latest_asset] Gefunden: cropped")
                         return cropped_path
                     
-                    # 4. Raw (alter Fallback ohne Suffix)
-                    raw_path = raw_dir / f"{source_asset_id}.png"
-                    if raw_path.exists():
-                        logger.info(f"[_get_latest_asset] Gefunden: raw")
-                        return raw_path
+                    # 4. Upscale (original)
+                    original_dir = _get_output_dir(source_job_id, "upscale")
+                    upscale_path = original_dir / f"{source_asset_id}_4x.png"
+                    if upscale_path.exists():
+                        logger.info(f"[_get_latest_asset] Gefunden: upscale")
+                        return upscale_path
                     
-                    # Nichts gefunden
-                    raise FileNotFoundError(f"Asset {source_asset_id} nicht gefunden (kein preview/adjusted/cropped/raw)")
+                    # 5. Generate (original)
+                    generate_path = original_dir / f"{source_asset_id}.png"
+                    if generate_path.exists():
+                        logger.info(f"[_get_latest_asset] Gefunden: generate")
+                        return generate_path
+                    
+                    raise FileNotFoundError(f"Source Asset {source_asset_id} nicht in Job {source_job_id} gefunden")
             except (json.JSONDecodeError, TypeError):
                 pass
     except Job.DoesNotExist:
         pass
 
-    # NORMALE JOBS: Standard-Logik mit Quick Adjust / Crop Support
-    raw_dir = _get_output_dir("raw")
-
-    # PRIORITÄT 1: Quick Adjust (neueste Version wenn mehrere existieren)
-    try:
-        qa_step = JobStep.objects.filter(
-            job_id=job_id,
-            step_type='quick_adjust',
-            status='done',
-            output_asset_id__isnull=False
-        ).order_by('-id').first()
-        
-        if qa_step:
-            # Suche nach adjusted-File mit Timestamp (neueste Version)
-            adjusted_files = sorted(
-                raw_dir.glob(f"{qa_step.output_asset_id}_adjusted_*.png"),
-                key=lambda p: p.stat().st_mtime,
-                reverse=True
-            )
-            if adjusted_files:
-                logger.info(f"[_get_latest_asset] Normale Job: Quick Adjust gefunden (neueste: {adjusted_files[0].name})")
-                return adjusted_files[0]
-    except JobStep.DoesNotExist:
-        pass
+    # NORMALE JOBS: Standard-Logik mit Quick Adjust / Crop Support (job-based)
+    
+    # PRIORITÄT 1: Quick Adjust (neueste Version)
+    qa_step = JobStep.objects.filter(
+        job_id=job_id,
+        step_type='quick_adjust',
+        status='done',
+        output_asset_id__isnull=False
+    ).order_by('-id').first()
+    
+    if qa_step:
+        adjusted_dir = _get_output_dir(str(job_id), "quick_adjust")
+        adjusted_files = sorted(
+            adjusted_dir.glob(f"{qa_step.output_asset_id}_adjusted_*.png"),
+            key=lambda p: p.stat().st_mtime,
+            reverse=True
+        )
+        if adjusted_files:
+            logger.info(f"[_get_latest_asset] Quick Adjust gefunden: {adjusted_files[0].name}")
+            return adjusted_files[0]
 
     # PRIORITÄT 2: Crop
-    try:
-        crop_step = JobStep.objects.filter(
-            job_id=job_id,
-            step_type='crop',
-            status='done',
-            output_asset_id__isnull=False
-        ).order_by('-id').first()
-        
-        if crop_step:
-            cropped_path = raw_dir / f"{crop_step.output_asset_id}_cropped.png"
-            if cropped_path.exists():
-                logger.info(f"[_get_latest_asset] Normale Job: Crop gefunden")
-                return cropped_path
-    except JobStep.DoesNotExist:
-        pass
+    crop_step = JobStep.objects.filter(
+        job_id=job_id,
+        step_type='crop',
+        status='done',
+        output_asset_id__isnull=False
+    ).order_by('-id').first()
+    
+    if crop_step:
+        crop_dir = _get_output_dir(str(job_id), "crop")
+        cropped_path = crop_dir / f"{crop_step.output_asset_id}_cropped.png"
+        if cropped_path.exists():
+            logger.info(f"[_get_latest_asset] Crop gefunden")
+            return cropped_path
 
-    # PRIORITÄT 3: Upscale / Generate (alte Logik)
+    # PRIORITÄT 3: Upscale / Generate
     if prefer_upscaled:
-        # Erst Upscale-Output versuchen, dann generate-Output
         for step_type in ("upscale", "generate"):
-            try:
-                step = JobStep.objects.get(job_id=job_id, step_type=step_type, status="done")
-                if step.output_asset_id:
-                    # Upscale hat _4x Suffix
-                    suffix = "_4x" if step_type == "upscale" else ""
-                    candidate = raw_dir / f"{step.output_asset_id}{suffix}.png"
-                    if candidate.exists():
-                        logger.info(f"[_get_latest_asset] Normale Job: {step_type} gefunden")
-                        return candidate
-            except JobStep.DoesNotExist:
-                continue
+            step = JobStep.objects.filter(
+                job_id=job_id,
+                step_type=step_type,
+                status="done",
+                output_asset_id__isnull=False
+            ).first()
+            
+            if step:
+                original_dir = _get_output_dir(str(job_id), step_type)
+                suffix = "_4x" if step_type == "upscale" else ""
+                candidate = original_dir / f"{step.output_asset_id}{suffix}.png"
+                if candidate.exists():
+                    logger.info(f"[_get_latest_asset] {step_type} gefunden")
+                    return candidate
 
-    raise FileNotFoundError(f"Kein verfügbares Bild-Asset für Job {job_id}")
+    raise FileNotFoundError(f"Kein Asset für Job {job_id} gefunden")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -181,7 +233,7 @@ def _get_latest_asset(job_id: str, prefer_upscaled: bool = True) -> Path:
 
 @shared_task(bind=True, max_retries=3, default_retry_delay=15, queue="cpu_queue")
 def pod_export(self, job_id: str):
-    """Exportiert PNG 300dpi sRGB → /exports/pod/"""
+    """Exportiert PNG 300dpi sRGB → /jobs/{job_id}/exports/pod/"""
     logger.info("[pod_export] Job %s", job_id)
     _save_step(job_id, "pod_export", "running")
 
@@ -189,7 +241,7 @@ def pod_export(self, job_id: str):
         from PIL import Image
 
         source = _get_latest_asset(job_id, prefer_upscaled=True)
-        output_dir = _get_output_dir("exports/pod")
+        output_dir = _get_output_dir(str(job_id), "pod_export")
         asset_id = uuid.uuid4()
         output_path = output_dir / f"{asset_id}_pod.png"
 
@@ -219,7 +271,7 @@ def pod_export(self, job_id: str):
 
 @shared_task(bind=True, max_retries=3, default_retry_delay=15, queue="cpu_queue")
 def preview_export(self, job_id: str):
-    """Exportiert JPG 72dpi max 1200px → /exports/preview/ (immer ausgeführt)"""
+    """Exportiert JPG 72dpi max 1200px → /jobs/{job_id}/exports/preview/"""
     logger.info("[preview_export] Job %s", job_id)
     _save_step(job_id, "preview_export", "running")
 
@@ -227,7 +279,7 @@ def preview_export(self, job_id: str):
         from PIL import Image
 
         source = _get_latest_asset(job_id, prefer_upscaled=True)
-        output_dir = _get_output_dir("exports/preview")
+        output_dir = _get_output_dir(str(job_id), "preview_export")
         asset_id = uuid.uuid4()
         output_path = output_dir / f"{asset_id}_preview.jpg"
 
@@ -268,7 +320,7 @@ def cmyk_export(self, job_id: str):
         from PIL import Image, ImageCms
 
         source = _get_latest_asset(job_id, prefer_upscaled=True)
-        output_dir = _get_output_dir("exports/offset")
+        output_dir = _get_output_dir(str(job_id), "cmyk_export")
         asset_id = uuid.uuid4()
 
         # ── TIFF mit CMYK-Konvertierung ──────────────────────────────────────
@@ -363,7 +415,7 @@ def vectorize_image(self, job_id: str):
         from PIL import Image
 
         source = _get_latest_asset(job_id, prefer_upscaled=True)
-        output_dir = _get_output_dir("exports/vector")
+        output_dir = _get_output_dir(str(job_id), "vectorize")
         asset_id = uuid.uuid4()
 
         # PNG → BMP (Potrace braucht BMP)
@@ -565,9 +617,9 @@ def adjust_colors(self, job_id: str):
         # Bild laden (nutzt _get_latest_asset für Enhancement-Jobs)
         source = _get_latest_asset(job_id, prefer_upscaled=True)
         
-        # Output-Pfad in raw/ (adjusted images bleiben hochauflösend)
+        # Output-Pfad in /jobs/{job_id}/adjusted/
         # Mit Timestamp für Versionierung
-        output_dir = _get_output_dir("raw")
+        output_dir = _get_output_dir(str(job_id), "quick_adjust")
         asset_id = uuid.uuid4()
         from datetime import datetime
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -674,8 +726,8 @@ def crop_image(self, job_id: str):
         # Bild laden
         source = _get_latest_asset(job_id, prefer_upscaled=True)
         
-        # Output-Pfad
-        output_dir = _get_output_dir("raw")
+        # Output-Pfad in /jobs/{job_id}/crop/
+        output_dir = _get_output_dir(str(job_id), "crop")
         asset_id = uuid.uuid4()
         output_path = output_dir / f"{asset_id}_cropped.png"
 
