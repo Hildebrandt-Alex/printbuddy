@@ -339,94 +339,41 @@ def job_results(request, job_id):
     preview_dir = Path(getattr(settings, "NAS_BASE_PATH", "local_nas")) / "exports" / "preview"
     raw_dir = Path(getattr(settings, "NAS_BASE_PATH", "local_nas")) / "raw"
     
-    # Zeige Preview UND Quick-Adjust/Crop Assets
-    # WICHTIG: Include pending/running steps damit neue Adjustments sofort sichtbar sind
-    preview_steps = job.steps.filter(
-        step_type__in=["preview_export", "quick_adjust", "crop"],
-        status__in=["pending", "running", "done"]
-    ).order_by('-id')  # Newest first (JobStep has no created_at, use id instead)
-
     # Prüfe welche Assets bereits als GalleryImage vorgemerkt sind
     from gallery.models import GalleryImage
-    # Hole alle GalleryImages für diesen Job
     existing_gallery_images = list(GalleryImage.objects.filter(source_job_id=job.id))
 
     assets = []
-    for step in preview_steps:
-        # Pending/running steps haben noch kein output_asset_id
-        if not step.output_asset_id:
-            # Zeige "Processing..." Badge für pending/running steps
-            assets.append({
-                "asset_id": None,
-                "filename": None,
-                "directory": None,
-                "exists": False,
-                "gallery_status": "processing",
-                "gallery_status_label": "⏳ Wird verarbeitet...",
-                "asset_type": "🎨 Quick Adjust" if step.step_type == "quick_adjust" else "Processing",
-                "is_processing": True,
-                "step_status": step.status,
-            })
+    
+    # ═══════════════════════════════════════════════════════════════════
+    # 1. ORIGINAL: Generate oder Upscale (nur der neueste)
+    # ═══════════════════════════════════════════════════════════════════
+    original_step = None
+    for step_type in ['upscale', 'generate']:
+        try:
+            original_step = job.steps.get(step_type=step_type, status='done')
+            break
+        except job.steps.model.DoesNotExist:
             continue
+    
+    if original_step and original_step.output_asset_id:
+        asset_id = str(original_step.output_asset_id)
         
-        asset_id = str(step.output_asset_id)
-        
-        # Quick Adjust und Crop Assets sind im raw/ Verzeichnis
-        if step.step_type == "quick_adjust":
-            # Filename mit Timestamp (falls vorhanden) - mit Backward-Compatibility
-            timestamp = step.completed_at.strftime("%Y%m%d_%H%M%S") if step.completed_at else "unknown"
-            filename_new = f"{asset_id}_adjusted_{timestamp}.png"
-            filepath_new = raw_dir / filename_new
-            
-            # Fallback auf alten Dateinamen ohne Timestamp (für alte Quick Adjusts)
-            filename_old = f"{asset_id}_adjusted.png"
-            filepath_old = raw_dir / filename_old
-            
-            # NFS kann PermissionError werfen statt False bei nicht-existierenden Dateien
-            try:
-                file_exists_new = filepath_new.exists()
-            except (PermissionError, OSError):
-                file_exists_new = False
-            
-            try:
-                file_exists_old = filepath_old.exists()
-            except (PermissionError, OSError):
-                file_exists_old = False
-            
-            if file_exists_new:
-                filename = filename_new
-                filepath = filepath_new
-            elif file_exists_old:
-                filename = filename_old
-                filepath = filepath_old
-            else:
-                # Wenn keine Datei existiert, verwende neuen Namen (wird bei neuem Adjust erstellt)
-                filename = filename_new
-                filepath = filepath_new
-            
-            # Badge mit Versionsnummer
-            adjust_number = job.steps.filter(
-                step_type="quick_adjust",
-                status="done",
-                completed_at__lte=step.completed_at
-            ).count() if step.completed_at else 1
-            asset_type = f"🎨 Adjusted #{adjust_number}"
-        elif step.step_type == "crop":
-            filename = f"{asset_id}_cropped.png"
-            filepath = raw_dir / filename
-            asset_type = "✂️ Cropped"
+        # Original ist im raw/ Verzeichnis (PNG)
+        # Upscale hat _4x Suffix, Generate ohne Suffix
+        if original_step.step_type == "upscale":
+            filename = f"{asset_id}_4x.png"
         else:
-            filename = f"{asset_id}_preview.jpg"
-            filepath = preview_dir / filename
-            asset_type = "Preview"
+            filename = f"{asset_id}.png"
+        
+        filepath = raw_dir / filename
         
         try:
             file_exists = filepath.exists()
         except (PermissionError, OSError):
-            file_exists = True  # NAS nicht lesbar für www-data — trotzdem anzeigen, Nginx serviert es
+            file_exists = True  # NAS nicht lesbar - Nginx serviert es trotzdem
         
-        # Status prüfen: nicht vorgemerkt / vorgemerkt / online
-        # Finde GalleryImage anhand des Asset-UUID im Dateinamen
+        # Gallery Status Check
         gallery_img = None
         for img in existing_gallery_images:
             if asset_id in str(img.file_path.name):
@@ -444,20 +391,103 @@ def job_results(request, job_id):
             status = "not_selected"
             status_label = None
         
-        # Bestimme Verzeichnis für URL-Generierung
-        if step.step_type in ["quick_adjust", "crop"]:
+        assets.append({
+            "asset_id": asset_id,
+            "filename": filename,
+            "directory": "raw",
+            "exists": file_exists,
+            "gallery_status": status,
+            "gallery_status_label": status_label,
+            "asset_type": "🖼️ Original" if original_step.step_type == "generate" else "⬆️ Upscaled",
+        })
+    
+    # ═══════════════════════════════════════════════════════════════════
+    # 2. ADJUSTMENTS: Quick Adjust & Crop (chronologisch)
+    # ═══════════════════════════════════════════════════════════════════
+    adjustment_steps = job.steps.filter(
+        step_type__in=["quick_adjust", "crop"],
+        status__in=["pending", "running", "done"]
+    ).order_by('id')  # Chronologisch (älteste zuerst)
+    
+    adjust_counter = 0
+    crop_counter = 0
+    
+    for step in adjustment_steps:
+        # Pending/running steps haben noch kein output_asset_id
+        if not step.output_asset_id:
+            assets.append({
+                "asset_id": None,
+                "filename": None,
+                "directory": None,
+                "exists": False,
+                "gallery_status": "processing",
+                "gallery_status_label": "⏳ Wird verarbeitet...",
+                "asset_type": "🎨 Quick Adjust" if step.step_type == "quick_adjust" else "✂️ Crop",
+                "is_processing": True,
+                "step_status": step.status,
+            })
+            continue
+        
+        asset_id = str(step.output_asset_id)
+        
+        if step.step_type == "quick_adjust":
+            adjust_counter += 1
+            
+            # ROBUST: Suche mit Glob-Pattern (Timestamp kann abweichen)
+            import glob
+            pattern = str(raw_dir / f"{asset_id}_adjusted_*.png")
+            matching_files = glob.glob(pattern)
+            
+            if matching_files:
+                # Neueste Version wenn mehrere
+                filepath = Path(max(matching_files, key=lambda p: Path(p).stat().st_mtime))
+                filename = filepath.name
+            else:
+                # Fallback: Altes Format
+                filename = f"{asset_id}_adjusted.png"
+                filepath = raw_dir / filename
+            
+            asset_type = f"🎨 Adjusted #{adjust_counter}"
             directory = "raw"
+            
+        elif step.step_type == "crop":
+            crop_counter += 1
+            filename = f"{asset_id}_cropped.png"
+            filepath = raw_dir / filename
+            asset_type = f"✂️ Cropped #{crop_counter}"
+            directory = "raw"
+        
+        try:
+            file_exists = filepath.exists()
+        except (PermissionError, OSError):
+            file_exists = True
+        
+        # Gallery Status Check
+        gallery_img = None
+        for img in existing_gallery_images:
+            if asset_id in str(img.file_path.name):
+                gallery_img = img
+                break
+        
+        if gallery_img:
+            if gallery_img.is_public:
+                status = "online"
+                status_label = "✓ Online in Galerie"
+            else:
+                status = "vorgemerkt"
+                status_label = "● Vorgemerkt (wartet auf Admin-Freigabe)"
         else:
-            directory = "exports/preview"
+            status = "not_selected"
+            status_label = None
         
         assets.append({
             "asset_id": asset_id,
             "filename": filename,
-            "directory": directory,  # Für korrekte URL-Generierung im Template
+            "directory": directory,
             "exists": file_exists,
             "gallery_status": status,
             "gallery_status_label": status_label,
-            "asset_type": asset_type,  # Zeige Typ (Preview / 🎨 Adjusted #1 / ✂️ Cropped)
+            "asset_type": asset_type,
         })
 
     return render(request, "studio/job_results.html", {"job": job, "assets": assets})
