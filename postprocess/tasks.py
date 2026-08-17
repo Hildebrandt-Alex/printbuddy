@@ -28,14 +28,14 @@ def _save_step(job_id: str, step_type: str, status: str, asset_id=None, error_ms
             job_id=job_id, 
             step_type=step_type,
             status='pending'
-        ).order_by('-created_at').first()
+        ).order_by('-id').first()  # Newest first (JobStep has no created_at, use id instead)
         
         if not step:
             # Fallback: neuester Step dieses Typs mit beliebigem Status
             step = JobStep.objects.filter(
                 job_id=job_id,
                 step_type=step_type
-            ).order_by('-created_at').first()
+            ).order_by('-id').first()  # Newest first (JobStep has no created_at, use id instead)
         
         if not step:
             logger.warning("JobStep %s/%s nicht gefunden", job_id, step_type)
