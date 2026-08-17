@@ -451,8 +451,8 @@ function initLivePreview() {
   
   previewCtx = previewCanvas.getContext('2d', { willReadFrequently: true });
   
-  // Lade erstes Preview-Bild
-  const firstPreviewImg = document.querySelector('[src*="/media/exports/preview/"]');
+  // Lade erstes Preview-Bild (job-basierte Struktur: /media/jobs/{id}/exports/preview/)
+  const firstPreviewImg = document.querySelector('[src*="exports/preview/"]');
   if (!firstPreviewImg) {
     console.warn('Kein Preview-Bild gefunden für Live-Preview');
     return;
