@@ -490,14 +490,22 @@ Host datemyhobby
 #!/bin/bash
 set -e
 cd /opt/printbuddy
+
+# WICHTIG: Production Settings explizit setzen!
+export DJANGO_SETTINGS_MODULE=printbuddy.settings.production
+
 git pull origin main
 source venv/bin/activate
 pip install -r requirements.txt --quiet
+
+# Alle Django-Commands verwenden jetzt automatisch production settings
 python manage.py migrate --run-syncdb
 python manage.py collectstatic --noinput --clear
+
 sudo systemctl restart gunicorn
 sudo systemctl restart celery-gpu celery-cpu
-echo "Deploy $(git rev-parse --short HEAD) abgeschlossen"
+
+echo "Deploy $(git rev-parse --short HEAD) abgeschlossen (PostgreSQL)"
 ```
 
 **Aufruf:** `ssh datemyhobby 'bash /opt/printbuddy/deploy.sh'` — läuft in < 5 Minuten.
