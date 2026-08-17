@@ -562,13 +562,17 @@ python manage.py migrate --run-syncdb
 python manage.py collectstatic --noinput --clear
 
 sudo systemctl restart gunicorn
-sudo systemctl restart celery-gpu celery-cpu
+sudo systemctl restart celery-printbuddy-gpu celery-printbuddy-cpu
 
 echo "Deploy $(git rev-parse --short HEAD) abgeschlossen (PostgreSQL)"
 ```
 
 **Aufruf:** `ssh datemyhobby 'bash /opt/printbuddy/deploy.sh'` — läuft in < 5 Minuten.
 **Rollback:** `git revert HEAD --no-edit && git push && ssh datemyhobby 'bash /opt/printbuddy/deploy.sh'`
+
+**WICHTIG:** Service-Namen müssen exakt mit systemd übereinstimmen:
+- `celery-printbuddy-gpu.service` (nicht `celery-gpu`)
+- `celery-printbuddy-cpu.service` (nicht `celery-cpu`)
 
 **NIEMALS verwenden:** `ssh root@67.86.108.37` (IP nicht erreichbar, Firewall/Tailscale-only)
 
