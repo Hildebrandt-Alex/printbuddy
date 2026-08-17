@@ -572,17 +572,29 @@ def asset_select(request, job_id):
     # Job-basierte Pfade
     base = Path(getattr(settings, "NAS_BASE_PATH", "local_nas"))
     preview_dir = base / "jobs" / str(job.id) / "exports" / "preview"
-    preview_filename = f"{asset_id}_preview.jpg"
-    preview_src = preview_dir / preview_filename
-
+    
+    # ROBUST: Suche nach passender Preview-Datei (generate/upscale vs. preview_export haben unterschiedliche IDs)
+    preview_candidates = [
+        f"{asset_id}_preview.jpg",  # Exakte Übereinstimmung
+    ]
+    
+    # Fallback: Alle Preview-Dateien im Ordner durchsuchen
+    import glob
     try:
-        file_missing = not preview_src.exists()
-    except (PermissionError, OSError):
-        file_missing = False  # NAS nicht lesbar für www-data — Step existiert laut DB, weiter
-
-    if file_missing:
-        messages.error(request, f"Preview-Datei nicht gefunden: {preview_filename}")
-        return redirect("studio:job_results", job_id=job.id)
+        all_previews = glob.glob(str(preview_dir / "*_preview.jpg"))
+        if all_previews:
+            # Neueste Preview-Datei (falls mehrere)
+            preview_src = Path(max(all_previews, key=lambda p: Path(p).stat().st_mtime))
+            preview_filename = preview_src.name
+        else:
+            # Keine Preview gefunden → Fehlermeldung
+            messages.error(request, f"Keine Preview-Datei für Job {job.id} gefunden.")
+            return redirect("studio:job_results", job_id=job.id)
+    except (PermissionError, OSError) as exc:
+        # NAS nicht lesbar — verwende exakte asset_id (Nginx kann es evtl. trotzdem servieren)
+        logger.warning("[asset_select] NAS preview_dir nicht lesbar: %s", exc)
+        preview_filename = f"{asset_id}_preview.jpg"
+        preview_src = preview_dir / preview_filename
 
     # Eindeutigen Slug erzeugen
     slug_base = slugify(title)[:100]
