@@ -114,9 +114,49 @@ def _get_latest_asset(job_id: str, prefer_upscaled: bool = True) -> Path:
     except Job.DoesNotExist:
         pass
 
-    # NORMALE JOBS: Standard-Logik
+    # NORMALE JOBS: Standard-Logik mit Quick Adjust / Crop Support
     raw_dir = _get_output_dir("raw")
 
+    # PRIORITÄT 1: Quick Adjust (neueste Version wenn mehrere existieren)
+    try:
+        qa_step = JobStep.objects.filter(
+            job_id=job_id,
+            step_type='quick_adjust',
+            status='done',
+            output_asset_id__isnull=False
+        ).order_by('-id').first()
+        
+        if qa_step:
+            # Suche nach adjusted-File mit Timestamp (neueste Version)
+            adjusted_files = sorted(
+                raw_dir.glob(f"{qa_step.output_asset_id}_adjusted_*.png"),
+                key=lambda p: p.stat().st_mtime,
+                reverse=True
+            )
+            if adjusted_files:
+                logger.info(f"[_get_latest_asset] Normale Job: Quick Adjust gefunden (neueste: {adjusted_files[0].name})")
+                return adjusted_files[0]
+    except JobStep.DoesNotExist:
+        pass
+
+    # PRIORITÄT 2: Crop
+    try:
+        crop_step = JobStep.objects.filter(
+            job_id=job_id,
+            step_type='crop',
+            status='done',
+            output_asset_id__isnull=False
+        ).order_by('-id').first()
+        
+        if crop_step:
+            cropped_path = raw_dir / f"{crop_step.output_asset_id}_cropped.png"
+            if cropped_path.exists():
+                logger.info(f"[_get_latest_asset] Normale Job: Crop gefunden")
+                return cropped_path
+    except JobStep.DoesNotExist:
+        pass
+
+    # PRIORITÄT 3: Upscale / Generate (alte Logik)
     if prefer_upscaled:
         # Erst Upscale-Output versuchen, dann generate-Output
         for step_type in ("upscale", "generate"):
@@ -127,6 +167,7 @@ def _get_latest_asset(job_id: str, prefer_upscaled: bool = True) -> Path:
                     suffix = "_4x" if step_type == "upscale" else ""
                     candidate = raw_dir / f"{step.output_asset_id}{suffix}.png"
                     if candidate.exists():
+                        logger.info(f"[_get_latest_asset] Normale Job: {step_type} gefunden")
                         return candidate
             except JobStep.DoesNotExist:
                 continue
