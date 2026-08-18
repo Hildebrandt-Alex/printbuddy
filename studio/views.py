@@ -1290,6 +1290,8 @@ def quick_adjust_image(request, job_id):
             # Output in /jobs/{id}/exports/preview/ (direkt Web-ready)
             output_dir = job_dir / 'exports' / 'preview'
             output_dir.mkdir(parents=True, exist_ok=True)
+            # NFS-Permissions fix: Group www-data muss schreiben können
+            os.chmod(output_dir, 0o775)
             output_path = output_dir / f"{asset_id}_adjusted_{timestamp}.jpg"
             
             # JPG mit 90% Qualität (optimiert für Web/Studio)

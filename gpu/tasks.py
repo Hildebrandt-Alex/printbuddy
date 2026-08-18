@@ -54,6 +54,9 @@ def _get_output_dir(job_id: str, step_type: str) -> Path:
         path = job_base / "other"
     
     path.mkdir(parents=True, exist_ok=True)
+    # NFS-Permissions fix: Group www-data muss schreiben können (Gunicorn Quick Adjust)
+    import os
+    os.chmod(path, 0o775)
     return path
 
 
