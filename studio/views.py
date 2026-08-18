@@ -1205,13 +1205,18 @@ def quick_adjust_image(request, job_id):
         
         # ── Inline Processing (NO async Celery Task) ──
         try:
-            # Source-Asset finden: NUR Original-Verzeichnis (User-Request)
+            # BUG #1 FIX: 3-Stage Fallback für Source-Asset
+            # Stage 1: original/ (GPU Generate Jobs)
+            # Stage 2: exports/preview/ (Enhancement Jobs ohne original/)
+            # Stage 3: adjusted/ (Wiederholte Quick Adjusts)
             nas_base = Path(getattr(settings, 'NAS_BASE_PATH', '/mnt/agency_nas'))
             job_dir = nas_base / 'jobs' / str(job.id)
-            original_dir = job_dir / 'original'
             
-            # Suche neuestes Bild in original/ (prefer upscaled _4x.png)
             source_path = None
+            source_type = None
+            
+            # Fallback Stage 1: original/ (prefer upscaled _4x.png)
+            original_dir = job_dir / 'original'
             if original_dir.exists():
                 # Prefer upscaled (_4x.png)
                 files = sorted(original_dir.glob('*_4x.png'), key=lambda p: p.stat().st_mtime, reverse=True)
@@ -1219,11 +1224,34 @@ def quick_adjust_image(request, job_id):
                     files = sorted(original_dir.glob('*.png'), key=lambda p: p.stat().st_mtime, reverse=True)
                 if files:
                     source_path = files[0]
+                    source_type = 'original'
+                    logger.info(f"Quick Adjust Source: original/{source_path.name}")
+            
+            # Fallback Stage 2: exports/preview/ (Enhancement Jobs)
+            if not source_path:
+                preview_dir = job_dir / 'exports' / 'preview'
+                if preview_dir.exists():
+                    files = sorted(preview_dir.glob('*.jpg'), key=lambda p: p.stat().st_mtime, reverse=True)
+                    if files:
+                        source_path = files[0]
+                        source_type = 'preview'
+                        logger.info(f"Quick Adjust Source: exports/preview/{source_path.name}")
+            
+            # Fallback Stage 3: adjusted/ (Wiederholte Quick Adjusts)
+            if not source_path:
+                adjusted_dir = job_dir / 'adjusted'
+                if adjusted_dir.exists():
+                    files = sorted(adjusted_dir.glob('*.png'), key=lambda p: p.stat().st_mtime, reverse=True)
+                    if files:
+                        source_path = files[0]
+                        source_type = 'adjusted'
+                        logger.info(f"Quick Adjust Source: adjusted/{source_path.name}")
             
             if not source_path or not source_path.exists():
+                logger.error(f"Quick Adjust: No source found in original/, exports/preview/, or adjusted/ for Job {job.id}")
                 return JsonResponse({
                     'success': False,
-                    'error': 'Kein Source-Asset gefunden'
+                    'error': 'Kein Source-Asset gefunden (checked: original/, exports/preview/, adjusted/)'
                 }, status=404)
             
             # Bild laden und anpassen
