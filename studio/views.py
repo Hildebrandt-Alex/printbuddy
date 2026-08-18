@@ -1134,6 +1134,8 @@ def create_enhancement_job(request, job_id):
 def quick_adjust_image(request, job_id):
     """
     Wendet Quick Adjustments auf das neueste Asset eines Jobs an.
+    REFACTORED: Speichert DIREKT JPG Preview (kein async Celery Task mehr).
+    
     Unterstützt:
     - Color adjustments (brightness, contrast, saturation, sharpness)
     - Crop (mit x, y, width, height)
@@ -1141,9 +1143,13 @@ def quick_adjust_image(request, job_id):
     Erstellt einen neuen Job-Step mit den Anpassungsparametern.
     """
     import json
+    import uuid
+    from datetime import datetime
+    from pathlib import Path
     from django.http import JsonResponse
     from jobs.models import JobStep
-    from postprocess.tasks import adjust_colors, crop_image
+    from PIL import Image, ImageEnhance
+    from django.conf import settings
     
     job = get_object_or_404(Job, id=job_id)
     
@@ -1197,40 +1203,107 @@ def quick_adjust_image(request, job_id):
         job.notes = json.dumps(notes_data)
         job.save(update_fields=['notes'])
         
-        # JobStep erstellen
-        step_order = job.steps.count() + 1
-        job_step = JobStep.objects.create(
-            job=job,
-            step_type='quick_adjust',
-            order=step_order,
-            status='pending',
-            params={
-                'brightness': brightness,
-                'contrast': contrast,
-                'saturation': saturation,
-                'sharpness': sharpness
-            }
-        )
-        
-        # Celery Task starten
+        # ── Inline Processing (NO async Celery Task) ──
         try:
-            result = adjust_colors.apply_async(args=[str(job_id)], queue='cpu_queue')
-            logger.info(f"[quick_adjust_image] Color adjustment task {result.id} gestartet für Job {job_id}")
+            # Source-Asset finden (prefer upscaled wenn vorhanden)
+            nas_base = Path(getattr(settings, 'NAS_BASE_PATH', '/mnt/agency_nas'))
+            job_dir = nas_base / 'jobs' / str(job.id)
+            
+            # Suche in dieser Reihenfolge: upscaled → original → adjusted
+            source_path = None
+            for subdir in ['original', 'adjusted']:
+                if (job_dir / subdir).exists():
+                    files = sorted((job_dir / subdir).glob('*_4x.png'), key=lambda p: p.stat().st_mtime, reverse=True)
+                    if not files:  # kein 4x? dann alle PNGs
+                        files = sorted((job_dir / subdir).glob('*.png'), key=lambda p: p.stat().st_mtime, reverse=True)
+                    if files:
+                        source_path = files[0]
+                        break
+            
+            if not source_path or not source_path.exists():
+                return JsonResponse({
+                    'success': False,
+                    'error': 'Kein Source-Asset gefunden'
+                }, status=404)
+            
+            # Bild laden und anpassen
+            img = Image.open(source_path)
+            if img.mode not in ('RGB', 'RGBA'):
+                img = img.convert('RGB')
+            
+            # Brightness (0.0 = schwarz, 1.0 = original, 2.0 = doppelt hell)
+            if brightness != 0:
+                factor = 1.0 + (brightness / 100.0)
+                enhancer = ImageEnhance.Brightness(img)
+                img = enhancer.enhance(max(0.0, factor))
+            
+            # Contrast
+            if contrast != 0:
+                factor = 1.0 + (contrast / 100.0)
+                enhancer = ImageEnhance.Contrast(img)
+                img = enhancer.enhance(max(0.0, factor))
+            
+            # Saturation
+            if saturation != 0:
+                factor = 1.0 + (saturation / 100.0)
+                enhancer = ImageEnhance.Color(img)
+                img = enhancer.enhance(max(0.0, factor))
+            
+            # Sharpness (0 → 0.0, 100 → 1.0, 200 → 2.0)
+            if sharpness != 100:
+                factor = sharpness / 100.0
+                enhancer = ImageEnhance.Sharpness(img)
+                img = enhancer.enhance(max(0.0, factor))
+            
+            # Speichere DIREKT als JPG Preview (kein PNG + async export)
+            asset_id = uuid.uuid4()
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            
+            # Output in /jobs/{id}/exports/preview/ (direkt Web-ready)
+            output_dir = job_dir / 'exports' / 'preview'
+            output_dir.mkdir(parents=True, exist_ok=True)
+            output_path = output_dir / f"{asset_id}_adjusted_{timestamp}.jpg"
+            
+            # JPG mit 90% Qualität (optimiert für Web/Studio)
+            img.convert('RGB').save(output_path, 'JPEG', quality=90, optimize=True)
+            
+            # NFS-Permissions fix für Nginx-Zugriff
+            import os
+            os.chmod(output_path, 0o666)
+            
+            # JobStep erstellen (STATUS=DONE sofort, kein pending)
+            step_order = job.steps.count() + 1
+            job_step = JobStep.objects.create(
+                job=job,
+                step_type='quick_adjust',
+                order=step_order,
+                status='done',  # ← SOFORT done (nicht pending)
+                output_asset_id=asset_id,
+                params={
+                    'brightness': brightness,
+                    'contrast': contrast,
+                    'saturation': saturation,
+                    'sharpness': sharpness
+                },
+                completed_at=datetime.now()
+            )
+            
+            logger.info(f"[quick_adjust_image] Adjusted JPG saved: {output_path} (JobStep {job_step.id})")
             
             return JsonResponse({
                 'success': True,
                 'step_id': str(job_step.id),
-                'task_id': result.id,
-                'message': 'Farbanpassung wird verarbeitet...'
+                'asset_id': str(asset_id),
+                'filename': output_path.name,
+                'message': 'Farbanpassung abgeschlossen!',
+                'url': f'/media/jobs/{job.id}/exports/preview/{output_path.name}'
             })
+            
         except Exception as e:
-            logger.error(f"[quick_adjust_image] Fehler beim Starten der Task: {e}")
-            job_step.status = 'failed'
-            job_step.error_msg = str(e)
-            job_step.save(update_fields=['status', 'error_msg'])
+            logger.error(f"[quick_adjust_image] Fehler beim Processing: {e}", exc_info=True)
             return JsonResponse({
                 'success': False,
-                'error': f'Fehler beim Starten: {e}'
+                'error': f'Fehler beim Verarbeiten: {str(e)}'
             }, status=500)
     
     elif adjust_type == 'crop':
