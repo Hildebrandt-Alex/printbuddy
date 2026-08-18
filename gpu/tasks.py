@@ -53,10 +53,8 @@ def _get_output_dir(job_id: str, step_type: str) -> Path:
         logger.warning(f"Unbekannter step_type '{step_type}', verwende /other/")
         path = job_base / "other"
     
-    path.mkdir(parents=True, exist_ok=True)
-    # NFS-Permissions fix: Group www-data muss schreiben können (Gunicorn Quick Adjust)
-    import os
-    os.chmod(path, 0o775)
+    # NFS-Permissions fix: mkdir mit mode-Parameter (chmod() auf NFS kann "Operation not permitted" geben)
+    path.mkdir(parents=True, exist_ok=True, mode=0o775)
     return path
 
 
