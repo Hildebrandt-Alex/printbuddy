@@ -485,22 +485,34 @@ def job_results(request, job_id):
         if step.step_type == "quick_adjust":
             adjust_counter += 1
             
-            # Quick Adjust speichert jetzt in exports/preview/ (nicht mehr adjusted/)
+            # Quick Adjust: Check BEIDE Pfade (neue JPG in preview/, alte PNG in adjusted/)
             import glob
-            pattern = str(preview_dir / f"{asset_id}_adjusted_*.jpg")
-            matching_files = glob.glob(pattern)
             
-            if matching_files:
-                # Neueste Version
-                filepath = Path(max(matching_files, key=lambda p: Path(p).stat().st_mtime))
+            # 1. Versuch: Neue Dateien in exports/preview/ als JPG
+            pattern_new = str(preview_dir / f"{asset_id}_adjusted_*.jpg")
+            matching_new = glob.glob(pattern_new)
+            
+            # 2. Versuch: Alte Dateien in adjusted/ als PNG (Backward Compatibility)
+            pattern_old = str(adjusted_dir / f"{asset_id}_adjusted_*.png")
+            matching_old = glob.glob(pattern_old)
+            
+            if matching_new:
+                # Neue Datei gefunden
+                filepath = Path(max(matching_new, key=lambda p: Path(p).stat().st_mtime))
                 filename = filepath.name
+                directory = f"jobs/{job.id}/exports/preview"
+            elif matching_old:
+                # Alte Datei gefunden (Fallback)
+                filepath = Path(max(matching_old, key=lambda p: Path(p).stat().st_mtime))
+                filename = filepath.name
+                directory = f"jobs/{job.id}/adjusted"
             else:
-                # Fallback
+                # Nichts gefunden - Default
                 filename = f"{asset_id}_adjusted.jpg"
                 filepath = preview_dir / filename
+                directory = f"jobs/{job.id}/exports/preview"
             
             asset_type = f"🎨 Adjusted #{adjust_counter}"
-            directory = f"jobs/{job.id}/exports/preview"
             
         elif step.step_type == "crop":
             crop_counter += 1
@@ -1146,6 +1158,7 @@ def quick_adjust_image(request, job_id):
     import uuid
     from datetime import datetime
     from pathlib import Path
+    import os
     from django.http import JsonResponse
     from jobs.models import JobStep
     from PIL import Image, ImageEnhance
@@ -1298,7 +1311,6 @@ def quick_adjust_image(request, job_id):
             img.convert('RGB').save(output_path, 'JPEG', quality=90, optimize=True)
             
             # NFS-Permissions fix für Nginx-Zugriff
-            import os
             os.chmod(output_path, 0o666)
             
             # JobStep erstellen (STATUS=DONE sofort, kein pending)
