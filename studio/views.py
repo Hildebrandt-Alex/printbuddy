@@ -485,9 +485,9 @@ def job_results(request, job_id):
         if step.step_type == "quick_adjust":
             adjust_counter += 1
             
-            # ROBUST: Suche mit Glob-Pattern (Timestamp kann abweichen)
+            # Quick Adjust speichert jetzt in exports/preview/ (nicht mehr adjusted/)
             import glob
-            pattern = str(adjusted_dir / f"{asset_id}_adjusted_*.png")
+            pattern = str(preview_dir / f"{asset_id}_adjusted_*.jpg")
             matching_files = glob.glob(pattern)
             
             if matching_files:
@@ -496,11 +496,11 @@ def job_results(request, job_id):
                 filename = filepath.name
             else:
                 # Fallback
-                filename = f"{asset_id}_adjusted.png"
-                filepath = adjusted_dir / filename
+                filename = f"{asset_id}_adjusted.jpg"
+                filepath = preview_dir / filename
             
             asset_type = f"🎨 Adjusted #{adjust_counter}"
-            directory = f"jobs/{job.id}/adjusted"
+            directory = f"jobs/{job.id}/exports/preview"
             
         elif step.step_type == "crop":
             crop_counter += 1
@@ -1205,23 +1205,20 @@ def quick_adjust_image(request, job_id):
         
         # ── Inline Processing (NO async Celery Task) ──
         try:
-            # Source-Asset finden (prefer upscaled wenn vorhanden)
+            # Source-Asset finden: NUR Original-Verzeichnis (User-Request)
             nas_base = Path(getattr(settings, 'NAS_BASE_PATH', '/mnt/agency_nas'))
             job_dir = nas_base / 'jobs' / str(job.id)
+            original_dir = job_dir / 'original'
             
-            # Suche in dieser Reihenfolge: original (mit _4x upscaled) → exports/preview → original (ohne 4x)
+            # Suche neuestes Bild in original/ (prefer upscaled _4x.png)
             source_path = None
-            for subdir in ['original', 'exports/preview']:
-                subdir_path = job_dir / subdir if '/' not in subdir else job_dir / Path(subdir)
-                if subdir_path.exists():
-                    # Prefer upscaled (_4x.png)
-                    files = sorted(subdir_path.glob('*_4x.png'), key=lambda p: p.stat().st_mtime, reverse=True)
-                    if not files:  # kein 4x? dann alle PNGs/JPGs
-                        files = sorted(list(subdir_path.glob('*.png')) + list(subdir_path.glob('*.jpg')), 
-                                     key=lambda p: p.stat().st_mtime, reverse=True)
-                    if files:
-                        source_path = files[0]
-                        break
+            if original_dir.exists():
+                # Prefer upscaled (_4x.png)
+                files = sorted(original_dir.glob('*_4x.png'), key=lambda p: p.stat().st_mtime, reverse=True)
+                if not files:  # kein 4x? dann alle PNGs
+                    files = sorted(original_dir.glob('*.png'), key=lambda p: p.stat().st_mtime, reverse=True)
+                if files:
+                    source_path = files[0]
             
             if not source_path or not source_path.exists():
                 return JsonResponse({
