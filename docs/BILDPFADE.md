@@ -1,75 +1,119 @@
-# PrintBuddy — Bildpfad-Dokumentation
+# PrintBuddy — Bildpfad-Dokumentation (PROD-verifiziert)
 
 ## Problem: "Bilder werden nicht angezeigt"
 
-**Root Cause:** Django speichert Bilder an 2 verschiedenen Orten:
-1. **Lokal** (`/opt/printbuddy/media/`) → für Uploads (Referenzbilder)
-2. **NAS** (`/mnt/agency_nas/`) → für generierte Bilder (GPU-Output)
-
-Nginx muss BEIDE Pfade servieren!
+**Root Cause:** Bilder werden auf dem **NAS-Homeserver** gespeichert (Speicherplatz!), nicht lokal auf VPS.  
+Nginx serviert diese über `/nas/jobs/` Route.
 
 ---
 
-## ✅ RICHTIGE NGINX-KONFIGURATION
+## ✅ PROD NGINX-KONFIGURATION
 
 ```nginx
+# Lokale Django-Uploads (Referenzbilder, Face Swap Portraits)
 location /media/ {
-    alias /opt/printbuddy/media/;   # Lokale Uploads
+    alias /opt/printbuddy/media/;
     expires 7d;
 }
 
+# NAS Jobs (GPU-generierte Bilder, Quick Adjust)
+location /media/jobs/ {
+    alias /mnt/agency_nas/jobs/;   # ← LEGACY Route (funktioniert aber)
+    expires 7d;
+}
+
+# NAS Root (komplettes NAS)
 location /nas/ {
-    alias /mnt/agency_nas/;         # Generierte Bilder
+    alias /mnt/agency_nas/;         # ← BEVORZUGTE Route
     expires 30d;
+}
+
+# Protected Bundles (nur für Partner via Django Auth)
+location /protected-bundles/ {
+    internal;
+    alias /mnt/agency_nas/bundles/;
 }
 ```
 
-**Datei:** `/etc/nginx/sites-enabled/printbuddy`
+**Datei:** `/etc/nginx/sites-enabled/printbuddy`  
+**URLs funktionieren BEIDE:** `/media/jobs/...` UND `/nas/jobs/...` → **verwende einheitlich `/nas/jobs/`**
+
+---
+
+## 📂 ECHTE PROD-STRUKTUR (NAS Homeserver)
+
+### Physischer Pfad: `/mnt/agency_nas/`
+
+```
+/mnt/agency_nas/
+├── jobs/                    ← GPU-generierte Bilder (JOB-basiert)
+│   └── {job_id}/            ← UUID des Jobs
+│       ├── original/        ← GPU-Roh-Output (PNG, vollaufgelöst)
+│       │   └── {asset_uuid}.png
+│       ├── adjusted/        ← DEPRECATED (Quick Adjust nutzt exports/preview/)
+│       └── exports/         ← Finale Exports für Produktion
+│           ├── preview/     ← JPG 72dpi (Studio + Gallery)
+│           │   ├── {asset_uuid}_preview.jpg
+│           │   └── {asset_uuid}_adjusted_{timestamp}.jpg
+│           ├── pod/         ← PNG 300dpi sRGB (Printful Print-on-Demand)
+│           ├── offset/      ← CMYK TIFF + PDF/X-4 (Offsetdruck)
+│           └── vector/      ← SVG (Vektorisierung)
+│
+├── raw/                     ← DEPRECATED (alte GPU-Outputs ohne Job-Struktur)
+├── exports/                 ← DEPRECATED (alte flache Struktur)
+├── gallery/                 ← DEPRECATED (galerie/{full|thumbs}/)
+├── bundles/                 ← ZIP-Druckdateien für Partner-Download
+└── backups/                 ← Postgres Dumps + Media Backups
+
+```
+
+**URL-Zugriff:**
+- Preview: `https://printbuddy.datemyhobby.com/nas/jobs/{job_id}/exports/preview/{asset_uuid}_preview.jpg`
+- POD: `https://printbuddy.datemyhobby.com/nas/jobs/{job_id}/exports/pod/{asset_uuid}_pod.png`
+
+---
+
+## 📁 LOKALE VPS-STRUKTUR
+
+### Physischer Pfad: `/opt/printbuddy/media/`
+
+```
+/opt/printbuddy/media/
+└── jobs/
+    └── refs/                ← Referenzbilder für Img2Img (User-Uploads)
+        └── {uuid}.png
+```
+
+**URL-Zugriff:**
+- Referenzbild: `https://printbuddy.datemyhobby.com/media/jobs/refs/{uuid}.png`
 
 ---
 
 ## ✅ RICHTIGE TEMPLATE-LOGIK
 
-### Regel:
-- **Pfad enthält `exports/`** → kommt vom NAS → `/nas/{{ path }}`
-- **Sonst** → lokaler Upload → `{{ ImageField.url }}`
-
-### Studio job_results.html
+### Studio job_results.html (Generated Assets)
 ```django
-<!-- IMMER NAS (Preview-Exports liegen immer auf NAS) -->
-<img src="/nas/exports/preview/{{ asset.filename }}">
+<!-- GPU-generierte Previews: IMMER /nas/jobs/ -->
+<img src="/nas/jobs/{{ job.id }}/exports/preview/{{ asset.filename }}">
 ```
 
 ### Gallery list.html & detail.html
 ```django
 {% if 'exports/' in image.file_path.name %}
-  <img src="/nas/{{ image.file_path.name }}">  <!-- NAS -->
+  <!-- NAS Export -->
+  <img src="/nas/{{ image.file_path.name }}">
 {% else %}
-  <img src="{{ image.file_path.url }}">        <!-- /media/ -->
+  <!-- Lokaler Upload -->
+  <img src="{{ image.file_path.url }}">
 {% endif %}
 ```
 
----
-
-## 📂 DATEI-STRUKTUREN
-
-### NAS (`/mnt/agency_nas/`)
-```
-raw/                      ← GPU-Roh-Outputs (vollaufgelöst)
-exports/
-  preview/                ← JPG 72dpi für Studio/Gallery
-  pod/                    ← PNG 300dpi sRGB (Printful-ready)
-  offset/                 ← CMYK TIFF + PDF/X-4
-  vector/                 ← SVG
-gallery/                  ← (deprecated - nicht mehr nutzen)
-bundles/                  ← ZIP-Druckdatei-Bundles
-```
-
-### Lokal (`/opt/printbuddy/media/`)
-```
-jobs/refs/                ← Referenzbilder für Img2Img
-gallery/full/             ← (deprecated - nicht mehr nutzen)
-gallery/thumbs/           ← (deprecated - nicht mehr nutzen)
+### Product Wizard (Image Selection)
+```python
+# studio/views.py
+assets.append({
+    "url": f"/nas/jobs/{job.id}/exports/preview/{filename}",
+})
 ```
 
 ---
@@ -80,40 +124,47 @@ Wenn Bilder nicht angezeigt werden:
 
 ### 1. Nginx-Routes prüfen
 ```bash
-ssh datemyhobby "cat /etc/nginx/sites-enabled/printbuddy | grep -A 3 'location /'"
+ssh datemyhobby "grep -E 'location.*/media|location.*/nas' /etc/nginx/sites-enabled/printbuddy -A 3"
 ```
-**Erwartung:** Beide `/media/` und `/nas/` Locations vorhanden
+**Erwartung:** `/media/`, `/media/jobs/`, `/nas/` Locations vorhanden
 
-### 2. Nginx-Reload nach Config-Änderung
+### 2. Dateien auf NAS prüfen
 ```bash
-ssh datemyhobby "sudo nginx -t && sudo systemctl reload nginx"
+# Beispiel-Job prüfen
+ssh datemyhobby "ls -lh /mnt/agency_nas/jobs/ | head -5"
+# Preview-Dateien eines Jobs
+ssh datemyhobby "find /mnt/agency_nas/jobs/{JOB_UUID}/exports/preview/ -type f"
 ```
+**Erwartung:** `.jpg` Dateien vorhanden, Rechte `-rw-r--r--` (644)
 
-### 3. Dateiberechtigungen prüfen
+### 3. URL manuell testen
 ```bash
-# NAS-Dateien müssen von www-data lesbar sein
-ssh datemyhobby "ls -lh /mnt/agency_nas/exports/preview/ | tail -5"
+# NAS Preview (bevorzugte Route)
+curl -I https://printbuddy.datemyhobby.com/nas/jobs/{job_id}/exports/preview/{uuid}_preview.jpg
 
-# Erwartung: -rw-r--r-- (644) oder besser
+# Legacy Route (funktioniert auch)
+curl -I https://printbuddy.datemyhobby.com/media/jobs/{job_id}/exports/preview/{uuid}_preview.jpg
+
+# Erwartung: HTTP/1.1 200 OK, Content-Type: image/jpeg
 ```
 
-### 4. URL manuell testen
-```bash
-# NAS-Bild (Preview)
-curl -I https://printbuddy.datemyhobby.com/nas/exports/preview/<uuid>_preview.jpg
-
-# Lokales Bild (Referenz)
-curl -I https://printbuddy.datemyhobby.com/media/jobs/refs/<uuid>.png
-
-# Erwartung: HTTP/1.1 200 OK
+### 4. Browser DevTools
+```
+F12 → Network Tab → Reload
+Filtern nach "jpg" oder "png"
+Status-Code prüfen:
+  - 200 OK ✅
+  - 404 Not Found ❌ → Datei fehlt auf NAS
+  - 403 Forbidden ❌ → Nginx-Rechte prüfen
 ```
 
-### 5. Django Template Variablen debuggen
+### 5. Django Template debuggen
 Im Template hinzufügen:
 ```django
-<!-- DEBUG: {{ image.file_path.name }} -->
+<!-- DEBUG: {{ asset.url }} -->
+<!-- DEBUG Physical Path: /mnt/agency_nas/jobs/{{ job.id }}/exports/preview/{{ asset.filename }} -->
 ```
-Browser → Quelltext anzeigen → Pfad prüfen
+Browser → Quelltext (Rechtsklick → View Source) → Pfad kontrollieren
 
 ---
 
@@ -121,65 +172,64 @@ Browser → Quelltext anzeigen → Pfad prüfen
 
 | Symptom | Ursache | Lösung |
 |---------|---------|--------|
-| Alle Bilder schwarz/nicht sichtbar | Nginx `/nas/` Route fehlt | Nginx-Config ergänzen + reload |
-| Gallery-Bilder fehlen, Studio OK | Template verwendet `.url` statt `/nas/` | Template-Logik korrigieren |
-| Einzelne Bilder fehlen | Datei existiert nicht auf NAS | Job neu laufen lassen |
-| 404 Not Found | MEDIA_URL_EXTERNAL falsch | Muss `printbuddy.datemyhobby.com` sein |
-| 500 Server Error beim Vormerken | `job.project` ist None | `getattr(job, 'project', None)` verwenden |
+| Alle Bilder 404 | Nginx `/nas/` Route fehlt | Nginx-Config hinzufügen + reload |
+| Canvas schwarz (Quick Adjust) | JS-Selector falsch | `.card img[src*="/nas/jobs/"]` verwenden |
+| Einzelne Bilder fehlen | Datei existiert nicht | Job neu generieren lassen |
+| Bilder nach Deploy weg | Pfad inkonsistent | Alle URLs auf `/nas/jobs/` umstellen |
+| 403 Forbidden | NAS-Mount nicht aktiv | `ls /mnt/agency_nas/` testen |
 
 ---
 
-## 📝 NACH JEDER ÄNDERUNG TESTEN
+## 📝 DEPLOYMENT CHECKLIST
+
+Nach Code-Änderungen die Bildpfade betreffen:
 
 ```bash
 # 1. Lokal committen
 git add .
-git commit -m "fix: [Beschreibung]"
+git commit -m "fix: Bildpfade /nas/jobs/ vereinheitlicht"
 git push
 
-# 2. Auf VPS deployen
-ssh datemyhobby 'bash /opt/printbuddy/deploy.sh'
+# 2. VPS Deploy
+ssh datemyhobby 'cd /opt/printbuddy && git pull && sudo systemctl restart gunicorn.printbuddy'
 
-# 3. Celery neu starten (wenn gpu/tasks.py geändert)
-ssh datemyhobby 'sudo systemctl restart celery-printbuddy-gpu celery-printbuddy-cpu'
+# 3. Nginx-Config geändert? (nur bei Änderungen an nginx-printbuddy.conf)
+scp nginx-printbuddy.conf datemyhobby:/tmp/
+ssh datemyhobby 'sudo cp /tmp/nginx-printbuddy.conf /etc/nginx/sites-enabled/printbuddy && sudo nginx -t && sudo systemctl reload nginx'
 
-# 4. Im Browser testen:
-- Studio Job Results: https://printbuddy.datemyhobby.com/studio/jobs/
-- Gallery: https://printbuddy.datemyhobby.com/gallery/
-- Bild mit F12 inspizieren → Network Tab → ist Request 200 oder 404?
+# 4. Browser-Test (CTRL+F5 für Cache-Bypass)
+- Studio Job Results öffnen
+- Quick Adjust testen
+- Gallery öffnen
+- DevTools Network Tab: Alle Bild-Requests 200 OK?
 ```
 
----
-
-## ⚠️ NIEMALS ÄNDERN OHNE TEST
-
-**Diese Dateien niemals editieren ohne sofort zu testen:**
-
-1. `/etc/nginx/sites-enabled/printbuddy` - Nginx-Config
-2. `templates/studio/job_results.html` - Studio Bildanzeige
-3. `templates/gallery/list.html` - Gallery Grid
-4. `templates/gallery/detail.html` - Gallery Detail
-5. `studio/views.py`: `asset_select()` - Gallery-Vormerken
-6. `.env` auf VPS - MEDIA_URL_EXTERNAL
-
-**Test-Reihenfolge:**
-1. Job erstellen → Results anzeigen (Studio)
-2. Für Galerie vormerken
-3. Gallery öffnen (öffentlich + Admin-Login)
-4. Browser DevTools → Network Tab → alle img Requests 200 OK?
+**WICHTIG:** Celery restart nur bei Änderungen an `gpu/tasks.py` oder `postprocess/tasks.py`!
 
 ---
 
 ## 🎯 QUICK REFERENCE
 
-| Was | Wo | Nginx-Route | Template-Syntax |
-|-----|-----|-------------|-----------------|
-| GPU-generierte Previews | NAS `/mnt/agency_nas/exports/preview/` | `/nas/` | `/nas/exports/preview/{{ filename }}` |
-| Img2Img Referenzbilder | Lokal `/opt/printbuddy/media/jobs/refs/` | `/media/` | `{{ reference_image.url }}` |
-| Gallery-Bilder (alt) | Lokal `/opt/printbuddy/media/gallery/` | `/media/` | `{{ file_path.url }}` |
-| Gallery-Bilder (neu) | NAS `/mnt/agency_nas/exports/preview/` | `/nas/` | `/nas/{{ file_path.name }}` |
+| Was | Physischer Pfad | Nginx-Route | URL-Präfix | Template-Code |
+|-----|----------------|-------------|------------|---------------|
+| **GPU Preview** | `/mnt/agency_nas/jobs/{job_id}/exports/preview/` | `/nas/` | `/nas/jobs/...` | `/nas/jobs/{{ job.id }}/exports/preview/{{ filename }}` |
+| **Quick Adjust** | `/mnt/agency_nas/jobs/{job_id}/exports/preview/` | `/nas/` | `/nas/jobs/...` | `/nas/jobs/{{ job.id }}/exports/preview/{{ filename }}` |
+| **POD Export** | `/mnt/agency_nas/jobs/{job_id}/exports/pod/` | `/nas/` | `/nas/jobs/...` | `/nas/jobs/{{ job.id }}/exports/pod/{{ filename }}` |
+| **Referenzbild** | `/opt/printbuddy/media/jobs/refs/` | `/media/` | `/media/jobs/refs/...` | `{{ reference_image.url }}` |
+| **Bundle** | `/mnt/agency_nas/bundles/` | `/protected-bundles/` | (intern) | X-Accel-Redirect |
 
 ---
 
-**Erstellt:** 2026-07-19
-**Letztes Update:** Nach Bugfix Session (Bildpfade Studio + Gallery)
+## ⚠️ MIGRATION VON ALT → NEU
+
+### Alte (deprecated) Pfade:
+- `/mnt/agency_nas/raw/` → jetzt `/mnt/agency_nas/jobs/{job_id}/original/`
+- `/mnt/agency_nas/exports/preview/` → jetzt `/mnt/agency_nas/jobs/{job_id}/exports/preview/`
+- `/mnt/agency_nas/jobs/{job_id}/adjusted/` → jetzt `/mnt/agency_nas/jobs/{job_id}/exports/preview/`
+
+**Keine Migration nötig!** Neue Jobs verwenden automatisch neue Struktur.
+
+---
+
+**Erstellt:** 2026-07-19  
+**Letztes Update:** 2026-08-18 (Prod-Pfade verifiziert, `/nas/jobs/` standardisiert)

@@ -702,7 +702,7 @@ def product_wizard(request, job_id):
         assets.append({
             "asset_id": asset_id,
             "filename": filename,
-            "url": f"/media/jobs/{job.id}/exports/preview/{filename}",
+            "url": f"/nas/jobs/{job.id}/exports/preview/{filename}",
         })
     
     if request.method == "POST":
@@ -1209,13 +1209,16 @@ def quick_adjust_image(request, job_id):
             nas_base = Path(getattr(settings, 'NAS_BASE_PATH', '/mnt/agency_nas'))
             job_dir = nas_base / 'jobs' / str(job.id)
             
-            # Suche in dieser Reihenfolge: upscaled → original → adjusted
+            # Suche in dieser Reihenfolge: original (mit _4x upscaled) → exports/preview → original (ohne 4x)
             source_path = None
-            for subdir in ['original', 'adjusted']:
-                if (job_dir / subdir).exists():
-                    files = sorted((job_dir / subdir).glob('*_4x.png'), key=lambda p: p.stat().st_mtime, reverse=True)
-                    if not files:  # kein 4x? dann alle PNGs
-                        files = sorted((job_dir / subdir).glob('*.png'), key=lambda p: p.stat().st_mtime, reverse=True)
+            for subdir in ['original', 'exports/preview']:
+                subdir_path = job_dir / subdir if '/' not in subdir else job_dir / Path(subdir)
+                if subdir_path.exists():
+                    # Prefer upscaled (_4x.png)
+                    files = sorted(subdir_path.glob('*_4x.png'), key=lambda p: p.stat().st_mtime, reverse=True)
+                    if not files:  # kein 4x? dann alle PNGs/JPGs
+                        files = sorted(list(subdir_path.glob('*.png')) + list(subdir_path.glob('*.jpg')), 
+                                     key=lambda p: p.stat().st_mtime, reverse=True)
                     if files:
                         source_path = files[0]
                         break

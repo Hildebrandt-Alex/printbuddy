@@ -39,7 +39,8 @@ def _get_output_dir(job_id: str, step_type: str) -> Path:
     if step_type in ("generate", "upscale", "face_swap"):
         path = job_base / "original"
     elif step_type == "quick_adjust":
-        path = job_base / "adjusted"
+        # Quick Adjust speichert in exports/preview/ (nicht mehr /adjusted/)
+        path = job_base / "exports" / "preview"
     elif step_type == "crop":
         path = job_base / "crop"
     elif step_type == "preview_export":
