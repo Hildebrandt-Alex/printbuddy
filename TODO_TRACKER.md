@@ -37,11 +37,13 @@
 - **Commit:** b1706a6
 
 ### P1.2: Quick Adjust Canvas Fix [15min]
-- [ ] `templates/studio/job_results.html` JavaScript selector korrigieren
-- [ ] Canvas mit Bild füllen statt schwarz
-- [ ] Git commit: `fix: Quick Adjust Modal zeigt Bild statt schwarzer Canvas`
-- [ ] VPS Deploy
-- [ ] Test: Quick Adjust öffnen → Bild sichtbar
+- [x] `templates/studio/job_results.html` JavaScript Selector flexibler gemacht
+- [x] Fix: `.card img[src*="/media/jobs/"]` statt `[src*="exports/preview/"]`
+- [x] naturalWidth/naturalHeight für korrekte Canvas-Größe
+- [x] Git commit: `fix: Quick Adjust Canvas zeigt Bild`
+- [x] VPS Deploy: ✅ Gunicorn active
+- **Status:** ✅ COMPLETED (18. Aug 2026, 02:45 CEST)
+- **Commit:** d2dee58
 
 ### P1.3: PipelineTemplate "Preview Only" anlegen [10min]
 - [ ] Django Admin → PipelineTemplates → Add
@@ -49,6 +51,7 @@
 - [ ] Name: "Preview Only — Schnelle Iteration"
 - [ ] default_model: flux_schnell, default_steps: 4, default_guidance: 0.0
 - [ ] Test: Neuen Job erstellen → nur Preview-Step läuft
+- **Status:** 🔄 IN PROGRESS
 
 ### P1.4: Verifizierung [15min]
 - [ ] Neuer Job mit Preview-Only Template → 30s statt 5min
