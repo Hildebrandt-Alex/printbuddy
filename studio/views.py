@@ -1296,7 +1296,7 @@ def quick_adjust_image(request, job_id):
                 'asset_id': str(asset_id),
                 'filename': output_path.name,
                 'message': 'Farbanpassung abgeschlossen!',
-                'url': f'/media/jobs/{job.id}/exports/preview/{output_path.name}'
+                'url': f'/nas/jobs/{job.id}/exports/preview/{output_path.name}'
             })
             
         except Exception as e:

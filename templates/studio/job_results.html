@@ -452,7 +452,7 @@ function initLivePreview() {
   previewCtx = previewCanvas.getContext('2d', { willReadFrequently: true });
   
   // Fix: Suche nach IRGENDEINEM Asset-Bild (flexibler Selector)
-  const firstPreviewImg = document.querySelector('.card img[src*="/media/jobs/"]');
+  const firstPreviewImg = document.querySelector('.card img[src*="/nas/jobs/"]');
   if (!firstPreviewImg) {
     console.warn('Kein Asset-Bild gefunden für Live-Preview');
     return;
